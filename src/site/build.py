@@ -1,0 +1,1661 @@
+from __future__ import annotations
+
+import html
+import json
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from src.datasets import load_code_dataset
+from src.experiments.paths import safe_path_part
+from src.experiments.statistics import matthews_correlation_coefficient, spearman
+from src.methods.llm_prompt import LLM_READABILITY_PROMPT_TEMPLATE
+from src.methods.posnett.method import JAVA_KEYWORDS, JAVA_OPERATORS, TOKEN_PATTERN, strip_comments
+from src.site.labels import (
+    DATASET_ORDER,
+    METHOD_ORDER,
+    dataset_label,
+    dataset_rank,
+    method_label,
+    method_rank,
+    short_model_label,
+)
+
+
+ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_DIR = ROOT / "output"
+DOCS_DIR = ROOT / "docs"
+
+RMC_AGGREGATION_LABEL = "fallback mean 3->2->1"
+RMC_EM_AGGREGATION_LABEL = "single-region mean"
+_TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
+_RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
+_DATASET_TOTAL_CACHE: dict[str, int | None] = {}
+
+
+@dataclass(frozen=True)
+class Run:
+    method: str
+    dataset: str
+    model: str | None
+    summary_path: Path
+    data: dict[str, Any]
+
+    @property
+    def label(self) -> str:
+        if self.method in {"rmc_masked", "rmc_em"}:
+            return f"{run_group_label(self.method, self.model)} on {dataset_label(self.dataset)}"
+        model = f" · {short_model_label(self.model)}" if self.model else ""
+        return f"{method_label(self.method)} on {dataset_label(self.dataset)}{model}"
+
+    @property
+    def slug(self) -> str:
+        parts = [self.method, self.dataset]
+        if self.model:
+            parts.append(self.model)
+        return "__".join(slugify(part) for part in parts)
+
+    @property
+    def metric_name(self) -> str:
+        if self.data.get("mcc") is not None:
+            return "MCC"
+        if self.data.get("spearman") is not None:
+            return "Spearman"
+        inferred = self.inferred_metric()
+        if inferred[0] is not None:
+            return inferred[0]
+        return str(self.data.get("evaluation_metric") or "Score")
+
+    @property
+    def metric_value(self) -> float | None:
+        value = self.data.get("mcc")
+        if value is None:
+            value = self.data.get("spearman")
+        if value is None:
+            value = self.inferred_metric()[1]
+        return as_float(value)
+
+    @property
+    def count(self) -> int | None:
+        return self.data.get("valid_count") or len(self.valid_rows()) or self.data.get("count")
+
+    def valid_rows(self) -> list[dict[str, Any]]:
+        rows = []
+        for row in self.data.get("results", []):
+            task_id = row.get("task_id")
+            score = display_score_for_row(self, row)
+            human = row.get("readability_score")
+            if task_id is not None and as_float(score) is not None and as_float(human) is not None:
+                updated = dict(row)
+                updated["score"] = score
+                rows.append(updated)
+        return rows
+
+    def inferred_metric(self) -> tuple[str | None, float | None]:
+        rows = self.valid_rows()
+        if len(rows) < 2:
+            return None, None
+        scores = [float(row.get("score", row.get("rmc_score"))) for row in rows]
+        human = [float(row["readability_score"]) for row in rows]
+        if all(value in {0.0, 1.0} for value in human):
+            return "MCC", best_mcc(scores, [int(value) for value in human])
+        return "Spearman", spearman(scores, human)
+
+
+def main() -> None:
+    runs = discover_runs()
+    reset_docs()
+    write_assets()
+    write_index(runs)
+    write_dataset_pages(runs)
+    write_method_pages(runs)
+    write_run_pages(runs)
+    print(f"Wrote {DOCS_DIR.relative_to(ROOT)} with {len(runs)} runs")
+
+
+def discover_runs() -> list[Run]:
+    runs = []
+    for path in sorted(OUTPUT_DIR.glob("**/summary.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("mock_recover") is True:
+            continue
+        rel = path.relative_to(OUTPUT_DIR)
+        parts = rel.parts
+        if len(parts) < 3:
+            continue
+        method = parts[0]
+        dataset = parts[1]
+        model = infer_model(method, parts, data)
+        runs.append(Run(method=method, dataset=dataset, model=model, summary_path=path, data=data))
+    return sorted(runs, key=lambda run: (method_rank(run.method), dataset_rank(run.dataset), run.model or ""))
+
+
+def infer_model(method: str, parts: tuple[str, ...], data: dict[str, Any]) -> str | None:
+    if method in {"posnett", "scalabrino"}:
+        return None
+    value = data.get("model")
+    if value:
+        return str(value)
+    if len(parts) >= 4:
+        return parts[2]
+    return None
+
+
+def reset_docs() -> None:
+    if DOCS_DIR.exists():
+        shutil.rmtree(DOCS_DIR)
+    (DOCS_DIR / "assets").mkdir(parents=True)
+    (DOCS_DIR / "datasets").mkdir()
+    (DOCS_DIR / "methods").mkdir()
+    (DOCS_DIR / "runs").mkdir()
+    (DOCS_DIR / "samples").mkdir()
+
+
+def write_assets() -> None:
+    (DOCS_DIR / "assets" / "style.css").write_text(STYLE_CSS, encoding="utf-8")
+    (DOCS_DIR / "assets" / "app.js").write_text(APP_JS, encoding="utf-8")
+
+
+def write_index(runs: list[Run]) -> None:
+    datasets = sorted({run.dataset for run in runs}, key=dataset_rank)
+    run_groups = sorted({run_group_key(run) for run in runs}, key=run_group_rank)
+    best_runs = best_runs_by_dataset(runs)
+    by_cell: dict[tuple[tuple[str, str | None], str], list[Run]] = {}
+    for run in runs:
+        by_cell.setdefault((run_group_key(run), run.dataset), []).append(run)
+
+    header = "".join(
+        f'<th><a href="datasets/{slugify(dataset)}.html">{escape(dataset_label(dataset))}</a></th>'
+        for dataset in datasets
+    )
+    rows = []
+    for group in run_groups:
+        method, model = group
+        cells = []
+        for dataset in datasets:
+            cell_runs = by_cell.get((group, dataset), [])
+            cells.append(f"<td>{render_run_cell(cell_runs, best_runs)}</td>")
+        label = run_group_label(method, model)
+        rows.append(
+            "<tr>"
+            f'<th><a href="methods/{slugify(method)}.html">{escape(label)}</a></th>'
+            + "".join(cells)
+            + "</tr>"
+        )
+    body = f"""
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Result matrix</p>
+          <h1>Code Readability Results</h1>
+        </div>
+      </div>
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead><tr><th>Method / Dataset</th>{header}</tr></thead>
+          <tbody>{''.join(rows)}</tbody>
+        </table>
+      </div>
+    </section>
+    """
+    write_page(DOCS_DIR / "index.html", "Code Readability Results", body, current="Results")
+
+
+def best_runs_by_dataset(runs: list[Run]) -> set[str]:
+    best: dict[str, tuple[float, str]] = {}
+    for run in runs:
+        value = run.metric_value
+        if value is None:
+            continue
+        current = best.get(run.dataset)
+        candidate = (float(value), run.slug)
+        if current is None or candidate[0] > current[0]:
+            best[run.dataset] = candidate
+    return {slug for _, slug in best.values()}
+
+
+def render_run_cell(runs: list[Run], best_runs: set[str]) -> str:
+    if not runs:
+        return '<span class="missing">Not run</span>'
+    links = []
+    for run in runs:
+        value = format_metric(run.metric_value)
+        coverage = format_coverage(run)
+        class_name = "result-link best" if run.slug in best_runs else "result-link"
+        links.append(
+            f'<a class="{class_name}" href="runs/{run.slug}.html">'
+            f"<strong>{escape(value)}</strong>"
+            f"<span>{escape(run.metric_name)}</span>"
+            f'<small>{escape(coverage)}</small>'
+            "</a>"
+        )
+    return "".join(links)
+
+
+def format_coverage(run: Run) -> str:
+    valid = run.count
+    total = dataset_total(run)
+    if valid is None and total is None:
+        return "valid n/a"
+    if total is None:
+        return f"{valid}/?"
+    if valid is None:
+        return f"?/{total}"
+    return f"{valid}/{total}"
+
+
+def dataset_total(run: Run) -> int | None:
+    if run.dataset in _DATASET_TOTAL_CACHE:
+        return _DATASET_TOTAL_CACHE[run.dataset]
+    items = load_dataset_items([run])
+    total = len(items) if items else as_int(run.data.get("count"))
+    _DATASET_TOTAL_CACHE[run.dataset] = total
+    return total
+
+
+def write_dataset_pages(runs: list[Run]) -> None:
+    for dataset in sorted({run.dataset for run in runs}, key=dataset_rank):
+        dataset_runs = [run for run in runs if run.dataset == dataset]
+        run_rows = "".join(run_row(run, prefix="../") for run in dataset_runs)
+        items = load_dataset_items(dataset_runs)
+        write_sample_pages(dataset, items, dataset_runs)
+        sample_rows = "".join(
+            dataset_sample_row(dataset, index, item, dataset_runs)
+            for index, item in enumerate(items, start=1)
+        )
+        score_headers = "".join(
+            sortable_header(short_run_label(run), run_sort_key(run))
+            for run in dataset_runs
+        )
+        human_label = dataset_human_label(dataset_runs)
+        body = f"""
+        <section class="panel">
+          <p class="eyebrow">Dataset</p>
+          <h1>{escape(dataset_label(dataset))}</h1>
+          {dataset_description(dataset, items)}
+        </section>
+        <section class="panel">
+          <h2>Runs</h2>
+          <table class="records">
+            <thead><tr><th>Method</th><th>Model</th><th>Metric</th><th>Count</th></tr></thead>
+            <tbody>{run_rows}</tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <div class="panel-head compact">
+            <div>
+              <h2>Samples</h2>
+              <p class="muted">Click a sample ID to inspect code on its own page. Method columns are only shown when that method has results for this dataset.</p>
+            </div>
+          </div>
+          <table class="records sample-table" data-sortable-samples>
+            <thead><tr>{sortable_header("ID", "order", "asc")}{sortable_header(human_label, "human", "desc")}{score_headers}{sortable_header("LOC", "code-lines", "desc")}</tr></thead>
+            <tbody>{sample_rows}</tbody>
+          </table>
+        </section>
+        """
+        write_page(DOCS_DIR / "datasets" / f"{slugify(dataset)}.html", dataset_label(dataset), body, prefix="../")
+
+
+def write_method_pages(runs: list[Run]) -> None:
+    for method in sorted({run.method for run in runs}, key=method_rank):
+        method_runs = [run for run in runs if run.method == method]
+        rows = "".join(method_run_row(run, prefix="../") for run in method_runs)
+        description = method_description(method)
+        body = f"""
+        <section class="panel">
+          <p class="eyebrow">Method</p>
+          <h1>{escape(method_label(method))}</h1>
+          {description}
+        </section>
+        <section class="panel">
+          <h2>Runs</h2>
+          <table class="records">
+            <thead><tr><th>Dataset</th><th>Model</th><th>Metric</th><th>Count</th></tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </section>
+        """
+        write_page(DOCS_DIR / "methods" / f"{slugify(method)}.html", method_label(method), body, prefix="../")
+
+
+def method_description(method: str) -> str:
+    if method == "rmc_masked":
+        return f"""
+          <p class="muted">RMC overall match masks control-flow regions, asks an LLM to reconstruct the full code, and scores the whole reconstructed program against the original.</p>
+          <p class="muted">Key parameters: model is shown in the run table, granularity = control, max masked regions = 3, similarity = sequence similarity.</p>
+        """
+    if method == "rmc_em":
+        return f"""
+          <p class="muted">RMC mask match asks the LLM to return a keyed JSON object such as <code>{{"mask_1": "..."}}</code>, then compares each recovered mask directly with the hidden code.</p>
+          <p class="muted">Key parameters: model is shown in the run table, granularity = control, aggregation = <strong>{escape(RMC_EM_AGGREGATION_LABEL)}</strong>, similarity = sequence similarity over exact mask contents.</p>
+        """
+    if method == "cognascore":
+        return """
+          <p class="muted">Our implementation embeds code lexemes and clusters them with DBSCAN; the score is the mean within-cluster diameter.</p>
+          <p class="muted">Key parameters: embedding model = nomic-ai/nomic-embed-text-v1.5, DBSCAN eps = 0.18, minPts = 2.</p>
+        """
+    if method == "posnett":
+        return """
+          <p class="muted">Our implementation of the Posnett logistic readability model using Java tokens, Halstead volume, LOC, and byte entropy.</p>
+          <p class="formula">readability = 1 / (1 + exp(-z)), z = 8.87 - 0.033 * V + 0.40 * LOC - 1.5 * H</p>
+        """
+    if method == "scalabrino":
+        return """
+          <p class="muted">The original Scalabrino model, run through the released Java tool and classifier.</p>
+          <p class="muted">It is a traditional feature-based model over structural, visual, and textual code metrics; no tuned hyperparameters are set in our runner.</p>
+        """
+    if method in {"llm", "llm_prompt"}:
+        prompt = LLM_READABILITY_PROMPT_TEMPLATE.format(code="{code}")
+        return f"""
+          <p class="muted">Our direct LLM scoring baseline: the model reads the source text and returns a readability score on a 0-20 scale.</p>
+          <p class="muted">Key parameter: model is shown in the run table.</p>
+          <h2>Prompt</h2>
+          <pre class="code-block"><code>{escape(prompt)}</code></pre>
+        """
+    return '<p class="muted">Method implementation details are not available for this method yet.</p>'
+
+
+def dataset_description(dataset: str, items) -> str:
+    if not items:
+        return '<p class="muted">Dataset statistics are unavailable because the dataset adapter could not load the source files.</p>'
+    stats = dataset_stats(items)
+    language = stats["language"]
+    lines = stats["lines"]
+    chars = stats["chars"]
+    labels = stats["labels"]
+    cards = [
+        stat("Samples", str(stats["count"])),
+        stat("Languages", language_summary(language)),
+        stat("Avg LOC", format_stat_number(lines["mean"])),
+        stat("Median LOC", format_stat_number(lines["median"])),
+        stat("Avg Chars", format_stat_number(chars["mean"])),
+        stat("Label Range", label_range(labels)),
+    ]
+    language_rows = "".join(
+        f"<tr><td>{escape(str(name))}</td><td>{count}</td><td>{count / stats['count']:.1%}</td></tr>"
+        for name, count in sorted(language.items(), key=lambda item: (-item[1], str(item[0])))
+    )
+    note = dataset_note(dataset)
+    return f"""
+      <p class="muted">{escape(note)}</p>
+      <div class="stats dataset-stats">{''.join(cards)}</div>
+      <table class="records compact-records">
+        <thead><tr><th>Language</th><th>Samples</th><th>Share</th></tr></thead>
+        <tbody>{language_rows}</tbody>
+      </table>
+    """
+
+
+def dataset_stats(items) -> dict[str, Any]:
+    line_counts = [len(item.content.splitlines()) for item in items]
+    char_counts = [len(item.content) for item in items]
+    labels = [item.readability_score for item in items if item.readability_score is not None]
+    language_counts: dict[str, int] = {}
+    for item in items:
+        language = item.metadata.get("language") or infer_item_language(item)
+        language_counts[str(language)] = language_counts.get(str(language), 0) + 1
+    return {
+        "count": len(items),
+        "language": language_counts,
+        "lines": numeric_summary(line_counts),
+        "chars": numeric_summary(char_counts),
+        "labels": labels,
+    }
+
+
+def numeric_summary(values: list[int | float]) -> dict[str, float]:
+    if not values:
+        return {"mean": 0.0, "median": 0.0}
+    ordered = sorted(float(value) for value in values)
+    mid = len(ordered) // 2
+    median = ordered[mid] if len(ordered) % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+    return {"mean": sum(ordered) / len(ordered), "median": median}
+
+
+def infer_item_language(item) -> str:
+    task_id = str(item.task_id).lower()
+    if "/python/" in task_id:
+        return "python"
+    if "/cuda/" in task_id:
+        return "cuda"
+    if "/java/" in task_id:
+        return "java"
+    return "java"
+
+
+def language_summary(language_counts: dict[str, int]) -> str:
+    if not language_counts:
+        return "n/a"
+    ordered = sorted(language_counts.items(), key=lambda item: (-item[1], item[0]))
+    if len(ordered) == 1:
+        name, count = ordered[0]
+        return f"{name} ({count})"
+    return ", ".join(f"{name} {count}" for name, count in ordered[:3])
+
+
+def label_range(labels: list[float]) -> str:
+    if not labels:
+        return "n/a"
+    return f"{min(labels):.2f}-{max(labels):.2f}"
+
+
+def format_stat_number(value: float) -> str:
+    return f"{value:.1f}" if abs(value) < 100 else f"{value:.0f}"
+
+
+def dataset_note(dataset: str) -> str:
+    notes = {
+        "mbjp": "MBJP is a small Java programming readability dataset with continuous human scores.",
+        "scalabrino": "Scalabrino contains Java snippets with continuous readability scores from the original dataset.",
+        "jetbrains": "JetBrains contains Java snippets with binary human readability labels.",
+        "dorn": "Dorn is the original mixed-language readability dataset with CUDA, Java, and Python snippets.",
+        "schnappinger": "Schnappinger contains Java class-level examples with continuous readability labels derived from the study probabilities.",
+        "clear": "CLEAR is a natural-language readability corpus, not a code dataset.",
+    }
+    return notes.get(dataset, "Dataset statistics are computed from the local adapter output.")
+
+
+def write_run_pages(runs: list[Run]) -> None:
+    for run in runs:
+        data = run.data
+        items = load_dataset_items([run])
+        rows = "".join(run_sample_row(run, index, item) for index, item in enumerate(items, start=1))
+        human_label = dataset_human_label([run])
+        score_key = run_sort_key(run)
+        body = f"""
+        <section class="panel">
+          <p class="eyebrow">Run</p>
+          <h1>{escape(run.label)}</h1>
+          <div class="stats">
+            {stat("Metric", f"{run.metric_name} {format_metric(run.metric_value)}")}
+            {stat("Valid", str(data.get("valid_count") or data.get("count") or "n/a"))}
+            {stat("Errors", str(data.get("error_count") or 0))}
+            {stat("Masks", str(data.get("total_mask_count") or "n/a"))}
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Configuration</h2>
+          {definition_list(run_config_items(run))}
+        </section>
+        <section class="panel">
+          <h2>Samples</h2>
+          <table class="records sample-table" data-sortable-samples>
+            <thead><tr>{sortable_header("ID", "order", "asc")}{sortable_header(human_label, "human", "desc")}{sortable_header(short_run_label(run), score_key)}{sortable_header("Diff", "diff", "desc")}{sortable_header("LOC", "code-lines", "desc")}</tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </section>
+        """
+        write_page(DOCS_DIR / "runs" / f"{run.slug}.html", run.label, body, prefix="../")
+
+
+def run_config_items(run: Run) -> list[tuple[str, str]]:
+    data = run.data
+    items = [
+        ("Method", method_label(run.method)),
+        ("Dataset", dataset_label(run.dataset)),
+        ("Model", short_model_label(run.model) or "deterministic"),
+        ("Summary", str(run.summary_path.relative_to(ROOT))),
+    ]
+    items.extend(readable_run_config_items(run))
+    return items
+
+
+def readable_run_config_items(run: Run) -> list[tuple[str, str]]:
+    data = run.data
+    items: list[tuple[str, str]] = []
+    if run.method in {"rmc_masked", "rmc_em"}:
+        if data.get("mask_strategy") is not None:
+            items.append(("Masking", readable_masking(data)))
+        if data.get("ast_granularity") is not None:
+            items.append(("Code Region", readable_granularity(data.get("ast_granularity"))))
+        if run.method == "rmc_em":
+            items.append(("Aggregation", "Single-region mean"))
+        if data.get("max_combination_size") is not None:
+            items.append(("Mask Combination", f"Up to {data['max_combination_size']} regions at once"))
+        if data.get("sampling_mode") is not None:
+            items.append(("Combination Coverage", readable_sampling(data)))
+        if data.get("similarity") is not None:
+            items.append(("Recovery Match", readable_similarity(data.get("similarity"))))
+        return items
+    if run.method == "cognascore":
+        model = data.get("embedding_model") or run.model
+        if model:
+            items.append(("Embeddings", short_model_label(str(model)) or str(model)))
+        dbscan = data.get("dbscan") or {}
+        if isinstance(dbscan, dict) and dbscan:
+            parts = []
+            if dbscan.get("eps") is not None:
+                parts.append(f"radius {dbscan['eps']}")
+            if dbscan.get("min_samples") is not None:
+                parts.append(f"min samples {dbscan['min_samples']}")
+            if parts:
+                items.append(("Clustering", ", ".join(parts)))
+        return items
+    metric = data.get("evaluation_metric")
+    if metric:
+        items.append(("Evaluation", readable_metric(metric)))
+    threshold = data.get("classification_threshold")
+    if threshold is not None:
+        items.append(("Decision Threshold", str(threshold)))
+    return items
+
+
+def readable_masking(data: dict[str, Any]) -> str:
+    strategy = str(data.get("mask_strategy", ""))
+    dataset = str(data.get("dataset_key") or data.get("source") or "")
+    if strategy.startswith("java_ast"):
+        return "Java control-flow regions from the AST"
+    if strategy.startswith("java_fragment"):
+        if dataset == "dorn":
+            return "Control-flow regions in CUDA, Java, and Python fragments"
+        return "Control-flow regions from token matching"
+    if strategy.startswith("natural_language"):
+        return "Natural-language passages"
+    return "Masked source regions"
+
+
+def readable_granularity(value: Any) -> str:
+    labels = {
+        "control": "Control statements",
+        "statement": "Statements",
+        "sentence": "Sentences",
+        "paragraph": "Paragraphs",
+    }
+    return labels.get(str(value), str(value).replace("_", " ").title())
+
+
+def readable_sampling(data: dict[str, Any]) -> str:
+    if data.get("sampling_mode") == "all":
+        return "All generated combinations"
+    limit = data.get("max_samples_per_stratum")
+    if limit is not None:
+        return f"Sampled, at most {limit} per group"
+    return "Sampled combinations"
+
+
+def readable_similarity(value: Any) -> str:
+    labels = {
+        "sequence": "Sequence similarity",
+        "edit": "Edit similarity",
+        "token_jaccard": "Token Jaccard",
+        "bleu": "BLEU",
+        "rouge_l": "ROUGE-L",
+        "cosine": "Embedding cosine",
+    }
+    return labels.get(str(value), str(value).replace("_", " ").title())
+
+
+def readable_metric(value: Any) -> str:
+    labels = {
+        "spearman": "Spearman correlation",
+        "mcc": "Matthews correlation coefficient",
+        "binary_threshold_required": "Binary classification threshold",
+    }
+    return labels.get(str(value), str(value).replace("_", " ").title())
+
+
+def run_row(run: Run, prefix: str) -> str:
+    return (
+        "<tr>"
+        f'<td><a href="{prefix}runs/{run.slug}.html">{escape(short_run_label(run))}</a></td>'
+        f"<td>{escape(short_model_label(run.model) or 'deterministic')}</td>"
+        f"<td>{escape(run.metric_name)} {escape(format_metric(run.metric_value))}</td>"
+        f"<td>{escape(str(run.count or 'n/a'))}</td>"
+        "</tr>"
+    )
+
+
+def method_run_row(run: Run, prefix: str) -> str:
+    return (
+        "<tr>"
+        f'<td><a href="{prefix}runs/{run.slug}.html">{escape(dataset_label(run.dataset))}</a></td>'
+        f"<td>{escape(short_model_label(run.model) or 'deterministic')}</td>"
+        f"<td>{escape(run.metric_name)} {escape(format_metric(run.metric_value))}</td>"
+        f"<td>{escape(str(run.count or 'n/a'))}</td>"
+        "</tr>"
+    )
+
+
+def load_dataset_items(runs: list[Run]):
+    if not runs:
+        return []
+    dataset_path = Path(str(runs[0].data.get("dataset", "")))
+    if not dataset_path.is_absolute():
+        dataset_path = ROOT / dataset_path
+    try:
+        return load_code_dataset(dataset_path)
+    except Exception:
+        return []
+
+
+def write_sample_pages(dataset: str, items, runs: list[Run]) -> None:
+    sample_dir = DOCS_DIR / "samples" / slugify(dataset)
+    sample_dir.mkdir(parents=True, exist_ok=True)
+    for index, item in enumerate(items, start=1):
+        score_rows = "".join(sample_score_row(item.task_id, run) for run in runs)
+        mode_tabs = sample_mode_tabs(item.task_id, runs)
+        mode_panels = sample_mode_panels(item, runs)
+        body = f"""
+        <section class="panel">
+          <p class="eyebrow">Sample</p>
+          <h1>{escape(item.task_id)}</h1>
+          <div class="stats">
+            {stat("Dataset", dataset_label(dataset))}
+            {stat(dataset_human_label(runs), format_metric(as_float(item.readability_score)))}
+            {stat("Order", str(index))}
+            {stat("Lines", str(len(item.content.splitlines())))}
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Scores</h2>
+          <table class="records">
+            <thead><tr><th>Method</th><th>Score</th></tr></thead>
+            <tbody>{score_rows}</tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Views</h2>
+          <div class="mode-tabs">{mode_tabs}</div>
+          {mode_panels}
+        </section>
+        """
+        write_page(sample_dir / f"{slugify(item.task_id)}.html", item.task_id, body, prefix="../../")
+
+
+def sample_score_row(task_id: str, run: Run) -> str:
+    score = run_score_by_task(run).get(task_id)
+    return (
+        "<tr>"
+        f"<td>{escape(short_run_label(run))}</td>"
+        f"<td>{escape(format_metric(as_float(score)))}</td>"
+        "</tr>"
+    )
+
+
+def sample_mode_tabs(task_id: str, runs: list[Run]) -> str:
+    tabs = ['<button class="mode-tab active" type="button" data-mode-target="mode-code">Code</button>']
+    for run in runs:
+        if task_id in run_score_by_task(run):
+            target = f"mode-{run.slug}"
+            tabs.append(
+                f'<button class="mode-tab" type="button" data-mode-target="{escape(target)}">'
+                f"{escape(short_run_label(run))}</button>"
+            )
+    return "".join(tabs)
+
+
+def sample_mode_panels(item, runs: list[Run]) -> str:
+    panels = [
+        (
+            '<div class="mode-panel active" id="mode-code">'
+            f'<pre class="code-block"><code>{escape(item.content)}</code></pre>'
+            '</div>'
+        )
+    ]
+    for run in runs:
+        if item.task_id not in run_score_by_task(run):
+            continue
+        panel_id = f"mode-{run.slug}"
+        if run.method == "posnett":
+            panels.append(posnett_panel(panel_id, item, run))
+        elif run.method in {"rmc_masked", "rmc_em"}:
+            panels.append(rmc_panel(panel_id, item, run))
+        elif run.method == "cognascore":
+            panels.append(cognascore_panel(panel_id, item, run))
+        elif run.method in {"llm", "llm_prompt"}:
+            panels.append(llm_panel(panel_id, item, run))
+        else:
+            score = run_score_by_task(run).get(item.task_id)
+            panels.append(
+                f'<div class="mode-panel" id="{escape(panel_id)}">'
+                f"<p class=\"muted\">{escape(short_run_label(run))} visualization placeholder. "
+                "This view will show method-specific evidence after the renderer is implemented.</p>"
+                f"<div class=\"stats\">{stat('Score', format_metric(as_float(score)))}</div>"
+                "</div>"
+            )
+    return "".join(panels)
+
+
+def posnett_panel(panel_id: str, item, run: Run) -> str:
+    row = run_row_by_task(run).get(item.task_id, {})
+    result = row.get("result", {})
+    formula = "p = sigmoid(8.87 - 0.033 * Halstead volume + 0.40 * LOC - 1.5 * byte entropy)"
+    metrics = [
+        ("Score", format_metric(as_float(row.get("score")))),
+        ("Probability", format_metric(as_float(result.get("probability")))),
+        ("z", format_metric(as_float(result.get("z_value")))),
+        ("LOC", str(result.get("lines", "n/a"))),
+        ("Halstead V", format_metric(as_float(result.get("halstead_volume")))),
+        ("Byte entropy", format_metric(as_float(result.get("byte_entropy")))),
+        ("Tokens", str(result.get("token_count", "n/a"))),
+        ("Vocabulary", str(result.get("vocabulary_size", "n/a"))),
+    ]
+    return f"""
+    <div class="mode-panel" id="{escape(panel_id)}">
+      <div class="grid two">
+        <article>
+          <h3>Operators</h3>
+          <p class="muted">Highlighted spans are Java operators and keywords used in the Halstead component after comments are stripped.</p>
+          <pre class="code-block"><code>{highlight_posnett_operations(item.content)}</code></pre>
+        </article>
+        <article>
+          <h3>Formula</h3>
+          <p class="formula">{escape(formula)}</p>
+          {definition_list(metrics)}
+        </article>
+      </div>
+    </div>
+    """
+
+
+def rmc_panel(panel_id: str, item, run: Run) -> str:
+    task_data = task_result_data(run, item.task_id)
+    score = run_score_by_task(run).get(item.task_id)
+    if not task_data:
+        return (
+            f'<div class="mode-panel" id="{escape(panel_id)}">'
+            f"<p class=\"muted\">No RMC task result found for {escape(item.task_id)}.</p>"
+            "</div>"
+        )
+    hard = hardest_contributing_mask_recoveries(
+        task_data,
+        selected_order=(1,) if run.method == "rmc_em" else (3, 2, 1),
+    )
+    hard_rows = "".join(hard_mask_row(rank, row) for rank, row in enumerate(hard[:2], start=1))
+    if not hard_rows:
+        hard_rows = '<tr><td colspan="5" class="missing">No contributing mask recovery available.</td></tr>'
+    patches = hard_mask_patches(hard[:2])
+    aggregation_label = RMC_EM_AGGREGATION_LABEL if run.method == "rmc_em" else RMC_AGGREGATION_LABEL
+    stats = [
+        ("Displayed Score", format_metric(as_float(score))),
+        ("Aggregation", aggregation_label),
+        ("Masks", str(len(task_data.get("masks", [])))),
+        ("Contributing Masks", str(len(hard))),
+    ]
+    return f"""
+    <div class="mode-panel" id="{escape(panel_id)}">
+      <div class="grid two">
+        <article>
+          <h3>Most Suspicious Control Regions</h3>
+          <table class="records">
+            <thead><tr><th>Rank</th><th>Control</th><th>Recovery</th><th>Gap</th><th>Lines</th></tr></thead>
+            <tbody>{hard_rows}</tbody>
+          </table>
+          <p class="muted evidence-note">Only masks used by the displayed-score aggregation are ranked. Gap is 1 - recovery similarity, so larger values indicate regions where the model prediction diverged most from the original code.</p>
+          {definition_list(stats)}
+        </article>
+        <article>
+          <h3>Model Patches</h3>
+          {patches}
+        </article>
+      </div>
+    </div>
+    """
+
+
+def cognascore_panel(panel_id: str, item, run: Run) -> str:
+    row = run_row_by_task(run).get(item.task_id, {})
+    result = row.get("result", {}) if isinstance(row.get("result"), dict) else {}
+    metrics = [
+        ("Score", format_metric(as_float(row.get("score")))),
+        ("Average Cluster Diameter", format_metric(as_float(result.get("avg_cluster_diameter")))),
+        ("Clusters", str(result.get("cluster_count", "n/a"))),
+        ("Lexemes", str(result.get("lexeme_count", "n/a"))),
+        ("Noise Lexemes", str(result.get("noise_lexeme_count", "n/a"))),
+    ]
+    return f"""
+    <div class="mode-panel" id="{escape(panel_id)}">
+      <div class="grid two">
+        <article>
+          <h3>Cluster Summary</h3>
+          {definition_list(metrics)}
+          <p class="muted evidence-note">The current stored CognaScore output contains aggregate cluster statistics per sample. Detailed cluster membership can be added here if future runs persist per-lexeme cluster assignments.</p>
+        </article>
+        <article>
+          <h3>Code</h3>
+          <pre class="code-block"><code>{escape(item.content)}</code></pre>
+        </article>
+      </div>
+    </div>
+    """
+
+
+def llm_panel(panel_id: str, item, run: Run) -> str:
+    row = run_row_by_task(run).get(item.task_id, {})
+    result = row.get("result", {}) if isinstance(row.get("result"), dict) else {}
+    score = as_float(row.get("score"))
+    reasoning = str(result.get("reasoning") or row.get("reasoning") or "No reasoning stored.")
+    metrics = [
+        ("Score", format_metric(score)),
+        ("Scale", "0-20"),
+        ("Model", short_model_label(run.model) or str(run.model or "n/a")),
+    ]
+    prompt = LLM_READABILITY_PROMPT_TEMPLATE.format(code="{code}")
+    return f"""
+    <div class="mode-panel" id="{escape(panel_id)}">
+      <div class="grid two">
+        <article>
+          <h3>LLM Score</h3>
+          {definition_list(metrics)}
+        </article>
+        <article>
+          <h3>Reasoning</h3>
+          <p class="muted llm-reasoning">{escape(reasoning)}</p>
+        </article>
+      </div>
+      <h3>Prompt</h3>
+      <pre class="code-block"><code>{escape(prompt)}</code></pre>
+    </div>
+    """
+
+
+def run_row_by_task(run: Run) -> dict[str, dict[str, Any]]:
+    result = {}
+    for row in run.data.get("results", []):
+        task_id = row.get("task_id")
+        if task_id is not None:
+            result[str(task_id)] = row
+    return result
+
+
+def task_result_data(run: Run, task_id: str) -> dict[str, Any] | None:
+    key = (run.summary_path.parent, task_id)
+    if key in _TASK_RESULT_CACHE:
+        return _TASK_RESULT_CACHE[key]
+    path = run.summary_path.parent / safe_path_part(task_id) / "result.json"
+    if not path.is_file():
+        _TASK_RESULT_CACHE[key] = None
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        data = None
+    _TASK_RESULT_CACHE[key] = data
+    return data
+
+
+def display_score_for_row(run: Run, row: dict[str, Any]) -> float | None:
+    task_id = row.get("task_id")
+    if run.method == "rmc_masked" and task_id is not None:
+        return rmc_fallback_mean_score(task_result_data(run, str(task_id)))
+    if run.method == "rmc_em" and task_id is not None:
+        return rmc_em_single_region_mean_score(task_result_data(run, str(task_id)))
+    return as_float(row.get("score", row.get("rmc_score")))
+
+
+def rmc_fallback_mean_score(task_data: dict[str, Any] | None) -> float | None:
+    if not task_data:
+        return None
+    by_k: dict[int, list[float]] = {}
+    masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
+    for recovery in task_data.get("recoveries", []):
+        mask = masks.get(recovery.get("index"), {})
+        selected = mask.get("selected_segments") or recovery.get("selected_segments")
+        score = as_float(recovery.get("score", recovery.get("similarity")))
+        if isinstance(selected, int) and score is not None:
+            by_k.setdefault(selected, []).append(score)
+    for selected in (3, 2, 1):
+        scores = by_k.get(selected)
+        if scores:
+            return sum(scores) / len(scores)
+    return None
+
+
+def rmc_em_single_region_mean_score(task_data: dict[str, Any] | None) -> float | None:
+    if not task_data:
+        return None
+    masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
+    scores = []
+    for recovery in task_data.get("recoveries", []):
+        mask = masks.get(recovery.get("index"), {})
+        selected = mask.get("selected_segments") or recovery.get("selected_segments")
+        score = as_float(recovery.get("score", recovery.get("similarity")))
+        if selected == 1 and score is not None:
+            scores.append(score)
+    return sum(scores) / len(scores) if scores else None
+
+
+def hardest_contributing_mask_recoveries(
+    task_data: dict[str, Any],
+    selected_order: tuple[int, ...] = (3, 2, 1),
+) -> list[dict[str, Any]]:
+    rows = []
+    masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
+    for recovery in task_data.get("recoveries", []):
+        mask = masks.get(recovery.get("index"), {})
+        score = as_float(recovery.get("score", recovery.get("similarity")))
+        k = mask.get("selected_segments") or recovery.get("selected_segments")
+        if score is None:
+            continue
+        row = dict(mask)
+        row.update(recovery)
+        row["score"] = score
+        row["k"] = k
+        rows.append(row)
+    active = contributing_mask_size(rows, selected_order)
+    if active is None:
+        return []
+    contributing = [row for row in rows if row.get("k") == active]
+    count = len(contributing)
+    for row in contributing:
+        score = as_float(row.get("score"))
+        row["impact"] = None if score is None or count == 0 else (1 - score) / count
+    return sorted(contributing, key=lambda row: (as_float(row.get("score")) or 0.0, mask_size(row), span_start(row)))
+
+
+def contributing_mask_size(
+    rows: list[dict[str, Any]],
+    selected_order: tuple[int, ...] = (3, 2, 1),
+) -> int | None:
+    for selected in selected_order:
+        if any(row.get("k") == selected for row in rows):
+            return selected
+    return None
+
+
+def hard_mask_row(rank: int, row: dict[str, Any]) -> str:
+    score = as_float(row.get("score", row.get("similarity")))
+    gap = None if score is None else 1 - score
+    return (
+        "<tr>"
+        f"<td>{rank}</td>"
+        f"<td>{escape(mask_label(row))}</td>"
+        f"<td>{escape(format_metric(score))}</td>"
+        f"<td>{escape(format_metric(gap))}</td>"
+        f"<td>{escape(span_label(row))}</td>"
+        "</tr>"
+    )
+
+
+def hard_mask_patches(hard_rows: list[dict[str, Any]]) -> str:
+    if not hard_rows:
+        return '<p class="missing">No model patch available.</p>'
+    blocks = []
+    for rank, row in enumerate(hard_rows, start=1):
+        recovered = str(row.get("recovered_text") or row.get("recovered_code") or "")
+        if not recovered.strip():
+            recovered = str(row.get("llm_answer") or "No recovered patch stored.")
+        expected = str(row.get("expected_text") or row.get("expected_source") or "")
+        blocks.append(
+            '<section class="patch-card">'
+            f"<h4>#{rank} {escape(mask_label(row))} · lines {escape(span_label(row))}</h4>"
+            '<p class="muted">Model prediction as a readability repair patch</p>'
+            f'<pre class="code-block patch"><code>{escape(recovered)}</code></pre>'
+            '<details><summary>Original hidden code</summary>'
+            f'<pre class="code-block patch"><code>{escape(expected)}</code></pre>'
+            '</details>'
+            '</section>'
+        )
+    return "".join(blocks)
+
+
+def highlight_hard_masks(task_data: dict[str, Any], hard_rows: list[dict[str, Any]]) -> str:
+    lines = task_data.get("source_lines") or []
+    if not isinstance(lines, list):
+        lines = []
+    rank_by_line: dict[int, int] = {}
+    for rank, row in enumerate(hard_rows, start=1):
+        for span in row.get("spans", []):
+            start = int(span.get("start", 0))
+            end = int(span.get("end", start + 1))
+            for line_index in range(start, end):
+                rank_by_line.setdefault(line_index, rank)
+    rendered = []
+    for index, line in enumerate(lines):
+        rank = rank_by_line.get(index)
+        label = f"{index + 1:>4} "
+        escaped = escape(str(line))
+        if rank == 1:
+            rendered.append(f'<span class="hard hard-1">{escape(label)}{escaped}</span>')
+        elif rank == 2:
+            rendered.append(f'<span class="hard hard-2">{escape(label)}{escaped}</span>')
+        else:
+            rendered.append(f"{escape(label)}{escaped}")
+    return "\n".join(rendered)
+
+
+def control_label(row: dict[str, Any]) -> str:
+    node_type = row.get("node_type")
+    role = row.get("ast_role")
+    if node_type and role:
+        return f"{node_type} · {role}"
+    if node_type:
+        return str(node_type)
+    nodes = row.get("node_types")
+    if isinstance(nodes, list) and nodes:
+        return ", ".join(str(node) for node in nodes)
+    return "control"
+
+
+def mask_label(row: dict[str, Any]) -> str:
+    selected = row.get("selected_segments")
+    if selected is None:
+        selected = mask_size(row)
+    if selected == 1:
+        return control_label(row)
+    nodes = row.get("node_types")
+    if isinstance(nodes, list) and nodes:
+        preview = ", ".join(str(node) for node in nodes[:3])
+        suffix = "" if len(nodes) <= 3 else f" +{len(nodes) - 3}"
+        return f"{selected}-mask · {preview}{suffix}"
+    return f"{selected}-mask"
+
+
+def mask_size(row: dict[str, Any]) -> int:
+    selected = row.get("selected_segments")
+    if isinstance(selected, int):
+        return selected
+    spans = row.get("spans")
+    if isinstance(spans, list):
+        return len(spans)
+    return 0
+
+
+def span_label(row: dict[str, Any]) -> str:
+    spans = row.get("spans") or []
+    labels = []
+    for span in spans:
+        start = int(span.get("start", 0)) + 1
+        end = int(span.get("end", start)) 
+        labels.append(str(start) if end <= start else f"{start}-{end}")
+    return ", ".join(labels) if labels else "n/a"
+
+
+def span_start(row: dict[str, Any]) -> int:
+    spans = row.get("spans") or []
+    if not spans:
+        return 0
+    return int(spans[0].get("start", 0))
+
+
+def highlight_posnett_operations(code: str) -> str:
+    stripped = "\n".join(line.rstrip() for line in strip_comments(code).splitlines())
+    parts = []
+    cursor = 0
+    for match in TOKEN_PATTERN.finditer(stripped):
+        token = match.group(0)
+        parts.append(escape(stripped[cursor:match.start()]))
+        if token in JAVA_OPERATORS or token in JAVA_KEYWORDS:
+            parts.append(f'<mark>{escape(token)}</mark>')
+        else:
+            parts.append(escape(token))
+        cursor = match.end()
+    parts.append(escape(stripped[cursor:]))
+    return "".join(parts)
+
+
+def dataset_sample_row(dataset: str, index: int, item, runs: list[Run]) -> str:
+    score_cells = []
+    loc = len(item.content.splitlines())
+    sort_attrs = [
+        f'data-order="{index}"',
+        f'data-human="{number_attr(item.readability_score)}"',
+        f'data-code-lines="{loc}"',
+    ]
+    for run in runs:
+        score = run_score_by_task(run).get(item.task_id)
+        key = run_sort_key(run)
+        sort_attrs.append(f'data-{key}="{number_attr(score)}"')
+        score_cells.append(f"<td>{escape(format_metric(as_float(score)))}</td>")
+    sample_href = f"../samples/{slugify(dataset)}/{slugify(item.task_id)}.html"
+    return (
+        f"<tr {' '.join(sort_attrs)}>"
+        f'<td><a href="{sample_href}">{escape(item.task_id)}</a></td>'
+        f"<td>{escape(format_metric(as_float(item.readability_score)))}</td>"
+        + "".join(score_cells)
+        + f"<td>{escape(str(loc))}</td>"
+        "</tr>"
+    )
+
+
+def run_sample_row(run: Run, index: int, item) -> str:
+    score = run_score_by_task(run).get(item.task_id)
+    if score is None:
+        return ""
+    diff = run_difference_by_task(run).get(item.task_id)
+    loc = len(item.content.splitlines())
+    score_key = run_sort_key(run)
+    sample_href = f"../samples/{slugify(run.dataset)}/{slugify(item.task_id)}.html"
+    sort_attrs = [
+        f'data-order="{index}"',
+        f'data-human="{number_attr(item.readability_score)}"',
+        f'data-{score_key}="{number_attr(score)}"',
+        f'data-diff="{number_attr(diff)}"',
+        f'data-code-lines="{loc}"',
+    ]
+    return (
+        f"<tr {' '.join(sort_attrs)}>"
+        f'<td><a href="{sample_href}">{escape(item.task_id)}</a></td>'
+        f"<td>{escape(format_metric(as_float(item.readability_score)))}</td>"
+        f"<td>{escape(format_metric(as_float(score)))}</td>"
+        f"<td>{escape(format_metric(as_float(diff)))}</td>"
+        f"<td>{escape(str(loc))}</td>"
+        "</tr>"
+    )
+
+
+def sortable_header(label: str, key: str, initial_dir: str = "desc") -> str:
+    return (
+        '<th>'
+        f'<button class="sort-header" type="button" data-sort-key="{escape(key)}" '
+        f'data-sort-dir="{escape(initial_dir)}">{escape(label)} <span aria-hidden="true">↕</span></button>'
+        '</th>'
+    )
+
+
+def run_score_by_task(run: Run) -> dict[str, float | None]:
+    if run.slug in _RUN_SCORE_CACHE:
+        return _RUN_SCORE_CACHE[run.slug]
+    result = {}
+    for row in run.data.get("results", []):
+        task_id = row.get("task_id")
+        if task_id is None:
+            continue
+        result[str(task_id)] = display_score_for_row(run, row)
+    _RUN_SCORE_CACHE[run.slug] = result
+    return result
+
+
+def run_difference_by_task(run: Run) -> dict[str, float | None]:
+    rows = run.valid_rows()
+    if not rows:
+        return {}
+    scores = [float(row["score"]) for row in rows]
+    human = [float(row["readability_score"]) for row in rows]
+    if all(value in {0.0, 1.0} for value in human):
+        threshold = as_float(run.data.get("classification_threshold"))
+        if threshold is None:
+            threshold = best_binary_threshold_value(scores, [int(value) for value in human])
+        if threshold is None:
+            return {str(row["task_id"]): None for row in rows}
+        return {
+            str(row["task_id"]): abs(float(float(row["score"]) >= threshold) - float(row["readability_score"]))
+            for row in rows
+        }
+
+    score_ranks = percentile_ranks(scores)
+    human_ranks = percentile_ranks(human)
+    if continuous_direction(run, scores, human) < 0:
+        score_ranks = [1.0 - value for value in score_ranks]
+    return {
+        str(row["task_id"]): abs(score_rank - human_rank)
+        for row, score_rank, human_rank in zip(rows, score_ranks, human_ranks)
+    }
+
+
+def percentile_ranks(values: list[float]) -> list[float]:
+    if len(values) <= 1:
+        return [0.0 for _ in values]
+    ordered = sorted((value, index) for index, value in enumerate(values))
+    ranks = [0.0 for _ in values]
+    start = 0
+    while start < len(ordered):
+        end = start + 1
+        while end < len(ordered) and ordered[end][0] == ordered[start][0]:
+            end += 1
+        average_rank = (start + end - 1) / 2
+        percentile = average_rank / (len(values) - 1)
+        for _, index in ordered[start:end]:
+            ranks[index] = percentile
+        start = end
+    return ranks
+
+
+def continuous_direction(run: Run, scores: list[float], human: list[float]) -> int:
+    value = run.metric_value
+    if value is None and len(scores) >= 2:
+        value = spearman(scores, human)
+    return -1 if value is not None and value < 0 else 1
+
+
+def run_sort_key(run: Run) -> str:
+    return "score-" + slugify(run.slug).lower().replace(".", "_")
+
+
+def run_group_key(run: Run) -> tuple[str, str | None]:
+    if run.model:
+        return run.method, run.model
+    return run.method, None
+
+
+def run_group_label(method: str, model: str | None) -> str:
+    if model is None:
+        return method_label(method)
+    short = short_model_label(model) or model
+    if method in {"rmc_masked", "rmc_em"}:
+        return f"{method_label(method)} {short}"
+    return f"{method_label(method)} ({short})"
+
+
+def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
+    method, model = group
+    return method_rank(method) + (short_model_label(model) or model or "",)
+
+
+def short_run_label(run: Run) -> str:
+    model = short_model_label(run.model)
+    if run.method in {"rmc_masked", "rmc_em"} and model:
+        return f"{method_label(run.method)} {model}"
+    if model:
+        return f"{method_label(run.method)} ({model})"
+    return method_label(run.method)
+
+
+def dataset_human_label(runs: list[Run]) -> str:
+    values = []
+    for run in runs:
+        for row in run.data.get("results", []):
+            value = as_float(row.get("readability_score"))
+            if value is not None:
+                values.append(value)
+    if values and all(value in {0.0, 1.0} for value in values):
+        return "Label"
+    return "Human"
+
+
+def number_attr(value: Any) -> str:
+    number = as_float(value)
+    return "" if number is None else f"{number:.12g}"
+
+
+def task_row(row: dict[str, Any], run: Run | None = None) -> str:
+    task_id = row.get("task_id", "unknown")
+    score = display_score_for_row(run, row) if run is not None else row.get("rmc_score", row.get("score"))
+    return (
+        "<tr>"
+        f"<td>{escape(str(task_id))}</td>"
+        f"<td>{escape(format_metric(as_float(row.get('readability_score'))))}</td>"
+        f"<td>{escape(format_metric(as_float(score)))}</td>"
+        f"<td>{escape(str(row.get('mask_count', '')))}</td>"
+        "</tr>"
+    )
+
+
+def best_mcc(scores: list[float], actual: list[int]) -> float | None:
+    unique = sorted(set(scores))
+    if not unique:
+        return None
+    candidates = [unique[0] - 1e-12]
+    candidates.extend((left + right) / 2 for left, right in zip(unique, unique[1:]))
+    candidates.append(unique[-1] + 1e-12)
+    best = None
+    for threshold in candidates:
+        predicted = [int(score >= threshold) for score in scores]
+        value = matthews_correlation_coefficient(predicted, actual)
+        if best is None or value > best:
+            best = value
+    return best
+
+
+def best_binary_threshold_value(scores: list[float], actual: list[int]) -> float | None:
+    unique = sorted(set(scores))
+    if not unique:
+        return None
+    candidates = [unique[0] - 1e-12]
+    candidates.extend((left + right) / 2 for left, right in zip(unique, unique[1:]))
+    candidates.append(unique[-1] + 1e-12)
+    best_threshold = None
+    best_value = None
+    for threshold in candidates:
+        predicted = [int(score >= threshold) for score in scores]
+        value = matthews_correlation_coefficient(predicted, actual)
+        if best_value is None or value > best_value:
+            best_value = value
+            best_threshold = threshold
+    return best_threshold
+
+
+def write_page(path: Path, title: str, body: str, prefix: str = "", current: str = "") -> None:
+    nav = f"""
+    <nav class="topbar">
+      <a class="brand" href="{prefix}index.html">Readability</a>
+      <div>
+        <a href="{prefix}index.html">{escape(current or "Results")}</a>
+      </div>
+    </nav>
+    """
+    page = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(title)} · Readability</title>
+  <link rel="stylesheet" href="{prefix}assets/style.css">
+  <script src="{prefix}assets/app.js" defer></script>
+</head>
+<body>
+  {nav}
+  <main>{body}</main>
+</body>
+</html>
+"""
+    path.write_text(page, encoding="utf-8")
+
+
+def stat(label: str, value: str) -> str:
+    return f'<div class="stat"><span>{escape(label)}</span><strong>{escape(value)}</strong></div>'
+
+
+def definition_list(items: list[tuple[str, str]]) -> str:
+    return "<dl>" + "".join(f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in items) + "</dl>"
+
+
+def link_item(href: str, label: str) -> str:
+    return f'<a href="{href}">{escape(label)}</a>'
+
+
+def as_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def as_int(value: Any) -> int | None:
+    number = as_float(value)
+    return None if number is None else int(number)
+
+
+def format_metric(value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.4f}"
+
+
+def slugify(value: str) -> str:
+    result = []
+    for char in value:
+        if char.isalnum() or char in {".", "_", "-"}:
+            result.append(char)
+        else:
+            result.append("-")
+    return "".join(result).strip("-._") or "default"
+
+
+def escape(value: str) -> str:
+    return html.escape(value, quote=True)
+
+
+STYLE_CSS = """
+:root {
+  color-scheme: light;
+  --bg: #f5f7f8;
+  --panel: #ffffff;
+  --text: #1d252c;
+  --muted: #68717a;
+  --line: #dce2e7;
+  --accent: #176b87;
+  --accent-soft: #e6f3f6;
+  --good: #1b7f4c;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+main { width: min(1180px, calc(100vw - 32px)); margin: 24px auto 56px; }
+.topbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(255,255,255,.92);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.brand { font-weight: 750; color: var(--text); }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+  margin-bottom: 18px;
+}
+.panel.small { margin-bottom: 0; }
+.panel-head {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 18px;
+}
+.panel-head.compact { align-items: start; margin-bottom: 10px; }
+h1, h2 { margin: 0; line-height: 1.15; letter-spacing: 0; }
+h1 { font-size: 30px; }
+h2 { font-size: 18px; margin-bottom: 14px; }
+h3 { margin: 0 0 10px; font-size: 15px; }
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.muted { color: var(--muted); max-width: 620px; margin: 0; }
+.llm-reasoning { max-width: 760px; line-height: 1.55; }
+.matrix-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom: 1px solid var(--line); padding: 12px 10px; text-align: left; vertical-align: top; }
+th { font-weight: 700; color: #2b333a; background: #fafbfc; }
+.matrix th:first-child { min-width: 190px; }
+.matrix td { min-width: 150px; }
+.result-link {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 112px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+}
+.result-link:hover { background: #f7f9fa; border-color: var(--line); }
+.result-link.best {
+  background: #e7f6ec;
+  border-color: #7fc894;
+}
+.result-link.best:hover { background: #dbf0e2; border-color: #5eb577; }
+.result-link strong { color: var(--text); font-size: 17px; }
+.result-link span { color: var(--muted); font-size: 12px; }
+.result-link small { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.missing { color: #9aa3ab; }
+.grid { display: grid; gap: 18px; margin-bottom: 18px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.link-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.link-list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fbfcfd; }
+.stat span { display: block; color: var(--muted); font-size: 12px; }
+.stat strong { display: block; margin-top: 4px; font-size: 18px; overflow-wrap: anywhere; }
+dl { display: grid; grid-template-columns: 170px 1fr; gap: 8px 14px; margin: 0; }
+dt { color: var(--muted); }
+dd { margin: 0; overflow-wrap: anywhere; }
+.records th, .records td { font-size: 14px; }
+.sort-header {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sort-header:hover { color: var(--accent); }
+.sort-header span { color: var(--muted); margin-left: 4px; }
+.sort-header.active span { color: #c74343; }
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.mode-tab {
+  appearance: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mode-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.mode-panel { display: none; }
+.mode-panel.active { display: block; }
+.formula {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  max-width: min(880px, calc(100vw - 80px));
+  max-height: 420px;
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f9fa;
+  color: #1d252c;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.code-block { max-width: none; }
+.code-block mark {
+  background: #fff2a8;
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 3px;
+}
+.hard {
+  display: block;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-left: 3px solid transparent;
+}
+.hard-1 { background: #fff0f0; border-left-color: #c74343; }
+.hard-2 { background: #fff7df; border-left-color: #c28a1d; }
+.evidence-note { margin-top: 12px; }
+.patch-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fbfcfd;
+}
+.patch-card h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.patch-card details {
+  margin-top: 10px;
+}
+.patch-card summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+.code-block.patch {
+  max-height: 220px;
+}
+.sample-table td:first-child { min-width: 260px; }
+@media (max-width: 760px) {
+  main { width: min(100vw - 20px, 1180px); margin-top: 12px; }
+  .topbar { padding: 0 14px; }
+  .panel { padding: 16px; }
+  .panel-head, .grid.two { display: block; }
+  .grid.two .panel { margin-bottom: 14px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  dl { grid-template-columns: 1fr; }
+}
+"""
+
+
+APP_JS = """
+function numericValue(row, key) {
+  const raw = row.getAttribute(`data-${key}`) || "";
+  if (raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function sortSampleTable(control) {
+  const table = control.closest("table");
+  if (!table) return;
+  const tbody = table.querySelector("tbody");
+  const key = control.dataset.sortKey;
+  const current = control.dataset.sortDir || "desc";
+  const dir = current === "desc" ? -1 : 1;
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  rows.sort((left, right) => {
+    const a = numericValue(left, key);
+    const b = numericValue(right, key);
+    if (a === null && b === null) {
+      return numericValue(left, "order") - numericValue(right, "order");
+    }
+    if (a === null) return 1;
+    if (b === null) return -1;
+    if (a === b) return numericValue(left, "order") - numericValue(right, "order");
+    return (a - b) * dir;
+  });
+  rows.forEach((row) => tbody.appendChild(row));
+  table.querySelectorAll(".sort-header").forEach((item) => {
+    item.classList.remove("active");
+    const marker = item.querySelector("span");
+    if (marker) marker.textContent = "↕";
+  });
+  const indicator = control.querySelector("span");
+  if (indicator) indicator.textContent = current === "desc" ? "↓" : "↑";
+  control.classList.add("active");
+  control.dataset.sortDir = current === "desc" ? "asc" : "desc";
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest(".sort-header[data-sort-key]");
+  if (button) {
+    sortSampleTable(button);
+    return;
+  }
+  const tab = event.target.closest(".mode-tab[data-mode-target]");
+  if (!tab) return;
+  const panel = tab.closest(".panel");
+  panel.querySelectorAll(".mode-tab").forEach((item) => item.classList.remove("active"));
+  panel.querySelectorAll(".mode-panel").forEach((item) => item.classList.remove("active"));
+  tab.classList.add("active");
+  const target = document.getElementById(tab.dataset.modeTarget);
+  if (target) target.classList.add("active");
+});
+"""
+
+
+if __name__ == "__main__":
+    main()

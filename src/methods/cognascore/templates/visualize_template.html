@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>CognaScore Cluster Visualization</title>
+    <style>
+        :root {
+          --bg: #fafafa;
+          --card: #ffffff;
+          --muted: #6b7280;
+          --chip-bg: #eef3f7;
+          --chip-fg: #0b2239;
+          --chip-gray: #e9e9e9;
+          --chip-gray-fg: #444;
+          --border: #ddd;
+          --accent: #1f6feb;
+        }
+        * { box-sizing: border-box; }
+        body {
+          margin: 16px;
+          font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+          background: var(--bg);
+          color: #111;
+        }
+        h1 { margin: 0 0 12px 0; font-weight: 700; font-size: 22px; }
+        .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+        .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+        .panel h2 { margin: 0 0 8px 0; font-size: 15px; }
+
+        input[type="text"] {
+          width: 260px; padding: 8px 10px;
+          border: 1px solid var(--border); border-radius: 8px;
+          background: #fff;
+        }
+        button {
+          padding: 8px 12px; border: 1px solid var(--accent);
+          background: var(--accent); color: #fff;
+          border-radius: 8px; cursor: pointer;
+          font-weight: 600; font-size: 13px;
+        }
+        button.secondary { background: #fff; color: var(--accent); }
+
+        .results { display: grid; gap: 14px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+
+        .title {
+          display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+          font-weight: 700; margin-bottom: 10px; font-size: 15px;
+        }
+        .subtitle { color: var(--muted); font-weight: 500; font-size: 12px; }
+
+        .grid-top {
+          display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 10px;
+        }
+        .grid-top > .col { min-width: 0; }
+        .col { background: #f7f7f7; border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+        .col h3 { margin: 0 0 6px 0; font-size: 13px; }
+
+        .code-scroll { overflow-x: auto; width: 100%; }
+        .code-rows { display: grid; gap: 2px; min-width: max-content; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+        .code-row { display: grid; grid-template-columns: 54px max-content; gap: 8px; }
+        .lineno { color: var(--muted); text-align: right; }
+        .code-line { white-space: pre; }
+
+        .rows { display: grid; gap: 2px; }
+        .chunks-scroll { overflow-x: auto; width: 100%; }
+        .chunks-scroll .rows { min-width: max-content; }
+        .row { display: grid; grid-template-columns: 54px max-content; gap: 8px; align-items: start; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+        .chip {
+          display: inline-flex; align-items: center;
+          padding: 2px 8px; border-radius: 999px;
+          font-size: 12px; line-height: 18px;
+          background: var(--chip-bg); color: var(--chip-fg);
+          border: 1px solid rgba(0,0,0,0.06);
+        }
+        .chip.gray { background: var(--chip-gray); color: var(--chip-gray-fg); }
+
+        .chip.bitwise,
+        .chip.junk,
+        .chip.regex {
+          border: 2px solid #000 !important;
+        }
+
+        .grid-bottom { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+        .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #333; }
+        .swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1); }
+
+        .cluster {
+          border: 1px dashed var(--border); background: #fff;
+          border-radius: 8px; padding: 8px; margin-bottom: 6px;
+        }
+        .cluster h4 { margin: 0 0 6px 0; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<h1>CognaScore Cluster Visualization</h1>
+<h2 id="subtitle">Dataset = (loading), DBSCAN = (loading)</h2>
+
+<div class="toolbar">
+    <div class="panel">
+        <h2>Filter</h2>
+        <label class="subtitle" for="taskFilter">Task ID contains:</label>
+        <input id="taskFilter" type="text" placeholder="substring filter"/>
+        <button id="applyBtn">Apply</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+    </div>
+</div>
+
+<div class="results" id="results"></div>
+
+<script>
+    // ===================
+    // utils
+    // ===================
+    function escapeHtml(s) {
+        return s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    // ===================
+    // DATA placeholder
+    // ===================
+    const EMBEDDED_JSONL = "__COGNASCORE_JSONL__";
+
+    function parseJsonl(text) {
+      return text.split(/\r?\n/)
+                 .map(s => s.trim())
+                 .filter(Boolean)
+                 .map(ln => { try { return JSON.parse(ln); } catch { return null; } })
+                 .filter(Boolean);
+    }
+
+    function clusterColor(idx, total) {
+      const hue = (idx * 137.508) % 360;
+      return `hsl(${hue}, 55%, 70%)`;
+    }
+
+    function buildMembershipMap(clusters) {
+      const map = new Map();
+      (clusters || []).forEach(c => {
+        (c.elements || []).forEach(e => {
+          map.set(`${e.line}|${e.lexeme}`, c.id);
+        });
+      });
+      return map;
+    }
+
+    function renderTaskCard(rec) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const avgDia = rec.avg_diameter?.toFixed(4) ?? "n/a";
+  const clusterDiaMap = rec.cluster_diameters || {};
+  card.innerHTML = `
+    <div class="title">
+      <div>${rec.task_id}</div>
+      <div class="subtitle">
+         clusters = ${rec.clusters.length},
+         avg diameter = ${avgDia}
+      </div>
+    </div>
+  `;
+
+  const gridTop = document.createElement('div');
+  gridTop.className = 'grid-top';
+
+  // ==== LEFT: source ====
+  const left = document.createElement('div');
+  left.className = 'col';
+  left.innerHTML = `<h3>Source</h3>`;
+  const src = (rec.source || "").split(/\r?\n/);
+  const codeScroll = document.createElement('div');
+  codeScroll.className = 'code-scroll';
+  const code = document.createElement('div');
+  code.className = 'code-rows';
+  src.forEach((line, i) => {
+    const row = document.createElement('div');
+    row.className = 'code-row';
+    row.innerHTML = `
+      <div class="lineno">${i+1}</div>
+      <div class="code-line">${escapeHtml(line)}</div>
+    `;
+    code.appendChild(row);
+  });
+  codeScroll.appendChild(code);
+  left.appendChild(codeScroll);
+  gridTop.appendChild(left);
+
+  // ==== RIGHT: chunks ====
+  const right = document.createElement('div');
+  right.className = 'col';
+  right.innerHTML = `<h3>Chunks by Line</h3>`;
+
+  const rows = document.createElement('div');
+  rows.className = 'rows';
+  const chunksScroll = document.createElement('div');
+  chunksScroll.className = 'chunks-scroll';
+
+  const byLine = new Map();
+  (rec.chunks || []).forEach(ch => {
+    if (!byLine.has(ch.line)) byLine.set(ch.line, []);
+    byLine.get(ch.line).push(ch);
+  });
+
+  const membership = buildMembershipMap(rec.clusters);
+  const maxLine = Math.max(src.length, ...(rec.chunks || []).map(c => c.line));
+
+  for (let ln = 1; ln <= maxLine; ln++) {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+
+    const chs = byLine.get(ln) || [];
+    chs.forEach(ch => {
+      const cid = membership.get(`${ch.line}|${ch.lexeme}`);
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+
+      if (cid == null) chip.classList.add('gray');
+      else {
+        const idx = rec.clusters.map(c => c.id).indexOf(cid);
+        chip.style.background = clusterColor(idx, rec.clusters.length);
+      }
+
+      if (ch.type === "BITWISE") chip.classList.add('bitwise');
+      if (ch.type === "JUNK") chip.classList.add('junk');
+      if (ch.type === "REGEX") chip.classList.add('regex');
+
+      chip.textContent = ch.lexeme;
+      chips.appendChild(chip);
+    });
+
+    row.innerHTML = `<div class="lineno">${ln}</div>`;
+    row.appendChild(chips);
+    rows.appendChild(row);
+  }
+
+  chunksScroll.appendChild(rows);
+  right.appendChild(chunksScroll);
+  gridTop.appendChild(right);
+
+  card.appendChild(gridTop);
+
+  // === Bottom: clusters ===
+  const gridBottom = document.createElement('div');
+  gridBottom.className = 'grid-bottom';
+
+  const clustersPanel = document.createElement('div');
+  clustersPanel.className = 'col';
+  clustersPanel.innerHTML = `<h3>Clusters</h3>`;
+
+  // legend
+  const legend = document.createElement('div');
+  legend.className = 'legend';
+  clustersPanel.appendChild(legend);
+
+  rec.clusters.forEach((c, i) => {
+    const block = document.createElement('div');
+    block.className = 'cluster';
+
+    const dia = (clusterDiaMap[String(c.id)] ?? 0).toFixed(4);
+
+    block.innerHTML = `
+      <h4>
+        Cluster ${c.id}
+        <span class="subtitle">
+          (size = ${c.elements.length}, diameter = ${dia})
+        </span>
+      </h4>
+    `;
+
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+
+    c.elements.forEach(e => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.style.background = clusterColor(i, rec.clusters.length);
+
+      if (e.type === "BITWISE") chip.classList.add('bitwise');
+      if (e.type === "JUNK") chip.classList.add('junk');
+      if (e.type === "REGEX") chip.classList.add('regex');
+
+      chip.textContent = `${e.lexeme} @${e.line}`;
+      chips.appendChild(chip);
+    });
+
+    block.appendChild(chips);
+    clustersPanel.appendChild(block);
+  });
+
+  gridBottom.appendChild(clustersPanel);
+// === Bottom: t-SNE visualization (added) ===
+if (rec.tsne && rec.tsne.length > 0) {
+    const tsnePanel = document.createElement('div');
+    tsnePanel.className = 'col';
+    tsnePanel.innerHTML = `<h3>t-SNE Projection (interactive)</h3>`;
+
+    const tsneDiv = document.createElement("div");
+    tsneDiv.style.width = "420px";
+    tsneDiv.style.height = "420px";
+    tsneDiv.style.position = "relative";
+    tsneDiv.style.background = "#fff";
+    tsneDiv.style.border = "1px solid #ddd";
+    tsneDiv.style.borderRadius = "8px";
+
+    tsnePanel.appendChild(tsneDiv);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 420;
+    canvas.height = 420;
+    canvas.style.position = "absolute";
+    canvas.style.left = "0";
+    canvas.style.top = "0";
+    tsneDiv.appendChild(canvas);
+
+    const ctx = canvas.getContext("2d");
+
+    // tooltip
+    const tooltip = document.createElement("div");
+    tooltip.style.position = "absolute";
+    tooltip.style.padding = "4px 6px";
+    tooltip.style.fontSize = "12px";
+    tooltip.style.background = "rgba(0,0,0,0.75)";
+    tooltip.style.color = "#fff";
+    tooltip.style.borderRadius = "4px";
+    tooltip.style.pointerEvents = "none";
+    tooltip.style.visibility = "hidden";
+    tsneDiv.appendChild(tooltip);
+
+    // ==== normalize coordinates ====
+    const xs = rec.tsne.map(p => p.x);
+    const ys = rec.tsne.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+    function mapX(x) { return ((x - minX) / (maxX - minX)) * 380 + 20; }
+    function mapY(y) { return ((y - minY) / (maxY - minY)) * 380 + 20; }
+
+    // membership map
+    const membership = buildMembershipMap(rec.clusters);
+    const clusterIdList = rec.clusters.map(c => c.id);
+
+    // pre-store points with canvas coordinates
+    const points = rec.tsne.map((p, i) => {
+        const key = `${p.line}|${p.lexeme}`;
+        const cid = membership.get(key);
+        let color = "#888";
+        if (cid != null) {
+            const idx = clusterIdList.indexOf(cid);
+            color = clusterColor(idx, rec.clusters.length);
+        }
+        return {
+            ...p,
+            cx: mapX(p.x),
+            cy: mapY(p.y),
+            color,
+            cid
+        };
+    });
+
+    function draw(highlightIndex = -1) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        points.forEach((pt, idx) => {
+            ctx.fillStyle = pt.color;
+            ctx.beginPath();
+
+            const r = (idx === highlightIndex) ? 7 : 4;
+            ctx.arc(pt.cx, pt.cy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (idx === highlightIndex) {
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
+    }
+
+    draw();
+
+    // mouse hover detection
+    canvas.addEventListener("mousemove", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        let hit = -1;
+        for (let i = 0; i < points.length; i++) {
+            const pt = points[i];
+            const dx = pt.cx - mx;
+            const dy = pt.cy - my;
+            if (dx * dx + dy * dy <= 7 * 7) {
+                hit = i;
+                break;
+            }
+        }
+
+        if (hit >= 0) {
+            const pt = points[hit];
+            tooltip.style.left = pt.cx + 10 + "px";
+            tooltip.style.top = pt.cy - 10 + "px";
+            tooltip.innerHTML = `
+            <div><b>${escapeHtml(pt.lexeme)}</b></div>
+            <div>line = ${pt.line}</div>
+            <div>cluster = ${pt.cid ?? "none"}</div>
+        `;
+            tooltip.style.visibility = "visible";
+        } else {
+            tooltip.style.visibility = "hidden";
+        }
+
+        draw(hit);
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+        tooltip.style.visibility = "hidden";
+        draw(-1);
+    });
+
+    gridBottom.appendChild(tsnePanel);
+}
+
+
+      card.appendChild(gridBottom);
+
+      return card;
+    }
+
+    function render(records, filter='') {
+      const container = document.getElementById('results');
+      container.innerHTML = '';
+      const f = filter.toLowerCase();
+      records.filter(r => !f || String(r.task_id).toLowerCase().includes(f))
+             .forEach(r => container.appendChild(renderTaskCard(r)));
+    }
+
+    const ALL = parseJsonl(EMBEDDED_JSONL);
+
+    const META = ALL.length ? ALL[0].meta || ALL[0] : {};
+    const RECS = ALL.slice(1);
+
+
+    (function updateSubtitle() {
+      const meta = META;
+
+      const dataset = meta.dataset || "(unknown)";
+      const description = meta.description || "(none)";
+
+      document.getElementById("subtitle").textContent =
+        `Dataset = ${dataset}, ${description}`;
+    })();
+
+
+    render(RECS);
+
+    document.getElementById('applyBtn')
+      .addEventListener('click', () =>
+        render(RECS, document.getElementById('taskFilter').value)
+      );
+
+    document.getElementById('clearBtn')
+      .addEventListener('click', () => {
+        document.getElementById('taskFilter').value = '';
+        render(RECS);
+      });
+
+</script>
+</body>
+</html>

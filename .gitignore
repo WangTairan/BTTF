@@ -1,0 +1,30 @@
+# Local OS/editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Experiment outputs and historical run data
+output/
+backups/
+
+# Local model/download caches
+models/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Keep the generated GitHub Pages visualization tracked.
+!docs/
+!docs/**
