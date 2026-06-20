@@ -27,8 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / "output"
 DOCS_DIR = ROOT / "docs"
 
-RMC_AGGREGATION_LABEL = "fallback mean 3->2->1"
-RMC_EM_AGGREGATION_LABEL = "single-region mean"
+RMC_AGGREGATION_LABEL = "single-region mean with method-body half penalty"
 _TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
 _RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
 _DATASET_TOTAL_CACHE: dict[str, int | None] = {}
@@ -44,7 +43,7 @@ class Run:
 
     @property
     def label(self) -> str:
-        if self.method in {"rmc_masked", "rmc_em"}:
+        if self.method == "rmc":
             return f"{run_group_label(self.method, self.model)} on {dataset_label(self.dataset)}"
         model = f" · {short_model_label(self.model)}" if self.model else ""
         return f"{method_label(self.method)} on {dataset_label(self.dataset)}{model}"
@@ -321,15 +320,11 @@ def write_method_pages(runs: list[Run]) -> None:
 
 
 def method_description(method: str) -> str:
-    if method == "rmc_masked":
+    if method == "rmc":
         return f"""
-          <p class="muted">RMC overall match masks control-flow regions, asks an LLM to reconstruct the full code, and scores the whole reconstructed program against the original.</p>
-          <p class="muted">Key parameters: model is shown in the run table, granularity = control, max masked regions = 3, similarity = sequence similarity.</p>
-        """
-    if method == "rmc_em":
-        return f"""
-          <p class="muted">RMC mask match asks the LLM to return a keyed JSON object such as <code>{{"mask_1": "..."}}</code>, then compares each recovered mask directly with the hidden code.</p>
-          <p class="muted">Key parameters: model is shown in the run table, granularity = control, aggregation = <strong>{escape(RMC_EM_AGGREGATION_LABEL)}</strong>, similarity = sequence similarity over exact mask contents.</p>
+          <p class="muted">RMC asks the LLM to return a keyed JSON object such as <code>{{"mask_1": "..."}}</code>, then compares each recovered mask directly with the hidden code.</p>
+          <p class="muted">Key parameters: model is shown in the run table, granularity = control, aggregation = <strong>{escape(RMC_AGGREGATION_LABEL)}</strong>, similarity = sequence similarity over exact mask contents.</p>
+          <p class="formula">method_body score = 1 - 0.5 * (1 - similarity); other control scores = similarity</p>
         """
     if method == "cognascore":
         return """
@@ -505,13 +500,12 @@ def run_config_items(run: Run) -> list[tuple[str, str]]:
 def readable_run_config_items(run: Run) -> list[tuple[str, str]]:
     data = run.data
     items: list[tuple[str, str]] = []
-    if run.method in {"rmc_masked", "rmc_em"}:
+    if run.method == "rmc":
         if data.get("mask_strategy") is not None:
             items.append(("Masking", readable_masking(data)))
         if data.get("ast_granularity") is not None:
             items.append(("Code Region", readable_granularity(data.get("ast_granularity"))))
-        if run.method == "rmc_em":
-            items.append(("Aggregation", "Single-region mean"))
+        items.append(("Aggregation", RMC_AGGREGATION_LABEL))
         if data.get("max_combination_size") is not None:
             items.append(("Mask Combination", f"Up to {data['max_combination_size']} regions at once"))
         if data.get("sampling_mode") is not None:
@@ -700,7 +694,7 @@ def sample_mode_panels(item, runs: list[Run]) -> str:
         panel_id = f"mode-{run.slug}"
         if run.method == "posnett":
             panels.append(posnett_panel(panel_id, item, run))
-        elif run.method in {"rmc_masked", "rmc_em"}:
+        elif run.method == "rmc":
             panels.append(rmc_panel(panel_id, item, run))
         elif run.method == "cognascore":
             panels.append(cognascore_panel(panel_id, item, run))
@@ -759,35 +753,42 @@ def rmc_panel(panel_id: str, item, run: Run) -> str:
             f"<p class=\"muted\">No RMC task result found for {escape(item.task_id)}.</p>"
             "</div>"
         )
-    hard = hardest_contributing_mask_recoveries(
+    control_rows = contributing_control_recoveries(
         task_data,
-        selected_order=(1,) if run.method == "rmc_em" else (3, 2, 1),
+        selected_order=(1,) if run.method == "rmc" else (3, 2, 1),
     )
-    hard_rows = "".join(hard_mask_row(rank, row) for rank, row in enumerate(hard[:2], start=1))
-    if not hard_rows:
-        hard_rows = '<tr><td colspan="5" class="missing">No contributing mask recovery available.</td></tr>'
-    patches = hard_mask_patches(hard[:2])
-    aggregation_label = RMC_EM_AGGREGATION_LABEL if run.method == "rmc_em" else RMC_AGGREGATION_LABEL
+    hard = sorted(control_rows, key=lambda row: (as_float(row.get("score")) or 0.0, mask_size(row), span_start(row)))
+    control_table_rows = "".join(
+        control_recovery_row(rank, row) for rank, row in enumerate(control_rows, start=1)
+    )
+    if not control_table_rows:
+        control_table_rows = '<tr><td colspan="6" class="missing">No contributing control recovery available.</td></tr>'
+    patches = mask_patch_cards(hard, task_data, run.method)
+    aggregation_label = RMC_AGGREGATION_LABEL if run.method == "rmc" else RMC_AGGREGATION_LABEL
     stats = [
         ("Displayed Score", format_metric(as_float(score))),
         ("Aggregation", aggregation_label),
         ("Masks", str(len(task_data.get("masks", [])))),
-        ("Contributing Masks", str(len(hard))),
+        ("Displayed Controls", str(len(control_rows))),
     ]
     return f"""
     <div class="mode-panel" id="{escape(panel_id)}">
       <div class="grid two">
-        <article>
-          <h3>Most Suspicious Control Regions</h3>
-          <table class="records">
-            <thead><tr><th>Rank</th><th>Control</th><th>Recovery</th><th>Gap</th><th>Lines</th></tr></thead>
-            <tbody>{hard_rows}</tbody>
-          </table>
-          <p class="muted evidence-note">Only masks used by the displayed-score aggregation are ranked. Gap is 1 - recovery similarity, so larger values indicate regions where the model prediction diverged most from the original code.</p>
+        <article class="rmc-source-panel">
+          <h3>Source Code</h3>
+          <pre class="code-block rmc-source"><code>{render_source_lines(task_data)}</code></pre>
           {definition_list(stats)}
         </article>
         <article>
-          <h3>Model Patches</h3>
+          <h3>Control Recoveries</h3>
+          <table class="records control-records">
+            <thead><tr><th>#</th><th>Control</th><th>Recovery</th><th>Size</th><th>Lines</th></tr></thead>
+            <tbody>{control_table_rows}</tbody>
+          </table>
+          <div class="patch-head">
+            <h3>Model Patches</h3>
+            <button class="patch-sort" type="button" data-sort-dir="desc">Worst first <span>↓</span></button>
+          </div>
           {patches}
         </article>
       </div>
@@ -878,32 +879,12 @@ def task_result_data(run: Run, task_id: str) -> dict[str, Any] | None:
 
 def display_score_for_row(run: Run, row: dict[str, Any]) -> float | None:
     task_id = row.get("task_id")
-    if run.method == "rmc_masked" and task_id is not None:
-        return rmc_fallback_mean_score(task_result_data(run, str(task_id)))
-    if run.method == "rmc_em" and task_id is not None:
-        return rmc_em_single_region_mean_score(task_result_data(run, str(task_id)))
+    if run.method == "rmc" and task_id is not None:
+        return rmc_single_region_mean_score(task_result_data(run, str(task_id)))
     return as_float(row.get("score", row.get("rmc_score")))
 
 
-def rmc_fallback_mean_score(task_data: dict[str, Any] | None) -> float | None:
-    if not task_data:
-        return None
-    by_k: dict[int, list[float]] = {}
-    masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
-    for recovery in task_data.get("recoveries", []):
-        mask = masks.get(recovery.get("index"), {})
-        selected = mask.get("selected_segments") or recovery.get("selected_segments")
-        score = as_float(recovery.get("score", recovery.get("similarity")))
-        if isinstance(selected, int) and score is not None:
-            by_k.setdefault(selected, []).append(score)
-    for selected in (3, 2, 1):
-        scores = by_k.get(selected)
-        if scores:
-            return sum(scores) / len(scores)
-    return None
-
-
-def rmc_em_single_region_mean_score(task_data: dict[str, Any] | None) -> float | None:
+def rmc_single_region_mean_score(task_data: dict[str, Any] | None) -> float | None:
     if not task_data:
         return None
     masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
@@ -913,16 +894,41 @@ def rmc_em_single_region_mean_score(task_data: dict[str, Any] | None) -> float |
         selected = mask.get("selected_segments") or recovery.get("selected_segments")
         score = as_float(recovery.get("score", recovery.get("similarity")))
         if selected == 1 and score is not None:
-            scores.append(score)
+            scores.append(adjusted_rmc_recovery_score(score, recovery, mask))
     return sum(scores) / len(scores) if scores else None
+
+
+def adjusted_rmc_recovery_score(
+    score: float,
+    recovery: dict[str, Any],
+    mask: dict[str, Any],
+) -> float:
+    node_type = str(recovery.get("node_type") or mask.get("node_type") or "")
+    ast_role = str(recovery.get("ast_role") or mask.get("ast_role") or "")
+    if ast_role == "method_body" or node_type in {"MethodDeclaration", "ConstructorDeclaration", "MethodBody"}:
+        return 1 - 0.5 * (1 - score)
+    return score
 
 
 def hardest_contributing_mask_recoveries(
     task_data: dict[str, Any],
     selected_order: tuple[int, ...] = (3, 2, 1),
 ) -> list[dict[str, Any]]:
+    contributing = contributing_control_recoveries(task_data, selected_order)
+    count = len(contributing)
+    for row in contributing:
+        score = as_float(row.get("score"))
+        row["impact"] = None if score is None or count == 0 else (1 - score) / count
+    return sorted(contributing, key=lambda row: (as_float(row.get("score")) or 0.0, mask_size(row), span_start(row)))
+
+
+def contributing_control_recoveries(
+    task_data: dict[str, Any],
+    selected_order: tuple[int, ...] = (3, 2, 1),
+) -> list[dict[str, Any]]:
     rows = []
     masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
+    source_tokens = source_token_count(task_data)
     for recovery in task_data.get("recoveries", []):
         mask = masks.get(recovery.get("index"), {})
         score = as_float(recovery.get("score", recovery.get("similarity")))
@@ -933,16 +939,15 @@ def hardest_contributing_mask_recoveries(
         row.update(recovery)
         row["score"] = score
         row["k"] = k
+        row["source_token_count"] = source_tokens
         rows.append(row)
     active = contributing_mask_size(rows, selected_order)
     if active is None:
         return []
-    contributing = [row for row in rows if row.get("k") == active]
-    count = len(contributing)
-    for row in contributing:
-        score = as_float(row.get("score"))
-        row["impact"] = None if score is None or count == 0 else (1 - score) / count
-    return sorted(contributing, key=lambda row: (as_float(row.get("score")) or 0.0, mask_size(row), span_start(row)))
+    return sorted(
+        [row for row in rows if row.get("k") == active],
+        key=lambda row: (span_start(row), mask_label(row)),
+    )
 
 
 def contributing_mask_size(
@@ -969,26 +974,141 @@ def hard_mask_row(rank: int, row: dict[str, Any]) -> str:
     )
 
 
-def hard_mask_patches(hard_rows: list[dict[str, Any]]) -> str:
-    if not hard_rows:
+def control_recovery_row(rank: int, row: dict[str, Any]) -> str:
+    score = as_float(row.get("score", row.get("similarity")))
+    status = recovery_status(score)
+    size = mask_size_label(row)
+    return (
+        f'<tr class="control-row {status}">'
+        f"<td>{rank}</td>"
+        f"<td>{escape(mask_label(row))}</td>"
+        f'<td><span class="recovery-badge {status}">{escape(format_metric(score))}</span></td>'
+        f"<td>{escape(size)}</td>"
+        f"<td>{escape(span_label(row))}</td>"
+        "</tr>"
+    )
+
+
+def recovery_status(score: float | None) -> str:
+    if score is None:
+        return "recovery-missing"
+    if score >= 0.7:
+        return "recovery-good"
+    if score >= 0.4:
+        return "recovery-mid"
+    return "recovery-bad"
+
+
+def mask_size_label(row: dict[str, Any]) -> str:
+    token_count = as_int(row.get("token_count"))
+    source_tokens = as_int(row.get("source_token_count"))
+    if token_count is None:
+        return "n/a"
+    if source_tokens is None or source_tokens <= 0:
+        return f"{token_count} tok"
+    return f"{token_count} tok · {token_count / source_tokens:.1%}"
+
+
+def source_token_count(task_data: dict[str, Any]) -> int:
+    lines = task_data.get("source_lines") or []
+    if not isinstance(lines, list):
+        return 0
+    return len(TOKEN_PATTERN.findall("\n".join(str(line) for line in lines)))
+
+
+def mask_patch_cards(rows: list[dict[str, Any]], task_data: dict[str, Any], method: str) -> str:
+    if not rows:
         return '<p class="missing">No model patch available.</p>'
     blocks = []
-    for rank, row in enumerate(hard_rows, start=1):
-        recovered = str(row.get("recovered_text") or row.get("recovered_code") or "")
-        if not recovered.strip():
-            recovered = str(row.get("llm_answer") or "No recovered patch stored.")
-        expected = str(row.get("expected_text") or row.get("expected_source") or "")
+    for rank, row in enumerate(rows, start=1):
+        score = as_float(row.get("score", row.get("similarity")))
+        gap = None if score is None else 1 - score
+        status = recovery_status(score)
+        recovered, recovered_label = recovered_patch_for_row(row, method)
+        expected = expected_patch_for_row(row, task_data, method)
+        line_indices = ",".join(str(index) for index in row_line_indices(row))
         blocks.append(
-            '<section class="patch-card">'
-            f"<h4>#{rank} {escape(mask_label(row))} · lines {escape(span_label(row))}</h4>"
-            '<p class="muted">Model prediction as a readability repair patch</p>'
+            f'<section class="patch-card {status}" data-score="{number_attr(score)}">'
+            f'<details class="mask-detail" data-lines="{escape(line_indices)}" data-status="{escape(status)}">'
+            "<summary>"
+            f'<span class="patch-title">#{rank} {escape(mask_label(row))}</span>'
+            f'<span class="recovery-badge {status}">{escape(format_metric(score))}</span>'
+            f'<span class="patch-meta">gap {escape(format_metric(gap))} · lines {escape(span_label(row))}</span>'
+            "</summary>"
+            f'<p class="muted">{escape(recovered_label)}</p>'
             f'<pre class="code-block patch"><code>{escape(recovered)}</code></pre>'
-            '<details><summary>Original hidden code</summary>'
+            '<p class="muted patch-subtitle">Original hidden code</p>'
             f'<pre class="code-block patch"><code>{escape(expected)}</code></pre>'
-            '</details>'
+            "</details>"
             '</section>'
         )
     return "".join(blocks)
+
+
+def row_line_indices(row: dict[str, Any]) -> list[int]:
+    indices: list[int] = []
+    for span in row.get("spans", []):
+        try:
+            start = int(span.get("start", 0))
+            end = int(span.get("end", start + 1))
+        except (TypeError, ValueError):
+            continue
+        indices.extend(range(max(start, 0), max(end, start + 1)))
+    return sorted(set(indices))
+
+
+def recovered_patch_for_row(row: dict[str, Any], method: str) -> tuple[str, str]:
+    recovered = str(row.get("recovered_text") or row.get("recovered_code") or "")
+    if not recovered.strip():
+        recovered = str(row.get("llm_answer") or "No recovered patch stored.")
+    return recovered, "Model prediction as a readability repair patch"
+
+
+def expected_patch_for_row(row: dict[str, Any], task_data: dict[str, Any], method: str) -> str:
+    return str(row.get("expected_text") or row.get("expected_source") or "")
+
+
+def source_from_char_spans(row: dict[str, Any], source: str) -> str:
+    spans = row.get("char_spans") or []
+    if not source or not isinstance(spans, list):
+        return ""
+    parts = []
+    for span in spans:
+        try:
+            start = int(span.get("start", 0))
+            end = int(span.get("end", start))
+        except (TypeError, ValueError):
+            continue
+        if 0 <= start < end <= len(source):
+            parts.append(source[start:end])
+    return "\n...\n".join(parts)
+
+
+def source_from_line_spans(row: dict[str, Any], task_data: dict[str, Any]) -> str:
+    lines = task_data.get("source_lines") or []
+    spans = row.get("spans") or []
+    if not isinstance(lines, list) or not isinstance(spans, list):
+        return ""
+    parts = []
+    for span in spans:
+        try:
+            start = int(span.get("start", 0))
+            end = int(span.get("end", start + 1))
+        except (TypeError, ValueError):
+            continue
+        chunk = lines[max(start, 0) : min(end, len(lines))]
+        if chunk:
+            parts.append("\n".join(str(line) for line in chunk))
+    return "\n...\n".join(parts)
+
+
+def extract_single_mask_replacement(masked_text: str, recovered: str) -> str | None:
+    if masked_text.count("<mask>") != 1 or not recovered:
+        return None
+    prefix, suffix = masked_text.split("<mask>", 1)
+    if recovered.startswith(prefix) and recovered.endswith(suffix):
+        return recovered[len(prefix) : len(recovered) - len(suffix)]
+    return None
 
 
 def highlight_hard_masks(task_data: dict[str, Any], hard_rows: list[dict[str, Any]]) -> str:
@@ -1014,6 +1134,57 @@ def highlight_hard_masks(task_data: dict[str, Any], hard_rows: list[dict[str, An
         else:
             rendered.append(f"{escape(label)}{escaped}")
     return "\n".join(rendered)
+
+
+def highlight_control_recoveries(task_data: dict[str, Any], rows: list[dict[str, Any]]) -> str:
+    lines = task_data.get("source_lines") or []
+    if not isinstance(lines, list):
+        lines = []
+    status_by_line: dict[int, str] = {}
+    rank_by_line: dict[int, int] = {}
+    priority = {
+        "recovery-bad": 3,
+        "recovery-mid": 2,
+        "recovery-good": 1,
+        "recovery-missing": 0,
+    }
+    for rank, row in enumerate(rows, start=1):
+        status = recovery_status(as_float(row.get("score", row.get("similarity"))))
+        for span in row.get("spans", []):
+            start = int(span.get("start", 0))
+            end = int(span.get("end", start + 1))
+            for line_index in range(start, end):
+                current = status_by_line.get(line_index)
+                if current is None or priority[status] > priority[current]:
+                    status_by_line[line_index] = status
+                    rank_by_line[line_index] = rank
+    rendered = []
+    for index, line in enumerate(lines):
+        label = f"{index + 1:>4} "
+        escaped = escape(str(line))
+        status = status_by_line.get(index)
+        if status:
+            rank = rank_by_line.get(index, 0)
+            rendered.append(
+                f'<span class="control-highlight {status}" title="control recovery #{rank}">'
+                f"{escape(label)}{escaped}</span>"
+            )
+        else:
+            rendered.append(f"{escape(label)}{escaped}")
+    return "\n".join(rendered)
+
+
+def render_source_lines(task_data: dict[str, Any]) -> str:
+    lines = task_data.get("source_lines") or []
+    if not isinstance(lines, list):
+        lines = []
+    rendered = []
+    for index, line in enumerate(lines):
+        label = f"{index + 1:>4} "
+        rendered.append(
+            f'<span class="source-line" data-line="{index}">{escape(label)}{escape(str(line))}</span>'
+        )
+    return "".join(rendered)
 
 
 def control_label(row: dict[str, Any]) -> str:
@@ -1224,7 +1395,7 @@ def run_group_label(method: str, model: str | None) -> str:
     if model is None:
         return method_label(method)
     short = short_model_label(model) or model
-    if method in {"rmc_masked", "rmc_em"}:
+    if method == "rmc":
         return f"{method_label(method)} {short}"
     return f"{method_label(method)} ({short})"
 
@@ -1236,7 +1407,7 @@ def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
 
 def short_run_label(run: Run) -> str:
     model = short_model_label(run.model)
-    if run.method in {"rmc_masked", "rmc_em"} and model:
+    if run.method == "rmc" and model:
         return f"{method_label(run.method)} {model}"
     if model:
         return f"{method_label(run.method)} ({model})"
@@ -1564,7 +1735,98 @@ pre {
 }
 .hard-1 { background: #fff0f0; border-left-color: #c74343; }
 .hard-2 { background: #fff7df; border-left-color: #c28a1d; }
+.rmc-source-panel {
+  position: sticky;
+  top: 72px;
+  align-self: start;
+}
+.rmc-source {
+  max-height: calc(100vh - 150px);
+}
+.source-line {
+  display: block;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-left: 3px solid transparent;
+  line-height: inherit;
+  min-height: 1.45em;
+}
+.source-line.active.recovery-good {
+  background: #eaf7ef;
+  border-left-color: #2f9b5f;
+}
+.source-line.active.recovery-mid {
+  background: #fff8df;
+  border-left-color: #c99a22;
+}
+.source-line.active.recovery-bad {
+  background: #fff0f0;
+  border-left-color: #c74343;
+}
+.control-records td,
+.control-records th {
+  font-size: 13px;
+}
+.control-row.recovery-good td:first-child {
+  border-left: 4px solid #2f9b5f;
+}
+.control-row.recovery-mid td:first-child {
+  border-left: 4px solid #c99a22;
+}
+.control-row.recovery-bad td:first-child {
+  border-left: 4px solid #c74343;
+}
+.recovery-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.recovery-badge.recovery-good {
+  color: #155d37;
+  background: #dff2e7;
+}
+.recovery-badge.recovery-mid {
+  color: #76530d;
+  background: #fff1bf;
+}
+.recovery-badge.recovery-bad {
+  color: #8d2525;
+  background: #ffe0e0;
+}
+.recovery-badge.recovery-missing {
+  color: var(--muted);
+  background: #edf1f4;
+}
 .evidence-note { margin-top: 12px; }
+.patch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+.patch-head h3 {
+  margin: 0;
+}
+.patch-sort {
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.patch-sort span {
+  color: #c74343;
+  margin-left: 4px;
+}
 .patch-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1572,16 +1834,35 @@ pre {
   margin-bottom: 12px;
   background: #fbfcfd;
 }
+.patch-card.recovery-good { border-left: 4px solid #2f9b5f; }
+.patch-card.recovery-mid { border-left: 4px solid #c99a22; }
+.patch-card.recovery-bad { border-left: 4px solid #c74343; }
 .patch-card h4 {
   margin: 0 0 6px;
   font-size: 14px;
 }
 .patch-card details {
-  margin-top: 10px;
+  margin: 0;
 }
 .patch-card summary {
-  color: var(--accent);
+  color: var(--text);
   cursor: pointer;
+  font-weight: 700;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  align-items: center;
+}
+.patch-title { overflow-wrap: anywhere; }
+.patch-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.patch-subtitle {
+  margin-top: 10px;
+  font-size: 13px;
   font-weight: 700;
 }
 .code-block.patch {
@@ -1639,7 +1920,60 @@ function sortSampleTable(control) {
   control.dataset.sortDir = current === "desc" ? "asc" : "desc";
 }
 
+function clearSourceHighlights(panel) {
+  panel.querySelectorAll(".source-line.active").forEach((line) => {
+    line.classList.remove("active", "recovery-good", "recovery-mid", "recovery-bad", "recovery-missing");
+  });
+}
+
+function highlightMaskLines(detail) {
+  const panel = detail.closest(".mode-panel");
+  if (!panel) return;
+  clearSourceHighlights(panel);
+  if (!detail.open) return;
+  const status = detail.dataset.status || "recovery-missing";
+  const lines = (detail.dataset.lines || "").split(",").filter(Boolean);
+  let first = null;
+  lines.forEach((lineIndex) => {
+    const line = panel.querySelector(`.source-line[data-line="${lineIndex}"]`);
+    if (!line) return;
+    line.classList.add("active", status);
+    if (!first) first = line;
+  });
+  if (first) {
+    first.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function sortPatchCards(button) {
+  const panel = button.closest(".mode-panel");
+  if (!panel) return;
+  const cards = Array.from(panel.querySelectorAll(".patch-card[data-score]"));
+  if (!cards.length) return;
+  const target = button.dataset.sortDir || "desc";
+  const dir = target === "asc" ? 1 : -1;
+  cards.sort((left, right) => {
+    const a = Number(left.dataset.score);
+    const b = Number(right.dataset.score);
+    if (!Number.isFinite(a) && !Number.isFinite(b)) return 0;
+    if (!Number.isFinite(a)) return 1;
+    if (!Number.isFinite(b)) return -1;
+    return (a - b) * dir;
+  });
+  cards.forEach((card) => card.parentElement.appendChild(card));
+  const next = target === "asc" ? "desc" : "asc";
+  button.dataset.sortDir = next;
+  button.firstChild.textContent = target === "asc" ? "Worst first " : "Best first ";
+  const marker = button.querySelector("span");
+  if (marker) marker.textContent = target === "asc" ? "↓" : "↑";
+}
+
 document.addEventListener("click", (event) => {
+  const patchSort = event.target.closest(".patch-sort");
+  if (patchSort) {
+    sortPatchCards(patchSort);
+    return;
+  }
   const button = event.target.closest(".sort-header[data-sort-key]");
   if (button) {
     sortSampleTable(button);
@@ -1654,6 +1988,12 @@ document.addEventListener("click", (event) => {
   const target = document.getElementById(tab.dataset.modeTarget);
   if (target) target.classList.add("active");
 });
+
+document.addEventListener("toggle", (event) => {
+  const detail = event.target.closest ? event.target.closest(".mask-detail") : null;
+  if (!detail) return;
+  highlightMaskLines(detail);
+}, true);
 """
 
 

@@ -4,15 +4,8 @@ import re
 from collections import Counter
 from typing import Sequence
 
-from .embeddings import embedding_cosine_similarity
-
-
 def sequence_similarity(original: str, recovered: str) -> float:
     return SequenceMatcher(a=original, b=recovered).ratio()
-
-
-def cosine_similarity(original: str, recovered: str) -> float:
-    return embedding_cosine_similarity(original, recovered)
 
 
 def exact_match_similarity(original: str, recovered: str) -> float:

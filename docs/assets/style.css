@@ -182,7 +182,98 @@ pre {
 }
 .hard-1 { background: #fff0f0; border-left-color: #c74343; }
 .hard-2 { background: #fff7df; border-left-color: #c28a1d; }
+.rmc-source-panel {
+  position: sticky;
+  top: 72px;
+  align-self: start;
+}
+.rmc-source {
+  max-height: calc(100vh - 150px);
+}
+.source-line {
+  display: block;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-left: 3px solid transparent;
+  line-height: inherit;
+  min-height: 1.45em;
+}
+.source-line.active.recovery-good {
+  background: #eaf7ef;
+  border-left-color: #2f9b5f;
+}
+.source-line.active.recovery-mid {
+  background: #fff8df;
+  border-left-color: #c99a22;
+}
+.source-line.active.recovery-bad {
+  background: #fff0f0;
+  border-left-color: #c74343;
+}
+.control-records td,
+.control-records th {
+  font-size: 13px;
+}
+.control-row.recovery-good td:first-child {
+  border-left: 4px solid #2f9b5f;
+}
+.control-row.recovery-mid td:first-child {
+  border-left: 4px solid #c99a22;
+}
+.control-row.recovery-bad td:first-child {
+  border-left: 4px solid #c74343;
+}
+.recovery-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.recovery-badge.recovery-good {
+  color: #155d37;
+  background: #dff2e7;
+}
+.recovery-badge.recovery-mid {
+  color: #76530d;
+  background: #fff1bf;
+}
+.recovery-badge.recovery-bad {
+  color: #8d2525;
+  background: #ffe0e0;
+}
+.recovery-badge.recovery-missing {
+  color: var(--muted);
+  background: #edf1f4;
+}
 .evidence-note { margin-top: 12px; }
+.patch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+.patch-head h3 {
+  margin: 0;
+}
+.patch-sort {
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.patch-sort span {
+  color: #c74343;
+  margin-left: 4px;
+}
 .patch-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -190,16 +281,35 @@ pre {
   margin-bottom: 12px;
   background: #fbfcfd;
 }
+.patch-card.recovery-good { border-left: 4px solid #2f9b5f; }
+.patch-card.recovery-mid { border-left: 4px solid #c99a22; }
+.patch-card.recovery-bad { border-left: 4px solid #c74343; }
 .patch-card h4 {
   margin: 0 0 6px;
   font-size: 14px;
 }
 .patch-card details {
-  margin-top: 10px;
+  margin: 0;
 }
 .patch-card summary {
-  color: var(--accent);
+  color: var(--text);
   cursor: pointer;
+  font-weight: 700;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  align-items: center;
+}
+.patch-title { overflow-wrap: anywhere; }
+.patch-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.patch-subtitle {
+  margin-top: 10px;
+  font-size: 13px;
   font-weight: 700;
 }
 .code-block.patch {

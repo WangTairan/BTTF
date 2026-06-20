@@ -7,8 +7,9 @@ methods and datasets can be added without changing unrelated experiments.
 
 Current method families:
 
-- RMC: Recursive Masking Complexity, including masked code RMC, prefix RMC, and
-  natural-language RMC variants.
+- RMC: the current Recursive Masking Complexity variant. It masks
+  control regions, asks the LLM to return exact mask replacements, and scores
+  hidden regions directly.
 - Posnett: deterministic Java readability model.
 - Scalabrino: deterministic Java readability model using the released tool.
 - CognaScore: Java lexeme embedding and clustering method.
@@ -76,13 +77,11 @@ Model-dependent methods keep the model layer:
 
 ```text
 output/cognascore/<dataset>/<embedding-model>/summary.json
-output/rmc_masked/<dataset>/<llm-model>/summary.json
-output/rmc_prefix/<dataset>/<llm-model>/summary.json
-output/rmc_natural_language/<dataset>/<llm-model>/summary.json
+output/rmc/<dataset>/<llm-model>/summary.json
 ```
 
-RMC result folders also contain a `config.json` at the run level and per-task
-`config.json` files so masking and model parameters remain recoverable.
+RMC result folders contain run-level and per-task configuration data so masking
+and model parameters remain recoverable.
 
 ## Standard Method Evaluation
 
@@ -184,27 +183,6 @@ Useful RMC controls:
 - `--max-samples-per-stratum N`: sample at most `N` combinations per stratum;
   if omitted, all non-overlapping combinations up to `--max-combination-size`
   are used.
-
-Compute RMC correlations from a completed result folder:
-
-```bash
-python3 -m src.methods.rmc.runners.spearman \
-  output/rmc_masked/<dataset>/<model>
-```
-
-## Natural-Language RMC
-
-CLEAR uses natural-language masking rather than code masking:
-
-```bash
-python3 -m src.methods.rmc.runners.clear \
-  --dataset datasets/clear_dev_dataset/readability_dataset.xlsx \
-  --model gpt41-nano
-```
-
-Natural-language masks operate at sentence or paragraph granularity depending on
-the runner arguments. The prompt asks for passage completion rather than code
-completion.
 
 ## Visualization Site
 

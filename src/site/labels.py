@@ -1,8 +1,5 @@
 METHOD_LABELS = {
-    "rmc_masked": "RMC overall match",
-    "rmc_em": "RMC mask match",
-    "rmc_prefix": "Prefix RMC",
-    "rmc_natural_language": "Natural-language RMC",
+    "rmc": "RMC",
     "posnett": "Posnett",
     "scalabrino": "Scalabrino",
     "cognascore": "CognaScore",
@@ -20,14 +17,11 @@ DATASET_LABELS = {
 }
 
 METHOD_ORDER = (
-    "rmc_masked",
-    "rmc_em",
+    "rmc",
     "posnett",
     "scalabrino",
     "cognascore",
     "llm_prompt",
-    "rmc_prefix",
-    "rmc_natural_language",
     "llm",
 )
 

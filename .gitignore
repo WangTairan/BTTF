@@ -15,6 +15,7 @@ env/
 
 # Experiment outputs and historical run data
 output/
+output_history/
 backups/
 
 # Local model/download caches

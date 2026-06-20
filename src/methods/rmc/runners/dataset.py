@@ -16,20 +16,14 @@ from src.methods.rmc import (
     DEFAULT_CONSTRAINTS,
     MaskConstraints,
     make_llm_batch_recover,
-    recursive_masking_complexity,
-    recursive_masking_complexity_batch,
     sequence_similarity,
     java_ast_masks,
-    java_ast_prefixes,
-    natural_language_masks,
 )
 from src.methods.rmc.complexity import (
     evaluate_exact_mask_recovery,
-    evaluate_scored_recovery,
     select_indexed_masks,
 )
 from src.methods.rmc.fragment_masking import java_fragment_control_masks
-from src.methods.rmc.masking import delta_mask
 from src.methods.rmc.report import result_to_dict, write_html_report, write_json_report
 from src.methods.rmc.similarity import mean
 from src.methods.rmc.text_units import clean_blank_units
@@ -189,7 +183,6 @@ def run_dataset(
     args: argparse.Namespace,
     summary_extra: Dict[str, Any] | None = None,
 ) -> Path:
-    recover = make_recover(config) if config.mock_recover else None
     selected_items = list(select_items(items, args.task_id))
     if args.start:
         selected_items = selected_items[args.start :]
@@ -244,31 +237,8 @@ def run_dataset(
                     extract_markdown=False,
                     exact_mask_mode=True,
                 )
-            elif config.mock_recover:
-                result = recursive_masking_complexity(
-                    sequence=units,
-                    recover=recover,
-                    constraints=config.constraints,
-                    similarity=sequence_similarity,
-                    progress=lambda completed, mask_total: progress.update("recovering", completed, mask_total),
-                    warning=print_warning,
-                    extract_markdown=config.prompt_mode == "code",
-                    mask_indices=config.mask_indices,
-                    mask_generator=mask_generator(config),
-                    enforce_sequence_bounds=not is_stratified_mask_strategy(config.mask_strategy),
-                )
             else:
-                result = recursive_masking_complexity_batch(
-                    sequence=units,
-                    batch_recover=batch_recover,
-                    constraints=config.constraints,
-                    similarity=sequence_similarity,
-                    warning=print_warning,
-                    extract_markdown=config.prompt_mode == "code",
-                    mask_indices=config.mask_indices,
-                    mask_generator=mask_generator(config),
-                    enforce_sequence_bounds=not is_stratified_mask_strategy(config.mask_strategy),
-                )
+                raise ValueError(f"Unsupported RMC prompt mode: {config.prompt_mode}")
         finally:
             progress.finish()
         result = aggregate_result_for_config(result, config)
@@ -385,8 +355,8 @@ def run_dataset_batch(
             units=task["units"],
             masks=masks,
             recovered_texts=task_recovered,
-            extract_markdown=config.prompt_mode == "code",
-            exact_mask_mode=config.prompt_mode == "code_mask_json",
+            extract_markdown=False,
+            exact_mask_mode=True,
         )
         result = aggregate_result_for_config(result, config)
         write_result(
@@ -414,33 +384,21 @@ def build_result_from_recoveries(
     masks: Sequence,
     recovered_texts: Sequence[str],
     extract_markdown: bool,
-    exact_mask_mode: bool = False,
+    exact_mask_mode: bool = True,
 ) -> ComplexityResult:
     profile = []
     scores = []
     total = len(masks)
     for index, (masked, recovered) in enumerate(zip(masks, recovered_texts), start=1):
-        if exact_mask_mode:
-            item, score = evaluate_exact_mask_recovery(
-                lines=units,
-                masked=masked,
-                recovered=recovered,
-                similarity=sequence_similarity,
-                task_index=index,
-                task_total=total,
-                warning=print_warning,
-            )
-        else:
-            item, score = evaluate_scored_recovery(
-                lines=units,
-                masked=masked,
-                recovered=recovered,
-                similarity=sequence_similarity,
-                task_index=index,
-                task_total=total,
-                warning=print_warning,
-                extract_markdown=extract_markdown,
-            )
+        item, score = evaluate_exact_mask_recovery(
+            lines=units,
+            masked=masked,
+            recovered=recovered,
+            similarity=sequence_similarity,
+            task_index=index,
+            task_total=total,
+            warning=print_warning,
+        )
         profile.append(item)
         scores.append(score)
 
@@ -483,12 +441,6 @@ def dataset_output_name(path: Path) -> str:
     return dataset_name_for_path(path)
 
 
-def make_recover(config: RunnerConfig):
-    if config.mock_recover:
-        return lambda masked_text: mock_recover(masked_text, config.prompt_mode)
-    raise RuntimeError("Non-mock dataset runs should use make_batch_recover")
-
-
 def make_batch_recover(
     config: RunnerConfig,
     state_path: Path | None = None,
@@ -508,24 +460,7 @@ def make_batch_recover(
 
 
 def mask_generator(config: RunnerConfig):
-    if config.mask_strategy.startswith("natural_language_stratified"):
-        return lambda lines, constraints: natural_language_masks(
-            lines,
-            constraints,
-            granularity=str(config.nl_granularity),
-            min_words=int(config.nl_min_words or config.ast_min_tokens),
-            max_combination_size=config.max_combination_size,
-            max_samples_per_stratum=config.max_samples_per_stratum,
-            sampling_seed=config.sampling_seed,
-        )
-    if config.mask_strategy.startswith("java_ast_prefix"):
-        return lambda lines, constraints: java_ast_prefixes(
-            "\n".join(lines),
-            constraints,
-            min_tokens=config.ast_min_tokens,
-            ast_granularity=config.ast_granularity,
-        )
-    if config.mask_strategy.startswith("java_fragment_control"):
+    if is_fragment_control_strategy(config.mask_strategy):
         return lambda lines, constraints: java_fragment_control_masks(
             "\n".join(lines),
             constraints,
@@ -548,24 +483,7 @@ def mask_generator(config: RunnerConfig):
 
 
 def generate_masks(units: Sequence[str], config: RunnerConfig):
-    if config.mask_strategy.startswith("natural_language_stratified"):
-        return natural_language_masks(
-            units,
-            config.constraints,
-            granularity=str(config.nl_granularity),
-            min_words=int(config.nl_min_words or config.ast_min_tokens),
-            max_combination_size=config.max_combination_size,
-            max_samples_per_stratum=config.max_samples_per_stratum,
-            sampling_seed=config.sampling_seed,
-        )
-    if config.mask_strategy.startswith("java_ast_prefix"):
-        return java_ast_prefixes(
-            "\n".join(units),
-            config.constraints,
-            min_tokens=config.ast_min_tokens,
-            ast_granularity=config.ast_granularity,
-        )
-    if config.mask_strategy.startswith("java_fragment_control"):
+    if is_fragment_control_strategy(config.mask_strategy):
         return java_fragment_control_masks(
             "\n".join(units),
             config.constraints,
@@ -584,16 +502,10 @@ def generate_masks(units: Sequence[str], config: RunnerConfig):
             sampling_seed=config.sampling_seed,
             ast_granularity=config.ast_granularity,
         )
-    if len(units) < config.constraints.nmin * config.constraints.lmin:
-        return ()
-    if len(units) > config.constraints.nmax * config.constraints.lmax:
-        return ()
-    return delta_mask(units, config.constraints)
+    return ()
 
 
 def mock_recover(masked_text: str, prompt_mode: str) -> str:
-    if prompt_mode == "code":
-        return f"```\n{masked_text.replace('<mask>', '# mock recovery')}\n```"
     if prompt_mode == "code_mask_json":
         return json.dumps(
             {
@@ -601,10 +513,6 @@ def mock_recover(masked_text: str, prompt_mode: str) -> str:
                 for index in range(1, masked_text.count("<mask>") + 1)
             }
         )
-    if prompt_mode == "code_prefix":
-        return f"```\n{masked_text}\n```"
-    if prompt_mode == "natural_language":
-        return masked_text.replace("<mask>", "[mock recovery]")
     raise ValueError(f"Unknown prompt mode: {prompt_mode}")
 
 
@@ -630,28 +538,15 @@ def fallback_selected_segments_score(result: ComplexityResult) -> float | None:
 
 
 def is_stratified_mask_strategy(mask_strategy: str) -> bool:
-    return (
-        mask_strategy.startswith("java_ast")
-        or mask_strategy.startswith("java_fragment_control")
-        or mask_strategy.startswith("natural_language_stratified")
-    )
+    return mask_strategy.startswith("java_ast") or is_fragment_control_strategy(mask_strategy)
+
+
+def is_fragment_control_strategy(mask_strategy: str) -> bool:
+    return mask_strategy.startswith("java_fragment_control") or mask_strategy.startswith("dorn_fragment_control")
 
 
 def rmc_output_dir(config: RunnerConfig, dataset_name: str, model_name: str) -> Path:
-    if config.prompt_mode == "code_mask_json":
-        return output_dir(config.output_root, rmc_experiment_name(config), dataset_name, model_name)
-    if config.mask_strategy.startswith("java_ast_prefix"):
-        return output_dir(config.output_root, "rmc_prefix", dataset_name, model_name)
-    if config.mask_strategy.startswith("java_ast") or config.mask_strategy.startswith("java_fragment_control"):
-        return output_dir(config.output_root, "rmc_masked", dataset_name, model_name)
-    if config.mask_strategy.startswith("natural_language_stratified"):
-        return output_dir(
-            config.output_root,
-            "rmc_natural_language",
-            dataset_name,
-            model_name,
-        )
-    return output_dir(config.output_root, "rmc_sequence", dataset_name, model_name)
+    return output_dir(config.output_root, "rmc", dataset_name, model_name)
 
 
 def sample_budget_label(max_samples_per_stratum: int | None) -> str:
@@ -826,7 +721,7 @@ def write_task_config(task_dir: Path, config: RunnerConfig, item: DatasetItem) -
 def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
     model_name = "mock" if config.mock_recover else config.model
     return {
-        "method": "rmc_em" if config.prompt_mode == "code_mask_json" else "rmc",
+        "method": "rmc",
         "experiment": rmc_experiment_name(config),
         "dataset": str(config.dataset_path),
         "dataset_key": dataset_output_name(config.dataset_path),
@@ -847,21 +742,17 @@ def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
         "ast_min_tokens": (
             config.ast_min_tokens
             if config.mask_strategy.startswith("java_ast")
-            or config.mask_strategy.startswith("java_fragment_control")
+            or is_fragment_control_strategy(config.mask_strategy)
             else None
         ),
         "ast_granularity": (
             config.ast_granularity
             if config.mask_strategy.startswith("java_ast")
-            or config.mask_strategy.startswith("java_fragment_control")
+            or is_fragment_control_strategy(config.mask_strategy)
             else None
         ),
-        "nl_granularity": (
-            config.nl_granularity if config.mask_strategy.startswith("natural_language_stratified") else None
-        ),
-        "nl_min_words": (
-            config.nl_min_words if config.mask_strategy.startswith("natural_language_stratified") else None
-        ),
+        "nl_granularity": None,
+        "nl_min_words": None,
         "max_combination_size": (
             config.max_combination_size
             if is_stratified_mask_strategy(config.mask_strategy)
@@ -889,7 +780,7 @@ def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
         "ast_granularities": (
             [config.ast_granularity]
             if config.mask_strategy.startswith("java_ast")
-            or config.mask_strategy.startswith("java_fragment_control")
+            or is_fragment_control_strategy(config.mask_strategy)
             else None
         ),
         "ast_combination_policy": (
@@ -904,8 +795,8 @@ def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
                     else None
                 ),
             }
-            if config.mask_strategy == "java_ast_stratified_v7"
-            or config.mask_strategy == "java_fragment_control_v1"
+            if config.mask_strategy.startswith("java_ast")
+            or is_fragment_control_strategy(config.mask_strategy)
             else None
         ),
         "score_aggregation": score_aggregation_name(config),
@@ -914,27 +805,11 @@ def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
 
 
 def rmc_experiment_name(config: RunnerConfig) -> str:
-    if config.prompt_mode == "code_mask_json":
-        return "rmc_em"
-    if config.mask_strategy.startswith("java_ast_prefix"):
-        return "rmc_prefix"
-    if config.mask_strategy.startswith("java_ast") or config.mask_strategy.startswith("java_fragment_control"):
-        return "rmc_masked"
-    if config.mask_strategy.startswith("natural_language_stratified"):
-        return "rmc_natural_language"
-    return "rmc_sequence"
+    return "rmc"
 
 
 def score_aggregation_name(config: RunnerConfig) -> str:
-    if config.prompt_mode == "code_mask_json":
-        return "fallback_mean_over_exact_mask_recovery_strata"
-    if config.mask_strategy.startswith("java_ast_prefix"):
-        return "equal_mean_over_prefix_positions"
-    if config.mask_strategy.startswith("java_ast") or config.mask_strategy.startswith("java_fragment_control"):
-        return "equal_mean_over_selected_segments_strata_within_ast_granularity"
-    if config.mask_strategy.startswith("natural_language_stratified"):
-        return "equal_mean_over_selected_segments_strata_within_natural_granularity"
-    return "mean_over_masks"
+    return "single_region_exact_mask_mean"
 
 
 def write_summary(

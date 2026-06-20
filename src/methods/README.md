@@ -2,8 +2,8 @@
 
 Each readability metric lives in its own package:
 
-- `rmc/`: Recursive Masking Complexity, including masking, recovery prompts,
-  similarity functions, embeddings, and reports.
+- `rmc/`: Recursive Masking Complexity. It contains the current mask-match
+  method, masking code, prompts, similarity functions, and dataset runners.
 - `posnett/`: Posnett readability model; see its `README.md`
   for the published formula and validation scope.
 - `scalabrino/`: Scalabrino readability model and released assets.

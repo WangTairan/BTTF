@@ -1,30 +1,31 @@
 # RMC
 
-Recursive Masking Complexity implementation and its commands live entirely in
-this package.
+Recursive Masking Complexity masks code control regions, asks the LLM to return
+exact replacements for each hidden region, and scores the hidden regions
+directly.
 
-RMC asks a configured recovery model to complete missing portions and averages
-recovery similarity over the generated masks.
+Java/code runs use `java_ast_stratified_v8` masking. A hole removes one parsed
+Java statement or one explicit control-flow body instead of an arbitrary line
+interval. In the control granularity, headers remain visible and the candidate
+set is:
 
-Java/code runs use `java_ast_stratified_v7` masking. A hole removes one complete
-parsed Java node or one explicit control-flow slot instead of an arbitrary
-line interval. The candidate set is:
+- `MethodDeclaration` and `ConstructorDeclaration` bodies
+- `IfBranch` for `then` and `else` bodies
+- `ForStatement`, `WhileStatement`, and `DoStatement` bodies
+- each `SwitchCase` body
+- `TryBody`, `CatchBody`, and `FinallyBody`
 
-- `MethodDeclaration` and `ConstructorDeclaration`
-- `FieldDeclaration` and `LocalVariableDeclaration`
-- `ReturnStatement`, `ThrowStatement`, and `StatementExpression`
-- `IfCondition`, `IfBranch` for `then` and `else` slots
-- complete `ForStatement`, `WhileStatement`, and `DoStatement`
-- complete `SwitchStatement`
-- complete `TryStatement`, including its `catch` and `finally` clauses
+The statement granularity contains ordinary Java statements such as field and
+local declarations, returns, throws, and statement expressions.
 
 The Dorn runner is the exception: the original Dorn dataset contains CUDA,
 Java, and Python snippets, and many snippets are fragments rather than parseable
 compilation units. `src.methods.rmc.runners.dorn` therefore uses
-`java_fragment_control_v1`, a language-tolerant token/bracket matcher for
-control structures, instead of the Java AST parser. It keeps the same RMC
-output schema and reports the strategy and language coverage in `config.json`
-and `summary.json`.
+`dorn_fragment_control_v2`, a language-tolerant matcher that uses braces for
+Java/CUDA snippets and indentation for Python snippets. It extracts control
+bodies and method/function bodies while keeping headers visible. It keeps the
+same RMC output schema and reports the strategy and language coverage in
+`config.json` and `summary.json`.
 
 Java experiments run one AST granularity at a time. The default is
 `--ast-granularity control`; `statement` must be run separately and reported
@@ -50,45 +51,17 @@ The sequence
 parameters `nmin`, `nmax`, `lmin`, and `lmax` are not used for Java AST mask
 generation.
 
-The separate `java_ast_prefix_v1` variant does not insert masks. It builds
-prefix-continuation tasks at the same `control` or `statement` AST
-granularities: the model receives `source[:cut]` and must continue the full
-Java code. Prefix cut points normally use AST candidate ends, so each later
-task reveals more code. If no end cut point exists because a candidate reaches
-EOF, candidate starts are used as a fallback.
-
-Natural-language runs use semantic units rather than equal partitions. The CLEAR
-runner supports `--nl-granularity sentence` and `--nl-granularity paragraph`,
-with default `--nl-min-words 8`. Sentence runs may combine up to three sentence
-holes, sampled with the same `--max-combination-size`,
-`--max-samples-per-stratum`, and `--sampling-seed` controls used by Java AST
-runs.
-
-Commands:
+## Smoke Commands
 
 ```bash
-python -m src.methods.rmc.runners.file examples/cognascore_example.java --mock-recover
 python -m src.methods.rmc.runners.mbjp --mock-recover --ast-granularity control --limit 1
 python -m src.methods.rmc.runners.dorn --mock-recover --ast-granularity control --limit 1
-python -m src.methods.rmc.runners.mbjp_prefix --mock-recover --ast-granularity statement --limit 1
-python -m src.methods.rmc.runners.clear --mock-recover --nl-granularity sentence --limit 1
-python -m src.methods.rmc.runners.scalabrino_prefix --mock-recover --ast-granularity statement --limit 1
 python -m src.methods.rmc.runners.schnappinger --mock-recover --task-id 'Schnappinger/aoi/artofillusion.animation.distortion.CustomDistortion'
 python -m src.methods.rmc.runners.jetbrains --mock-recover --limit 1
-python -m src.methods.rmc.runners.spearman output/rmc_masked/<dataset>/<model>
 ```
-
-The dataset runner performs recovery once. Its saved results can then be
-evaluated without additional recovery calls using `--similarity sequence`,
-`--similarity exact_match`, `--similarity edit`, `--similarity token_jaccard`,
-`--similarity token_cosine`, `--similarity bleu`, `--similarity rouge_l`, or
-`--similarity cosine`. For stratified Java AST runs, report the
-`official:ast_strata` row.
 
 Results use:
 
 ```text
-output/rmc_masked/<dataset>/<model>/  # Java/code
-output/rmc_prefix/<dataset>/<model>/  # Java prefix/code
-output/rmc_natural_language/<dataset>/<model>/  # natural language
+output/rmc/<dataset>/<model>/
 ```

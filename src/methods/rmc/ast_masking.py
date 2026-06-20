@@ -21,7 +21,7 @@ except ImportError:  # pragma: no cover
     javalang = None
 
 
-JAVA_AST_STRATEGY = "java_ast_stratified_v7"
+JAVA_AST_STRATEGY = "java_ast_stratified_v8"
 AST_GRANULARITIES = ("control", "statement")
 BLOCK_NODE_TYPES = {"MethodDeclaration", "ConstructorDeclaration"}
 STATEMENT_NODE_TYPES = {
@@ -133,7 +133,9 @@ def java_ast_masks(
 
 
 def _ast_granularity(candidate: AstCandidate) -> str:
-    if candidate.node_type in LOOP_NODE_TYPES | CONTROL_BLOCK_NODE_TYPES | {"IfCondition", "IfBranch"}:
+    if candidate.ast_role == "method_body":
+        return "control"
+    if candidate.node_type in LOOP_NODE_TYPES | {"IfBranch", "SwitchCase", "TryBody", "CatchBody", "FinallyBody"}:
         return "control"
     return "statement"
 
@@ -269,12 +271,12 @@ def _candidates(tree, tokens: list[TokenPosition], prefix_length: int, source_le
             _add_if_candidates(unique, node, tokens, prefix_length, source_length)
             continue
         if node_type in LOOP_NODE_TYPES:
-            interval = _node_interval(node, tokens)
+            interval = _control_body_interval(node, tokens)
             if interval is not None:
                 _add_candidate(
                     unique,
                     node_type=node_type,
-                    role="whole_loop",
+                    role="body",
                     start_index=interval[0],
                     end_index=interval[1],
                     tokens=tokens,
@@ -282,13 +284,19 @@ def _candidates(tree, tokens: list[TokenPosition], prefix_length: int, source_le
                     source_length=source_length,
                 )
             continue
-        if node_type in CONTROL_BLOCK_NODE_TYPES:
-            interval = _node_interval(node, tokens)
+        if node_type == "SwitchStatement":
+            _add_switch_case_candidates(unique, node, tokens, prefix_length, source_length)
+            continue
+        if node_type == "TryStatement":
+            _add_try_body_candidates(unique, node, tokens, prefix_length, source_length)
+            continue
+        if node_type in BLOCK_NODE_TYPES:
+            interval = _method_body_interval(node, tokens)
             if interval is not None:
                 _add_candidate(
                     unique,
                     node_type=node_type,
-                    role="whole_control",
+                    role="method_body",
                     start_index=interval[0],
                     end_index=interval[1],
                     tokens=tokens,
@@ -332,22 +340,10 @@ def _add_if_candidates(
     token_index = _token_index_at_node(tokens, node)
     if token_index is None:
         return
-    condition = _parenthesized_interval(tokens, token_index)
-    if condition is not None and condition[0] + 1 <= condition[1] - 1:
-        _add_candidate(
-            unique,
-            node_type="IfCondition",
-            role="condition",
-            start_index=condition[0] + 1,
-            end_index=condition[1] - 1,
-            tokens=tokens,
-            prefix_length=prefix_length,
-            source_length=source_length,
-        )
     for role, statement in (("then_branch", node.then_statement), ("else_branch", node.else_statement)):
         if statement is None:
             continue
-        interval = _node_interval(statement, tokens)
+        interval = _statement_body_interval(statement, tokens)
         if interval is not None:
             _add_candidate(
                 unique,
@@ -359,6 +355,107 @@ def _add_if_candidates(
                 prefix_length=prefix_length,
                 source_length=source_length,
             )
+
+
+def _add_switch_case_candidates(
+    unique: dict[tuple[int, int, str], AstCandidate],
+    node,
+    tokens: list[TokenPosition],
+    prefix_length: int,
+    source_length: int,
+) -> None:
+    token_index = _token_index_at_node(tokens, node)
+    if token_index is None:
+        return
+    open_index = next((i for i in range(token_index, len(tokens)) if tokens[i].value == "{"), None)
+    close_index = _block_end_index(tokens, token_index)
+    if open_index is None or close_index is None:
+        return
+    label_indexes = [
+        index
+        for index in range(open_index + 1, close_index)
+        if tokens[index].value in {"case", "default"}
+    ]
+    for offset, label_index in enumerate(label_indexes):
+        colon_index = next(
+            (i for i in range(label_index, close_index) if tokens[i].value == ":"),
+            None,
+        )
+        if colon_index is None:
+            continue
+        next_label = label_indexes[offset + 1] if offset + 1 < len(label_indexes) else close_index
+        start_index = colon_index + 1
+        end_index = next_label - 1
+        if start_index <= end_index:
+            _add_candidate(
+                unique,
+                node_type="SwitchCase",
+                role="case_body",
+                start_index=start_index,
+                end_index=end_index,
+                tokens=tokens,
+                prefix_length=prefix_length,
+                source_length=source_length,
+            )
+
+
+def _add_try_body_candidates(
+    unique: dict[tuple[int, int, str], AstCandidate],
+    node,
+    tokens: list[TokenPosition],
+    prefix_length: int,
+    source_length: int,
+) -> None:
+    token_index = _token_index_at_node(tokens, node)
+    if token_index is None:
+        return
+    try_body = _block_body_interval(tokens, token_index)
+    if try_body is not None:
+        _add_candidate(
+            unique,
+            node_type="TryBody",
+            role="try_body",
+            start_index=try_body[0],
+            end_index=try_body[1],
+            tokens=tokens,
+            prefix_length=prefix_length,
+            source_length=source_length,
+        )
+    try_end = _block_end_index(tokens, token_index)
+    cursor = try_end + 1 if try_end is not None else token_index + 1
+    while cursor < len(tokens):
+        value = tokens[cursor].value
+        if value == "catch":
+            body = _block_body_interval(tokens, cursor)
+            if body is not None:
+                _add_candidate(
+                    unique,
+                    node_type="CatchBody",
+                    role="catch_body",
+                    start_index=body[0],
+                    end_index=body[1],
+                    tokens=tokens,
+                    prefix_length=prefix_length,
+                    source_length=source_length,
+                )
+                end_index = _block_end_index(tokens, cursor)
+                cursor = end_index + 1 if end_index is not None else cursor + 1
+                continue
+        if value == "finally":
+            body = _block_body_interval(tokens, cursor)
+            if body is not None:
+                _add_candidate(
+                    unique,
+                    node_type="FinallyBody",
+                    role="finally_body",
+                    start_index=body[0],
+                    end_index=body[1],
+                    tokens=tokens,
+                    prefix_length=prefix_length,
+                    source_length=source_length,
+                )
+            return
+        return
 
 
 def _add_candidate(
@@ -431,6 +528,37 @@ def _block_body_interval(tokens: list[TokenPosition], index: int) -> tuple[int, 
     if end_index is None or brace_index + 1 > end_index - 1:
         return None
     return brace_index + 1, end_index - 1
+
+
+def _statement_body_interval(node, tokens: list[TokenPosition]) -> tuple[int, int] | None:
+    token_index = _token_index_at_node(tokens, node)
+    if token_index is None:
+        return None
+    if tokens[token_index].value == "{":
+        return _block_body_interval(tokens, token_index)
+    return _node_interval(node, tokens)
+
+
+def _control_body_interval(node, tokens: list[TokenPosition]) -> tuple[int, int] | None:
+    node_type = node.__class__.__name__
+    if node_type in {"ForStatement", "WhileStatement"}:
+        return _statement_body_interval(node.body, tokens)
+    if node_type == "DoStatement":
+        return _statement_body_interval(node.body, tokens)
+    return _statement_body_interval(node, tokens)
+
+
+def _method_body_interval(node, tokens: list[TokenPosition]) -> tuple[int, int] | None:
+    token_index = _token_index_at_node(tokens, node)
+    if token_index is None:
+        return None
+    open_index = next((index for index in range(token_index, len(tokens)) if tokens[index].value == "{"), None)
+    if open_index is None:
+        return None
+    close_index = _block_end_index(tokens, open_index)
+    if close_index is None or open_index + 1 > close_index - 1:
+        return None
+    return open_index + 1, close_index - 1
 
 
 def _parenthesized_interval(tokens: list[TokenPosition], index: int) -> tuple[int, int] | None:

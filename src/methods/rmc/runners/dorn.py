@@ -4,9 +4,10 @@ from pathlib import Path
 
 from src.datasets.dorn import load_dataset
 from src.methods.rmc import DEFAULT_CONSTRAINTS
-from src.methods.rmc.fragment_masking import java_fragment_control_masks
-from src.methods.rmc.runners.dataset import add_common_args, build_config, run_dataset
+from src.methods.rmc.fragment_masking import JAVA_FRAGMENT_CONTROL_STRATEGY, java_fragment_control_masks
+from src.methods.rmc.runners.dataset import build_config, run_dataset
 from src.methods.rmc.text_units import clean_blank_units
+from src.methods.rmc.runners.common import add_rmc_dataset_args
 
 
 DEFAULT_DATASET = Path("datasets/dorn/dataset")
@@ -14,13 +15,7 @@ DEFAULT_DATASET = Path("datasets/dorn/dataset")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run RMC over the Dorn dataset.")
-    parser.add_argument(
-        "--dataset",
-        type=Path,
-        default=DEFAULT_DATASET,
-        help=f"Dorn dataset directory, defaults to {DEFAULT_DATASET}",
-    )
-    add_common_args(parser)
+    add_rmc_dataset_args(parser, DEFAULT_DATASET)
     return parser.parse_args()
 
 
@@ -31,12 +26,12 @@ def main() -> None:
     items, skipped_no_masks, language_counts, skipped_no_masks_by_language = prepare_items(args)
     config = build_config(
         args=args,
-        prompt_mode="code",
+        prompt_mode="code_mask_json",
         source_label="Dorn",
         text_unit="code_line",
         line_numbering="cleaned_non_blank_1_based",
         constraints=DEFAULT_CONSTRAINTS,
-        mask_strategy="java_fragment_control_v1",
+        mask_strategy=JAVA_FRAGMENT_CONTROL_STRATEGY,
     )
     run_dataset(
         items=items,
@@ -49,7 +44,7 @@ def main() -> None:
             "selected_by_language": dict(sorted(language_counts.items())),
             "skipped_no_masks": skipped_no_masks,
             "skipped_no_masks_by_language": dict(sorted(skipped_no_masks_by_language.items())),
-            "fragment_parser": "token_brace_control_matcher",
+            "fragment_parser": "brace_and_python_indent_control_matcher",
         },
     )
 

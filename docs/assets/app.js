@@ -37,7 +37,60 @@ function sortSampleTable(control) {
   control.dataset.sortDir = current === "desc" ? "asc" : "desc";
 }
 
+function clearSourceHighlights(panel) {
+  panel.querySelectorAll(".source-line.active").forEach((line) => {
+    line.classList.remove("active", "recovery-good", "recovery-mid", "recovery-bad", "recovery-missing");
+  });
+}
+
+function highlightMaskLines(detail) {
+  const panel = detail.closest(".mode-panel");
+  if (!panel) return;
+  clearSourceHighlights(panel);
+  if (!detail.open) return;
+  const status = detail.dataset.status || "recovery-missing";
+  const lines = (detail.dataset.lines || "").split(",").filter(Boolean);
+  let first = null;
+  lines.forEach((lineIndex) => {
+    const line = panel.querySelector(`.source-line[data-line="${lineIndex}"]`);
+    if (!line) return;
+    line.classList.add("active", status);
+    if (!first) first = line;
+  });
+  if (first) {
+    first.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function sortPatchCards(button) {
+  const panel = button.closest(".mode-panel");
+  if (!panel) return;
+  const cards = Array.from(panel.querySelectorAll(".patch-card[data-score]"));
+  if (!cards.length) return;
+  const target = button.dataset.sortDir || "desc";
+  const dir = target === "asc" ? 1 : -1;
+  cards.sort((left, right) => {
+    const a = Number(left.dataset.score);
+    const b = Number(right.dataset.score);
+    if (!Number.isFinite(a) && !Number.isFinite(b)) return 0;
+    if (!Number.isFinite(a)) return 1;
+    if (!Number.isFinite(b)) return -1;
+    return (a - b) * dir;
+  });
+  cards.forEach((card) => card.parentElement.appendChild(card));
+  const next = target === "asc" ? "desc" : "asc";
+  button.dataset.sortDir = next;
+  button.firstChild.textContent = target === "asc" ? "Worst first " : "Best first ";
+  const marker = button.querySelector("span");
+  if (marker) marker.textContent = target === "asc" ? "↓" : "↑";
+}
+
 document.addEventListener("click", (event) => {
+  const patchSort = event.target.closest(".patch-sort");
+  if (patchSort) {
+    sortPatchCards(patchSort);
+    return;
+  }
   const button = event.target.closest(".sort-header[data-sort-key]");
   if (button) {
     sortSampleTable(button);
@@ -52,3 +105,9 @@ document.addEventListener("click", (event) => {
   const target = document.getElementById(tab.dataset.modeTarget);
   if (target) target.classList.add("active");
 });
+
+document.addEventListener("toggle", (event) => {
+  const detail = event.target.closest ? event.target.closest(".mask-detail") : null;
+  if (!detail) return;
+  highlightMaskLines(detail);
+}, true);
