@@ -15,6 +15,8 @@ from src.methods.rmc import (
     DEFAULT_AST_SAMPLING_SEED,
     DEFAULT_CONSTRAINTS,
     MaskConstraints,
+    ORIGINAL_PROMPT_VARIANT,
+    PROMPT_VARIANTS,
     make_llm_batch_recover,
     sequence_similarity,
     java_ast_masks,
@@ -25,6 +27,20 @@ from src.methods.rmc.complexity import (
 )
 from src.methods.rmc.fragment_masking import java_fragment_control_masks
 from src.methods.rmc.report import result_to_dict, write_html_report, write_json_report
+from src.methods.rmc.scoring import (
+    AGGREGATION_LABEL,
+    DEFAULT_CONTROL_CAPACITY,
+    DEFAULT_ERROR_PENALTY,
+    EXCEPTION_CONTROL_CAPACITY,
+    EXCEPTION_ERROR_PENALTY,
+    METHOD_BODY_CAPACITY,
+    METHOD_BODY_ERROR_PENALTY,
+    MASK_PROPORTION_WEIGHT,
+    MIN_CONTROL_DENSITY,
+    MIN_CONTROL_DENSITY_LOC,
+    SPARSE_CONTROL_PENALTY,
+    score_task_result,
+)
 from src.methods.rmc.similarity import mean
 from src.methods.rmc.text_units import clean_blank_units
 from src.experiments.paths import dataset_name_for_path, output_dir, safe_path_part
@@ -38,6 +54,7 @@ class RunnerConfig:
     model: str | None
     mock_recover: bool
     prompt_mode: str
+    prompt_variant: str
     source_label: str
     text_unit: str
     line_numbering: str
@@ -58,6 +75,12 @@ SourceUnitsFn = Callable[[DatasetItem], Sequence[str]]
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--model", help="Model key from src/services/llm.py")
+    parser.add_argument(
+        "--prompt-variant",
+        choices=PROMPT_VARIANTS,
+        default=ORIGINAL_PROMPT_VARIANT,
+        help="Recovery prompt: original or one of the two generalist 3-shot variants.",
+    )
     parser.add_argument(
         "-o",
         "--output",
@@ -102,7 +125,10 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         "--ast-min-tokens",
         type=int,
         default=DEFAULT_AST_MIN_TOKENS,
-        help="Minimum lexical tokens in one Java AST hole, defaults to 8.",
+        help=(
+            "Minimum lexical tokens in one Java AST hole, defaults to "
+            f"{DEFAULT_AST_MIN_TOKENS}."
+        ),
     )
     parser.add_argument(
         "--ast-granularity",
@@ -114,7 +140,10 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         "--max-combination-size",
         type=int,
         default=DEFAULT_AST_MAX_COMBINATION_SIZE,
-        help="Maximum number of same-granularity Java AST holes masked together, defaults to 3.",
+        help=(
+            "Maximum number of same-granularity Java AST holes masked together, "
+            f"defaults to {DEFAULT_AST_MAX_COMBINATION_SIZE}."
+        ),
     )
     parser.add_argument(
         "--max-samples-per-stratum",
@@ -160,6 +189,7 @@ def build_config(
         model=args.model,
         mock_recover=args.mock_recover,
         prompt_mode=prompt_mode,
+        prompt_variant=args.prompt_variant,
         source_label=source_label,
         text_unit=text_unit,
         line_numbering=line_numbering,
@@ -250,6 +280,7 @@ def run_dataset(
             source_lines=units,
             line_numbering=config.line_numbering,
         )
+        data["summary"]["score"] = score_task_result(data)
         data["dataset_item"] = dataset_item_payload(item, config)
         if is_stratified_mask_strategy(config.mask_strategy):
             data["ast_strata"] = ast_stratum_scores(result)
@@ -428,6 +459,7 @@ def write_result(
         source_lines=units,
         line_numbering=config.line_numbering,
     )
+    data["summary"]["score"] = score_task_result(data)
     data["dataset_item"] = dataset_item_payload(item, config)
     if is_stratified_mask_strategy(config.mask_strategy):
         data["ast_strata"] = ast_stratum_scores(result)
@@ -454,6 +486,7 @@ def make_batch_recover(
     return make_llm_batch_recover(
         str(config.model),
         prompt_mode=config.prompt_mode,
+        prompt_variant=config.prompt_variant,
         state_path=state_path,
         progress=progress,
     )
@@ -729,6 +762,7 @@ def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
         "mock_recover": config.mock_recover,
         "similarity": "sequence",
         "prompt_mode": config.prompt_mode,
+        "prompt_variant": config.prompt_variant,
         "source": config.source_label,
         "text_unit": config.text_unit,
         "constraints": {
@@ -800,6 +834,18 @@ def run_config_payload(config: RunnerConfig) -> Dict[str, Any]:
             else None
         ),
         "score_aggregation": score_aggregation_name(config),
+        "score_parameters": {
+            "method_body_capacity": METHOD_BODY_CAPACITY,
+            "method_body_error_penalty": METHOD_BODY_ERROR_PENALTY,
+            "exception_control_capacity": EXCEPTION_CONTROL_CAPACITY,
+            "exception_error_penalty": EXCEPTION_ERROR_PENALTY,
+            "default_control_capacity": DEFAULT_CONTROL_CAPACITY,
+            "default_error_penalty": DEFAULT_ERROR_PENALTY,
+            "mask_proportion_weight": MASK_PROPORTION_WEIGHT,
+            "minimum_loc_for_control_density": MIN_CONTROL_DENSITY_LOC,
+            "minimum_control_count_per_loc": MIN_CONTROL_DENSITY,
+            "sparse_control_penalty": SPARSE_CONTROL_PENALTY,
+        },
         "line_numbering": config.line_numbering,
     }
 
@@ -809,7 +855,7 @@ def rmc_experiment_name(config: RunnerConfig) -> str:
 
 
 def score_aggregation_name(config: RunnerConfig) -> str:
-    return "single_region_exact_mask_mean"
+    return AGGREGATION_LABEL
 
 
 def write_summary(

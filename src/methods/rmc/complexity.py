@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence, Tuple, Union
 
 from .masking import delta_mask
-from .prompts import build_recovery_prompt
+from .prompts import build_recovery_messages
 from .similarity import mean, sequence_similarity
 from .types import ComplexityResult, MaskConstraints, MaskSpan, RecoveryResult
 
@@ -333,11 +333,22 @@ def expected_mask_parts(lines: Sequence[str], masked) -> list[str]:
     ]
 
 
-def make_llm_recover(model_name: str, prompt_mode: str = "code") -> RecoverFn:
-    from src.services.llm import chat
+def make_llm_recover(
+    model_name: str,
+    prompt_mode: str = "code",
+    prompt_variant: str = "original",
+) -> RecoverFn:
+    from src.services.llm import chat_messages
 
     def recover(masked_text: str) -> str:
-        return chat(model_name, build_recovery_prompt(masked_text, mode=prompt_mode))
+        return chat_messages(
+            model_name,
+            build_recovery_messages(
+                masked_text,
+                mode=prompt_mode,
+                variant=prompt_variant,
+            ),
+        )
 
     return recover
 
@@ -345,19 +356,24 @@ def make_llm_recover(model_name: str, prompt_mode: str = "code") -> RecoverFn:
 def make_llm_batch_recover(
     model_name: str,
     prompt_mode: str = "code",
+    prompt_variant: str = "original",
     state_path: Path | str | None = None,
     progress: Optional[BatchProgressFn] = None,
 ) -> BatchRecoverFn:
-    from src.services.llm import batch_chat_prompts
+    from src.services.llm import batch_chat
 
     def batch_recover(masked_texts: Sequence[str]) -> Sequence[str]:
-        prompts = [
-            build_recovery_prompt(masked_text, mode=prompt_mode)
+        messages_list = [
+            build_recovery_messages(
+                masked_text,
+                mode=prompt_mode,
+                variant=prompt_variant,
+            )
             for masked_text in masked_texts
         ]
-        return batch_chat_prompts(
+        return batch_chat(
             model_name,
-            prompts,
+            messages_list,
             state_path=state_path,
             progress=progress,
         )

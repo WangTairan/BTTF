@@ -32,6 +32,8 @@ MODEL_LABELS = {
     "gpt-4.1-nano-2025-04-14": "4.1",
     "gpt5-nano": "5nano",
     "gpt-5-nano-2025-08-07": "5nano",
+    "dsv4-pro": "DSV4 Pro",
+    "deepseek-v4-pro": "DSV4 Pro",
     "nomic-ai-nomic-embed-text-v1.5": "Nomic",
     "nomic-ai/nomic-embed-text-v1.5": "Nomic",
 }

@@ -25,6 +25,7 @@ Method-specific details live in each package README, especially
 datasets/              Original and derived datasets
 docs/                  Static visualization site for GitHub Pages
 examples/              Small local examples
+mask_playground/       Interactive single-mask recovery lab
 models/                Local model/cache files
 output/                Experiment outputs
 src/datasets/          Dataset adapters
@@ -118,8 +119,8 @@ experiments use:
 model: gpt41-nano
 similarity: sequence
 granularity: control
-ast_min_tokens: 8
-max_combination_size: 3
+ast_min_tokens: 3
+max_combination_size: 1
 max_samples_per_stratum: unlimited unless explicitly provided
 ```
 
@@ -132,41 +133,41 @@ Run current masked RMC code datasets from small to large:
 python3 -m src.methods.rmc.runners.mbjp \
   --model gpt41-nano \
   --ast-granularity control \
-  --ast-min-tokens 8 \
-  --max-combination-size 3
+  --ast-min-tokens 3 \
+  --max-combination-size 1
 ```
 
 ```bash
 python3 -m src.methods.rmc.runners.dorn \
   --model gpt41-nano \
   --ast-granularity control \
-  --ast-min-tokens 8 \
-  --max-combination-size 3
+  --ast-min-tokens 3 \
+  --max-combination-size 1
 ```
 
 ```bash
 python3 -m src.methods.rmc.runners.jetbrains \
   --model gpt41-nano \
   --ast-granularity control \
-  --ast-min-tokens 8 \
-  --max-combination-size 3
+  --ast-min-tokens 3 \
+  --max-combination-size 1
 ```
 
 ```bash
 python3 -m src.methods.rmc.runners.scalabrino \
   --model gpt41-nano \
   --ast-granularity control \
-  --ast-min-tokens 8 \
-  --max-combination-size 3
+  --ast-min-tokens 3 \
+  --max-combination-size 1
 ```
 
 Expected recovery counts for the current control configuration:
 
 ```text
-MBJP        158
-Dorn       2115
-JetBrains  2393
-Scalabrino 3386
+MBJP         69
+Dorn       1149
+JetBrains   651
+Scalabrino  733
 ```
 
 Use `--skip-existing` to resume after interruption without rewriting completed
@@ -198,6 +199,22 @@ LOC. Sample pages use one shared view for all entry points and show the source
 code plus method-specific evidence, such as Posnett tokens, RMC hard control
 regions, CognaScore cluster summaries, and LLM scores with reasoning.
 
+## Mask Recovery Lab
+
+The local Lab supports interactive single-region experiments across the code
+datasets. Select source code on the left, inspect or edit the system-prompt and
+few-shot sections, choose a model, and run one recovery. The mask task is
+generated from the current selection and is not stored in the three per-template
+custom prompt caches.
+
+```bash
+python3 -m mask_playground.server
+```
+
+Open `http://127.0.0.1:8765`. The result panel reports exact match, sequence,
+token Jaccard, token cosine, and BLEU. Edit distance and other quadratic
+dynamic-programming metrics are intentionally excluded from this interface.
+
 ## LLM Keys
 
 Set the provider key required by the selected model alias in
@@ -207,7 +224,12 @@ Set the provider key required by the selected model alias in
 export OPENAI_API_KEY=...
 export GROQ_API_KEY=...
 export OPENROUTER_API_KEY=...
+export DEEPSEEK_API_KEY=...
 ```
+
+Clients and keys are loaded lazily. The repository and Lab can start with only
+some keys configured; a missing key is reported immediately only when a model
+from that provider is run.
 
 For supported providers, dataset RMC runs use batch recovery and store
 `.batch_state.json` so interrupted submitted batches can resume polling instead

@@ -13,7 +13,12 @@ from .ast_masking import java_ast_masks
 from .masking import MASK_TOKEN, delta_mask
 from .prompts import (
     CODE_MASK_JSON_PROMPT_TEMPLATE,
+    GENERALIST_NEGATIVE_3SHOT_VARIANT,
+    GENERALIST_POSITIVE_3SHOT_VARIANT,
+    ORIGINAL_PROMPT_VARIANT,
+    PROMPT_VARIANTS,
     RECOVERY_PROMPT_TEMPLATE,
+    build_recovery_messages,
     build_recovery_prompt,
 )
 from .similarity import (
@@ -43,7 +48,12 @@ __all__ = [
     "RecoveryResult",
     "RECOVERY_PROMPT_TEMPLATE",
     "CODE_MASK_JSON_PROMPT_TEMPLATE",
+    "GENERALIST_NEGATIVE_3SHOT_VARIANT",
+    "GENERALIST_POSITIVE_3SHOT_VARIANT",
+    "ORIGINAL_PROMPT_VARIANT",
+    "PROMPT_VARIANTS",
     "build_recovery_prompt",
+    "build_recovery_messages",
     "exact_match_similarity",
     "edit_similarity",
     "token_jaccard_similarity",

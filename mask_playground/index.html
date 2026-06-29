@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mask Recovery Lab</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+        <div>
+          <h1>Mask Recovery Lab</h1>
+          <p>Single-region completion</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label>
+          <span>Dataset</span>
+          <select id="dataset-select" aria-label="Dataset"></select>
+        </label>
+        <label>
+          <span>Sample</span>
+          <select id="sample-select" aria-label="Dataset sample"></select>
+        </label>
+        <label>
+          <span>Language</span>
+          <span class="toolbar-value" id="language-display">Java</span>
+        </label>
+        <label>
+          <span>Model</span>
+          <select id="model-select" aria-label="Model"></select>
+        </label>
+        <label>
+          <span>Prompt</span>
+          <select id="template-select" aria-label="Prompt template">
+            <option value="original">Default</option>
+            <option value="original__custom">Default · custom</option>
+            <option value="generalist_negative_3shot">Generalist 3-shot · negative</option>
+            <option value="generalist_negative_3shot__custom">Generalist 3-shot · negative · custom</option>
+            <option value="generalist_positive_3shot">Generalist 3-shot · positive</option>
+            <option value="generalist_positive_3shot__custom">Generalist 3-shot · positive · custom</option>
+          </select>
+        </label>
+        <button id="run-button" type="button" disabled>
+          <span class="run-icon" aria-hidden="true">▶</span>
+          Run recovery
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="pane source-pane" aria-labelledby="source-title">
+        <div class="pane-header">
+          <h2 id="source-title">Source Code</h2>
+          <div class="selection-status" id="selection-status">No selection</div>
+        </div>
+        <div class="editor-shell">
+          <pre class="line-numbers" id="line-numbers" aria-hidden="true">1</pre>
+          <div class="editor-stage">
+            <pre class="code-highlight" id="code-highlight" aria-hidden="true"></pre>
+            <textarea id="source-editor" aria-label="Source code" spellcheck="false" wrap="off"></textarea>
+          </div>
+        </div>
+        <div class="source-footer">
+          <span id="source-stats">0 lines · 0 characters</span>
+          <span id="mask-stats">Mask not set</span>
+        </div>
+      </section>
+
+      <div class="splitter splitter-vertical" id="splitter-vertical" role="separator" aria-orientation="vertical" aria-label="Resize source and result panes"></div>
+
+      <section class="right-column">
+        <section class="pane prompt-pane" aria-labelledby="prompt-title">
+          <div class="pane-header">
+            <h2 id="prompt-title">Prompt</h2>
+            <div class="prompt-tabs" role="tablist" aria-label="Prompt section">
+              <button class="prompt-tab active" type="button" data-prompt-tab="all">All</button>
+              <button class="prompt-tab" type="button" data-prompt-tab="system">System prompt</button>
+              <button class="prompt-tab" type="button" data-prompt-tab="examples">Examples</button>
+              <button class="prompt-tab" type="button" data-prompt-tab="mask">Mask</button>
+            </div>
+          </div>
+          <div class="prompt-view" id="prompt-all" data-prompt-view="all">
+            <pre class="prompt-section prompt-section-system" id="prompt-all-system"></pre>
+            <pre class="prompt-section prompt-section-examples" id="prompt-all-examples"></pre>
+            <pre class="prompt-section prompt-section-mask" id="prompt-all-mask"></pre>
+          </div>
+          <textarea class="output-code prompt-editor" id="prompt-system" data-prompt-view="system" aria-label="Editable system prompt" spellcheck="false"></textarea>
+          <textarea class="output-code prompt-editor" id="prompt-examples" data-prompt-view="examples" aria-label="Editable examples" spellcheck="false"></textarea>
+          <pre class="output-code prompt-mask" id="prompt-mask" data-prompt-view="mask">Select a source region.</pre>
+        </section>
+
+        <div class="splitter splitter-horizontal" id="splitter-horizontal" role="separator" aria-orientation="horizontal" aria-label="Resize prompt and response panes"></div>
+
+        <section class="pane response-pane" aria-labelledby="response-title">
+          <div class="pane-header response-header">
+            <h2 id="response-title">Model Response</h2>
+            <div class="response-tabs" role="tablist" aria-label="Response view">
+              <button class="tab active" type="button" data-response-tab="extracted" role="tab">Extracted</button>
+              <button class="tab" type="button" data-response-tab="completed" role="tab">Completed code</button>
+              <button class="tab" type="button" data-response-tab="raw" role="tab">Raw</button>
+            </div>
+          </div>
+          <div class="result-meta" id="result-meta">
+            <span>Not run</span>
+          </div>
+          <pre class="output-code response-output" id="response-output">No response.</pre>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>

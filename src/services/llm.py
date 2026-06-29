@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import tempfile
 import time
@@ -8,7 +9,7 @@ from typing import Any, Callable, Sequence
 
 from openai import OpenAI
 from groq import Groq
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 
 
 MODELS = {
@@ -44,6 +45,10 @@ MODELS = {
         "id": "deepseek/deepseek-v3.2",
         "provider": "openrouter",
     },
+    "dsv4-pro": {
+        "id": "deepseek-v4-pro",
+        "provider": "deepseek",
+    },
     "llama3-70": {
         "id": "llama-3.3-70b-versatile",
         "provider": "groq",
@@ -58,6 +63,11 @@ MODELS = {
 _openai_client = None
 _groq_client = None
 _openrouter_client = None
+_deepseek_client = None
+
+
+class MissingAPIKeyError(RuntimeError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -81,7 +91,7 @@ def _get_openai_client():
     if _openai_client is None:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not set")
+            raise MissingAPIKeyError("OPENAI_API_KEY not set")
         _openai_client = OpenAI(api_key=api_key)
     return _openai_client
 
@@ -91,7 +101,7 @@ def _get_groq_client():
     if _groq_client is None:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GROQ_API_KEY not set")
+            raise MissingAPIKeyError("GROQ_API_KEY not set")
         _groq_client = Groq(api_key=api_key)
     return _groq_client
 
@@ -101,7 +111,7 @@ def _get_openrouter_client():
     if _openrouter_client is None:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY not set")
+            raise MissingAPIKeyError("OPENROUTER_API_KEY not set")
 
         referer = os.getenv("OPENROUTER_SITE_URL", "http://localhost")
         title = os.getenv("OPENROUTER_APP_NAME", "my-app")
@@ -117,6 +127,19 @@ def _get_openrouter_client():
     return _openrouter_client
 
 
+def _get_deepseek_client():
+    global _deepseek_client
+    if _deepseek_client is None:
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise MissingAPIKeyError("DEEPSEEK_API_KEY not set")
+        _deepseek_client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com",
+        )
+    return _deepseek_client
+
+
 def _get_client(provider: str):
     if provider == "openai":
         return _get_openai_client()
@@ -124,6 +147,8 @@ def _get_client(provider: str):
         return _get_groq_client()
     if provider == "openrouter":
         return _get_openrouter_client()
+    if provider == "deepseek":
+        return _get_deepseek_client()
     raise ValueError(f"Unknown provider: {provider}")
 
 
@@ -151,6 +176,9 @@ def _apply_reasoning_controls(
     if provider == "openai" and model_name in {"gpt5-nano", "gpt5-mini"}:
         body["reasoning_effort"] = "minimal"
 
+    if provider == "deepseek" and model_name == "dsv4-pro":
+        body["extra_body"] = {"thinking": {"type": "disabled"}}
+
 
 def _build_chat_body(
     model_name: str,
@@ -165,12 +193,28 @@ def _build_chat_body(
     provider = info["provider"]
     body = {
         "model": model_id,
-        "messages": list(messages),
-        "temperature": kwargs.pop("temperature", 1),
+        "messages": _provider_messages(provider, messages),
     }
+    temperature = kwargs.pop("temperature", 1)
+    if provider != "deepseek":
+        body["temperature"] = temperature
     body.update(kwargs)
     _apply_reasoning_controls(provider, model_name, model_id, body)
     return provider, model_id, body
+
+
+def _provider_messages(
+    provider: str,
+    messages: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if provider != "deepseek":
+        return list(messages)
+    return [
+        {**message, "role": "system"}
+        if message.get("role") == "developer"
+        else dict(message)
+        for message in messages
+    ]
 
 
 def _message_content(response_body: Any) -> str:
@@ -207,6 +251,7 @@ def chat(model_name: str, prompt: str, **kwargs: Any) -> str:
 
 
 @retry(
+    retry=retry_if_not_exception_type(MissingAPIKeyError),
     stop=stop_after_attempt(10),
     wait=wait_exponential(multiplier=5, min=1, max=90),
 )
@@ -253,6 +298,7 @@ def batch_chat(
     client = _get_client(provider)
     custom_ids = [f"request-{index:06d}" for index in range(len(messages_list))]
     request_index = {custom_id: index for index, custom_id in enumerate(custom_ids)}
+    request_fingerprint = batch_request_fingerprint(model_name, messages_list, kwargs)
     resolved_state_path = Path(state_path) if state_path is not None else None
     jsonl_path: Path | None = None
 
@@ -263,6 +309,7 @@ def batch_chat(
             provider=provider,
             request_count=len(messages_list),
             custom_ids=custom_ids,
+            request_fingerprint=request_fingerprint,
         )
         if batch is None:
             jsonl_path = write_batch_jsonl(model_name, messages_list, custom_ids, kwargs)
@@ -282,6 +329,7 @@ def batch_chat(
                 input_file_id=_obj_get(input_file, "id"),
                 request_count=len(messages_list),
                 custom_ids=custom_ids,
+                request_fingerprint=request_fingerprint,
             )
             if progress is not None:
                 progress("submitted", 0, len(messages_list))
@@ -371,6 +419,7 @@ def load_batch_state(
     provider: str,
     request_count: int,
     custom_ids: Sequence[str],
+    request_fingerprint: str,
 ) -> Any | None:
     if state_path is None or not state_path.exists():
         return None
@@ -384,6 +433,7 @@ def load_batch_state(
         or state_provider != provider
         or data.get("request_count") != request_count
         or data.get("custom_ids") != list(custom_ids)
+        or data.get("request_fingerprint") != request_fingerprint
     ):
         clear_batch_state(state_path)
         return None
@@ -398,6 +448,7 @@ def save_batch_state(
     input_file_id: str,
     request_count: int,
     custom_ids: Sequence[str],
+    request_fingerprint: str,
 ) -> None:
     if state_path is None:
         return
@@ -409,9 +460,29 @@ def save_batch_state(
         "input_file_id": input_file_id,
         "request_count": request_count,
         "custom_ids": list(custom_ids),
+        "request_fingerprint": request_fingerprint,
         "created_at": time.time(),
     }
     state_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def batch_request_fingerprint(
+    model_name: str,
+    messages_list: Sequence[Sequence[dict[str, Any]]],
+    kwargs: dict[str, Any],
+) -> str:
+    payload = json.dumps(
+        {
+            "model": model_name,
+            "messages": messages_list,
+            "kwargs": kwargs,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        default=str,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def clear_batch_state(state_path: Path | None) -> None:

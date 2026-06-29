@@ -12,6 +12,22 @@ from src.experiments.paths import safe_path_part
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.methods.llm_prompt import LLM_READABILITY_PROMPT_TEMPLATE
 from src.methods.posnett.method import JAVA_KEYWORDS, JAVA_OPERATORS, TOKEN_PATTERN, strip_comments
+from src.methods.rmc.prompts import CODE_MASK_JSON_PROMPT_TEMPLATE
+from src.methods.rmc.scoring import (
+    AGGREGATION_LABEL as RMC_AGGREGATION_LABEL,
+    DEFAULT_CONTROL_CAPACITY as RMC_DEFAULT_CONTROL_CAPACITY,
+    DEFAULT_ERROR_PENALTY as RMC_DEFAULT_ERROR_PENALTY,
+    EXCEPTION_CONTROL_CAPACITY as RMC_EXCEPTION_CONTROL_CAPACITY,
+    EXCEPTION_ERROR_PENALTY as RMC_EXCEPTION_ERROR_PENALTY,
+    METHOD_BODY_CAPACITY as RMC_METHOD_BODY_CAPACITY,
+    METHOD_BODY_ERROR_PENALTY as RMC_METHOD_BODY_ERROR_PENALTY,
+    MASK_PROPORTION_WEIGHT as RMC_MASK_PROPORTION_WEIGHT,
+    MIN_CONTROL_DENSITY as RMC_MIN_CONTROL_DENSITY,
+    MIN_CONTROL_DENSITY_LOC as RMC_MIN_CONTROL_DENSITY_LOC,
+    SPARSE_CONTROL_PENALTY as RMC_SPARSE_CONTROL_PENALTY,
+    count_source_tokens as rmc_source_token_count,
+    score_task_result,
+)
 from src.site.labels import (
     DATASET_ORDER,
     METHOD_ORDER,
@@ -26,8 +42,8 @@ from src.site.labels import (
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / "output"
 DOCS_DIR = ROOT / "docs"
+RMC_METHODS = {"rmc"}
 
-RMC_AGGREGATION_LABEL = "single-region mean with method-body half penalty"
 _TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
 _RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
 _DATASET_TOTAL_CACHE: dict[str, int | None] = {}
@@ -43,7 +59,7 @@ class Run:
 
     @property
     def label(self) -> str:
-        if self.method == "rmc":
+        if is_rmc_method(self.method):
             return f"{run_group_label(self.method, self.model)} on {dataset_label(self.dataset)}"
         model = f" · {short_model_label(self.model)}" if self.model else ""
         return f"{method_label(self.method)} on {dataset_label(self.dataset)}{model}"
@@ -139,6 +155,10 @@ def infer_model(method: str, parts: tuple[str, ...], data: dict[str, Any]) -> st
     if len(parts) >= 4:
         return parts[2]
     return None
+
+
+def is_rmc_method(method: str) -> bool:
+    return method in RMC_METHODS
 
 
 def reset_docs() -> None:
@@ -320,11 +340,19 @@ def write_method_pages(runs: list[Run]) -> None:
 
 
 def method_description(method: str) -> str:
-    if method == "rmc":
+    if is_rmc_method(method):
+        developer_message, user_prompt = rmc_prompt_for_method(method)
         return f"""
           <p class="muted">RMC asks the LLM to return a keyed JSON object such as <code>{{"mask_1": "..."}}</code>, then compares each recovered mask directly with the hidden code.</p>
           <p class="muted">Key parameters: model is shown in the run table, granularity = control, aggregation = <strong>{escape(RMC_AGGREGATION_LABEL)}</strong>, similarity = sequence similarity over exact mask contents.</p>
-          <p class="formula">method_body score = 1 - 0.5 * (1 - similarity); other control scores = similarity</p>
+          <p class="formula">RMC = 1 - sum(error penalty * (1 - similarity)) / sum(capacity)</p>
+          <p class="formula">method body: capacity = {RMC_METHOD_BODY_CAPACITY}, penalty = {RMC_METHOD_BODY_ERROR_PENALTY}; try/catch/finally: capacity = {RMC_EXCEPTION_CONTROL_CAPACITY}, penalty = {RMC_EXCEPTION_ERROR_PENALTY}; other controls: capacity = {RMC_DEFAULT_CONTROL_CAPACITY}, penalty = {RMC_DEFAULT_ERROR_PENALTY}</p>
+          <p class="formula">for mask proportion r = mask tokens / source tokens, capacity and penalty are both multiplied by {RMC_MASK_PROPORTION_WEIGHT}</p>
+          <p class="formula">if LOC &gt;= {RMC_MIN_CONTROL_DENSITY_LOC} and control_count / LOC &lt; {RMC_MIN_CONTROL_DENSITY}: score = max(0, score - {RMC_SPARSE_CONTROL_PENALTY})</p>
+          <h2>Developer / System Message</h2>
+          <pre class="code-block"><code>{escape(developer_message or "None")}</code></pre>
+          <h2>User Prompt</h2>
+          <pre class="code-block"><code>{escape(user_prompt)}</code></pre>
         """
     if method == "cognascore":
         return """
@@ -350,6 +378,11 @@ def method_description(method: str) -> str:
           <pre class="code-block"><code>{escape(prompt)}</code></pre>
         """
     return '<p class="muted">Method implementation details are not available for this method yet.</p>'
+
+
+def rmc_prompt_for_method(method: str) -> tuple[str | None, str]:
+    masked_code = "{masked_code}"
+    return None, CODE_MASK_JSON_PROMPT_TEMPLATE.format(masked_text=masked_code)
 
 
 def dataset_description(dataset: str, items) -> str:
@@ -500,7 +533,7 @@ def run_config_items(run: Run) -> list[tuple[str, str]]:
 def readable_run_config_items(run: Run) -> list[tuple[str, str]]:
     data = run.data
     items: list[tuple[str, str]] = []
-    if run.method == "rmc":
+    if is_rmc_method(run.method):
         if data.get("mask_strategy") is not None:
             items.append(("Masking", readable_masking(data)))
         if data.get("ast_granularity") is not None:
@@ -694,7 +727,7 @@ def sample_mode_panels(item, runs: list[Run]) -> str:
         panel_id = f"mode-{run.slug}"
         if run.method == "posnett":
             panels.append(posnett_panel(panel_id, item, run))
-        elif run.method == "rmc":
+        elif is_rmc_method(run.method):
             panels.append(rmc_panel(panel_id, item, run))
         elif run.method == "cognascore":
             panels.append(cognascore_panel(panel_id, item, run))
@@ -755,7 +788,7 @@ def rmc_panel(panel_id: str, item, run: Run) -> str:
         )
     control_rows = contributing_control_recoveries(
         task_data,
-        selected_order=(1,) if run.method == "rmc" else (3, 2, 1),
+        selected_order=(1,) if is_rmc_method(run.method) else (3, 2, 1),
     )
     hard = sorted(control_rows, key=lambda row: (as_float(row.get("score")) or 0.0, mask_size(row), span_start(row)))
     control_table_rows = "".join(
@@ -764,7 +797,7 @@ def rmc_panel(panel_id: str, item, run: Run) -> str:
     if not control_table_rows:
         control_table_rows = '<tr><td colspan="6" class="missing">No contributing control recovery available.</td></tr>'
     patches = mask_patch_cards(hard, task_data, run.method)
-    aggregation_label = RMC_AGGREGATION_LABEL if run.method == "rmc" else RMC_AGGREGATION_LABEL
+    aggregation_label = RMC_AGGREGATION_LABEL
     stats = [
         ("Displayed Score", format_metric(as_float(score))),
         ("Aggregation", aggregation_label),
@@ -879,35 +912,9 @@ def task_result_data(run: Run, task_id: str) -> dict[str, Any] | None:
 
 def display_score_for_row(run: Run, row: dict[str, Any]) -> float | None:
     task_id = row.get("task_id")
-    if run.method == "rmc" and task_id is not None:
-        return rmc_single_region_mean_score(task_result_data(run, str(task_id)))
+    if is_rmc_method(run.method) and task_id is not None:
+        return score_task_result(task_result_data(run, str(task_id)))
     return as_float(row.get("score", row.get("rmc_score")))
-
-
-def rmc_single_region_mean_score(task_data: dict[str, Any] | None) -> float | None:
-    if not task_data:
-        return None
-    masks = {mask.get("index"): mask for mask in task_data.get("masks", [])}
-    scores = []
-    for recovery in task_data.get("recoveries", []):
-        mask = masks.get(recovery.get("index"), {})
-        selected = mask.get("selected_segments") or recovery.get("selected_segments")
-        score = as_float(recovery.get("score", recovery.get("similarity")))
-        if selected == 1 and score is not None:
-            scores.append(adjusted_rmc_recovery_score(score, recovery, mask))
-    return sum(scores) / len(scores) if scores else None
-
-
-def adjusted_rmc_recovery_score(
-    score: float,
-    recovery: dict[str, Any],
-    mask: dict[str, Any],
-) -> float:
-    node_type = str(recovery.get("node_type") or mask.get("node_type") or "")
-    ast_role = str(recovery.get("ast_role") or mask.get("ast_role") or "")
-    if ast_role == "method_body" or node_type in {"MethodDeclaration", "ConstructorDeclaration", "MethodBody"}:
-        return 1 - 0.5 * (1 - score)
-    return score
 
 
 def hardest_contributing_mask_recoveries(
@@ -1010,10 +1017,7 @@ def mask_size_label(row: dict[str, Any]) -> str:
 
 
 def source_token_count(task_data: dict[str, Any]) -> int:
-    lines = task_data.get("source_lines") or []
-    if not isinstance(lines, list):
-        return 0
-    return len(TOKEN_PATTERN.findall("\n".join(str(line) for line in lines)))
+    return rmc_source_token_count(task_data)
 
 
 def mask_patch_cards(rows: list[dict[str, Any]], task_data: dict[str, Any], method: str) -> str:
@@ -1036,13 +1040,17 @@ def mask_patch_cards(rows: list[dict[str, Any]], task_data: dict[str, Any], meth
             f'<span class="patch-meta">gap {escape(format_metric(gap))} · lines {escape(span_label(row))}</span>'
             "</summary>"
             f'<p class="muted">{escape(recovered_label)}</p>'
-            f'<pre class="code-block patch"><code>{escape(recovered)}</code></pre>'
+            f'<pre class="code-block patch"><code>{escape(clean_display_code(recovered))}</code></pre>'
             '<p class="muted patch-subtitle">Original hidden code</p>'
-            f'<pre class="code-block patch"><code>{escape(expected)}</code></pre>'
+            f'<pre class="code-block patch"><code>{escape(clean_display_code(expected))}</code></pre>'
             "</details>"
             '</section>'
         )
     return "".join(blocks)
+
+
+def clean_display_code(code: str) -> str:
+    return "\n".join(line.rstrip() for line in code.splitlines())
 
 
 def row_line_indices(row: dict[str, Any]) -> list[int]:
@@ -1395,7 +1403,7 @@ def run_group_label(method: str, model: str | None) -> str:
     if model is None:
         return method_label(method)
     short = short_model_label(model) or model
-    if method == "rmc":
+    if is_rmc_method(method):
         return f"{method_label(method)} {short}"
     return f"{method_label(method)} ({short})"
 
@@ -1407,7 +1415,7 @@ def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
 
 def short_run_label(run: Run) -> str:
     model = short_model_label(run.model)
-    if run.method == "rmc" and model:
+    if is_rmc_method(run.method) and model:
         return f"{method_label(run.method)} {model}"
     if model:
         return f"{method_label(run.method)} ({model})"

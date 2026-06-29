@@ -18,6 +18,28 @@ set is:
 The statement granularity contains ordinary Java statements such as field and
 local declarations, returns, throws, and statement expressions.
 
+The reported control score uses one capacity-normalized recovery-error formula:
+
+```text
+RMC = 1 - sum(error_penalty_i * (1 - similarity_i)) / sum(capacity_i)
+```
+
+Method bodies use capacity 2.0 and error penalty 1.0. Exception-handling bodies
+use capacity and error penalty 0.5; `if`, loop, `switch`, and other control
+bodies use capacity and error penalty 1.0. A mask occupying proportion
+`r = mask_tokens / source_tokens` receives contribution weight `4r(1-r)`.
+This continuously reduces the influence of both very small masks and masks that
+hide nearly the entire sample. For samples with at least 30 non-blank lines,
+the score is reduced by 0.10 when the number of non-method control regions
+divided by LOC is below 0.15.
+This sparse-control penalty prevents long samples with little observable
+control logic from receiving an inflated readability score.
+
+Recovery supports the original keyed-JSON prompt and two generalist-developer
+3-shot variants: `generalist_negative_3shot` and
+`generalist_positive_3shot`. The 3-shot prompts target the current single-mask
+experiments and require exactly one `mask_1` value.
+
 The Dorn runner is the exception: the original Dorn dataset contains CUDA,
 Java, and Python snippets, and many snippets are fragments rather than parseable
 compilation units. `src.methods.rmc.runners.dorn` therefore uses
@@ -29,10 +51,10 @@ same RMC output schema and reports the strategy and language coverage in
 
 Java experiments run one AST granularity at a time. The default is
 `--ast-granularity control`; `statement` must be run separately and reported
-separately. Only candidates containing at least `8` Java lexical
-tokens are retained by default (`--ast-min-tokens`). A multi-hole mask contains
-at most `3` holes by default (`--max-combination-size`). Single holes are
-retained in full.
+separately. Only candidates containing at least `3` Java lexical
+tokens are retained by default (`--ast-min-tokens`). The reported score uses
+single holes, so `--max-combination-size` defaults to `1`. Higher values remain
+available for explicit combination experiments.
 Combination holes are deterministically sampled per `(granularity, combination
 size)` stratum only when `--max-samples-per-stratum` is set. By default the
 budget is unlimited and all eligible combinations are retained; if a budget is
@@ -42,11 +64,10 @@ code unit and without splitting a larger structure merely to fit an upper
 bound. A loop is never split into its header and body as a control-flow
 candidate. Nested legal AST holes are retained alongside their parent control
 hole. Candidate holes are grouped into `control` and `statement`
-granularities. Multi-hole masks combine only non-overlapping holes in the
-same granularity, up to `--max-combination-size`; the number of eligible
-candidates in the selected granularity does not disable combinations. The Java
-task score is the equal mean of its available combination-size strata within
-the selected granularity, rather than a flat average over all generated holes.
+granularities. Multi-hole masks combine only non-overlapping holes in the same
+granularity when explicitly enabled with `--max-combination-size`; the number
+of eligible candidates in the selected granularity does not disable
+combinations.
 The sequence
 parameters `nmin`, `nmax`, `lmin`, and `lmax` are not used for Java AST mask
 generation.
