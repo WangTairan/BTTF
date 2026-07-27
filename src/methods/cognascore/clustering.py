@@ -17,6 +17,9 @@ class DBSCAN:
         self.min_pts = min_pts
 
     def fit(self, records: list[EmbeddedLexeme]) -> list[int]:
+        return self._fit_python(records)
+
+    def _fit_python(self, records: list[EmbeddedLexeme]) -> list[int]:
         labels: list[int | None] = [None] * len(records)
         cluster_id = 0
 

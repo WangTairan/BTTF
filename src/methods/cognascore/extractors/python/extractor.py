@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover
 
 
 class LexemeExtractor:
+    MAX_LEXEME_CHARS = 256
+
     IDENT_BLACKLIST = {
         "aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff", "gggg", "hhhh",
         "llll", "mmmm", "nnnn", "oooo", "pppp", "qqqq", "rrrr", "tttt", "wwww",
@@ -22,6 +24,18 @@ class LexemeExtractor:
     IMPORT_RE = re.compile(r"^\s*import\s+(?:static\s+)?([^;]+);")
     MEMBER_SNIPPET_PREFIX = "class Snippet {\n"
     MEMBER_SNIPPET_SUFFIX = "\n}\n"
+    FALLBACK_TOKEN_RE = re.compile(
+        r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|'
+        r'\b(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d+)?)\b|'
+        r'\b[A-Za-z_]\w*\b|'
+        r'==|!=|<=|>=|&&|\|\||<<|>>|\+\+|--|\+=|-=|\*=|/=|%=|'
+        r'[+\-*/%<>&|^~=!]'
+    )
+    CONTROL_WORDS = {"if", "else", "for", "while", "do", "switch", "case", "catch", "try"}
+    DECLARATION_WORDS = {
+        "class", "struct", "enum", "interface", "def", "function", "void", "int",
+        "long", "short", "float", "double", "char", "bool", "boolean", "string", "String",
+    }
 
     def require_parser(self) -> None:
         self._require_parser()
@@ -46,13 +60,56 @@ class LexemeExtractor:
             try:
                 wrapped_chunks = self.extract(wrapped_source)
             except parse_errors:
-                raise initial_error
+                chunks = self._extract_lexical_fallback(source)
+                if not chunks:
+                    raise initial_error
+                return chunks, True
             chunks = [
                 replace(chunk, line=chunk.line - 1)
                 for chunk in wrapped_chunks
                 if chunk.line > 1
             ]
+            if not chunks:
+                lexical_chunks = self._extract_lexical_fallback(source)
+                if lexical_chunks:
+                    return lexical_chunks, True
             return chunks, True
+
+    def _extract_lexical_fallback(self, source: str) -> list[LexemeChunk]:
+        """Extract language-neutral semantic chunks from incomplete or non-Java code."""
+        chunks = self._extract_comments(source)
+        masked = self._mask_comments(source)
+        logical = {"&&", "||", "!"}
+        comparison = {"==", "!=", "<", ">", "<=", ">="}
+        bitwise = {"&", "|", "^", "~", "<<", ">>"}
+        arithmetic = {"+", "-", "*", "/", "%", "++", "--"}
+        assignments = {"=", "+=", "-=", "*=", "/=", "%="}
+        for line_no, line in enumerate(masked.splitlines(), start=1):
+            tokens = self.FALLBACK_TOKEN_RE.findall(line)
+            for index, token in enumerate(tokens):
+                next_token = tokens[index + 1] if index + 1 < len(tokens) else ""
+                if token in self.CONTROL_WORDS:
+                    kind, lexeme = "CONTROL_FLOW", token
+                elif token in self.DECLARATION_WORDS:
+                    kind, lexeme = "DECLARATION", token
+                elif token in logical:
+                    kind, lexeme = "LOGICAL", token
+                elif token in comparison:
+                    kind, lexeme = "COMPARISON", token
+                elif token in bitwise:
+                    kind, lexeme = "BITWISE", token
+                elif token in arithmetic:
+                    kind, lexeme = "ARITHMETIC", token
+                elif token in assignments:
+                    kind, lexeme = "ASSIGNMENT", token
+                elif token.startswith(('"', "'")) or token[0].isdigit():
+                    kind, lexeme = "LITERAL", f"literal_{self._normalize(token)}"
+                elif next_token == "(" and token not in self.CONTROL_WORDS:
+                    kind, lexeme = "CALL", f"call_{self._normalize(token)}"
+                else:
+                    kind, lexeme = self._identifier_type(token), self._normalize(token)
+                self._add(chunks, lexeme, line_no, kind)
+        return chunks
 
     def _require_parser(self) -> None:
         if javalang is None:
@@ -79,7 +136,7 @@ class LexemeExtractor:
             used = self._import_is_used(imported, code_without_imports)
             prefix = "import" if used else "unused_import"
             kind = "IMPORT" if used else "UNUSED_IMPORT"
-            chunks.append(LexemeChunk(f"{prefix}_{category}_{base}", line_no, kind))
+            self._add(chunks, f"{prefix}_{category}_{base}", line_no, kind)
         return chunks
 
     def _import_is_used(self, imported: str, code_without_imports: str) -> bool:
@@ -108,8 +165,7 @@ class LexemeExtractor:
                 if end == -1:
                     end = len(source)
                 lexeme = self._comment_normalize(source[i + 2:end])
-                if lexeme:
-                    chunks.append(LexemeChunk(f"comment_{lexeme}", line, "COMMENT"))
+                self._add(chunks, f"comment_{lexeme}", line, "COMMENT")
                 i = end
                 continue
 
@@ -120,8 +176,7 @@ class LexemeExtractor:
                 current_line = line
                 for comment_line in self._split_block_comment(raw):
                     lexeme = self._comment_normalize(comment_line)
-                    if lexeme:
-                        chunks.append(LexemeChunk(f"comment_{lexeme}", current_line, "COMMENT"))
+                    self._add(chunks, f"comment_{lexeme}", current_line, "COMMENT")
                     current_line += 1
                 line += raw.count("\n")
                 i = block_end if end == -1 else end + 2
@@ -158,10 +213,54 @@ class LexemeExtractor:
         line = self._line(node)
         name = self._normalize(node.name)
         params = [self._normalize(param.name) for param in node.parameters or []]
-        self._add(chunks, ["def", name, *params], line)
-        self._add(chunks, name, line)
+        self._add(chunks, ["def", name, *params], line, "DECLARATION")
+        self._add(chunks, name, line, "IDENTIFIER")
         for child in self._children(node):
             self._walk(child, chunks)
+        return True
+
+    def _handle_ClassDeclaration(self, node, chunks: list[LexemeChunk]) -> bool:
+        return self._handle_type_declaration(node, chunks, "class")
+
+    def _handle_InterfaceDeclaration(self, node, chunks: list[LexemeChunk]) -> bool:
+        return self._handle_type_declaration(node, chunks, "interface")
+
+    def _handle_EnumDeclaration(self, node, chunks: list[LexemeChunk]) -> bool:
+        return self._handle_type_declaration(node, chunks, "enum")
+
+    def _handle_type_declaration(self, node, chunks: list[LexemeChunk], kind_name: str) -> bool:
+        line = self._line(node)
+        name = self._normalize(getattr(node, "name", ""))
+        extends = self._type_to_str(getattr(node, "extends", None))
+        implements = [self._type_to_str(item) for item in getattr(node, "implements", None) or []]
+        self._add(chunks, name, line, self._identifier_type(name))
+        self._add(chunks, [kind_name, name, extends, *implements], line, "DECLARATION")
+        for child in self._children(node):
+            self._walk(child, chunks)
+        return True
+
+    def _handle_ConstructorDeclaration(self, node, chunks: list[LexemeChunk]) -> bool:
+        line = self._line(node)
+        name = self._normalize(getattr(node, "name", ""))
+        params = [self._normalize(param.name) for param in getattr(node, "parameters", None) or []]
+        self._add(chunks, ["constructor", name, *params], line, "DECLARATION")
+        self._add(chunks, name, line, self._identifier_type(name))
+        for child in self._children(node):
+            self._walk(child, chunks)
+        return True
+
+    def _handle_FieldDeclaration(self, node, chunks: list[LexemeChunk]) -> bool:
+        type_name = self._type_to_str(getattr(node, "type", None))
+        line = self._line(node)
+        for declarator in getattr(node, "declarators", None) or []:
+            name = self._normalize(declarator.name)
+            declarator_line = self._line(declarator, line)
+            self._add(chunks, name, declarator_line, self._identifier_type(name))
+            self._add(chunks, [type_name, name], declarator_line, "DECLARATION")
+            if declarator.initializer is not None:
+                self._add(chunks, f"def_{name}", declarator_line, "DECLARATION")
+                self._add(chunks, f"def_{name}_{self._expr(declarator.initializer)}", declarator_line, "DECLARATION")
+                self._walk(declarator.initializer, chunks)
         return True
 
     def _handle_FormalParameter(self, node, chunks: list[LexemeChunk]) -> bool:
@@ -169,7 +268,7 @@ class LexemeExtractor:
         name = self._normalize(node.name)
         type_name = self._type_to_str(node.type)
         self._add(chunks, name, line, self._identifier_type(name))
-        self._add(chunks, [type_name, name], line)
+        self._add(chunks, [type_name, name], line, "DECLARATION")
         return True
 
     def _handle_LocalVariableDeclaration(self, node, chunks: list[LexemeChunk]) -> bool:
@@ -178,10 +277,10 @@ class LexemeExtractor:
         for declarator in node.declarators or []:
             name = self._normalize(declarator.name)
             self._add(chunks, name, self._line(declarator, line), self._identifier_type(name))
-            self._add(chunks, [type_name, name], self._line(declarator, line))
+            self._add(chunks, [type_name, name], self._line(declarator, line), "DECLARATION")
             if declarator.initializer is not None:
-                self._add(chunks, f"def_{name}", self._line(declarator, line))
-                self._add(chunks, f"def_{name}_{self._expr(declarator.initializer)}", self._line(declarator, line))
+                self._add(chunks, f"def_{name}", self._line(declarator, line), "DECLARATION")
+                self._add(chunks, f"def_{name}_{self._expr(declarator.initializer)}", self._line(declarator, line), "DECLARATION")
                 self._walk(declarator.initializer, chunks)
         return True
 
@@ -196,9 +295,9 @@ class LexemeExtractor:
         if name and not static_like_qualifier:
             self._add(chunks, name, line, self._identifier_type(name))
         for op in node.prefix_operators or []:
-            self._add(chunks, f"{op}{name}", line, "BITWISE" if op == "~" else "NORMAL")
+            self._add(chunks, f"{op}{name}", line, "BITWISE" if op == "~" else "ARITHMETIC")
         for op in node.postfix_operators or []:
-            self._add(chunks, f"{name}{op}", line)
+            self._add(chunks, f"{name}{op}", line, "ARITHMETIC")
         return True
 
     def _handle_Literal(self, node, chunks: list[LexemeChunk]) -> bool:
@@ -211,18 +310,18 @@ class LexemeExtractor:
                 for token in self._tokenize_regex(string_value):
                     self._add(chunks, ["regex", token], line, "REGEX")
             else:
-                self._add(chunks, f"literal_{self._normalize(string_value)}", line)
+                self._add(chunks, f"literal_{self._normalize(string_value)}", line, "LITERAL")
             return True
         if value != "null":
-            self._add(chunks, f"literal_{self._normalize(value)}", line)
+            self._add(chunks, f"literal_{self._normalize(value)}", line, "LITERAL")
         return True
 
     def _handle_BinaryOperation(self, node, chunks: list[LexemeChunk]) -> bool:
-        kind = "BITWISE" if node.operator in {"&", "|", "^", "<<", ">>", ">>>"} else "NORMAL"
+        kind = self._operator_type(node.operator)
         self._add(chunks, self._expr(node), self._line(node), kind)
         current = node.operandl
         while self._is_node(current) and current.__class__.__name__ == "BinaryOperation" and current.operator == node.operator:
-            nested_kind = "BITWISE" if current.operator in {"&", "|", "^", "<<", ">>", ">>>"} else "NORMAL"
+            nested_kind = self._operator_type(current.operator)
             self._add(chunks, self._expr(current), self._line(current), nested_kind)
             current = current.operandl
         self._walk(node.operandl, chunks)
@@ -232,15 +331,15 @@ class LexemeExtractor:
     def _handle_MethodInvocation(self, node, chunks: list[LexemeChunk]) -> bool:
         parts = [self._method_select(node)]
         parts.extend(self._expr(arg) for arg in node.arguments or [])
-        self._add(chunks, parts, self._line(node))
+        self._add(chunks, parts, self._line(node), "CALL")
         if getattr(node, "prefix_operators", None):
-            self._add(chunks, self._expr(node), self._line(node), "BITWISE" if "~" in node.prefix_operators else "NORMAL")
+            self._add(chunks, self._expr(node), self._line(node), "BITWISE" if "~" in node.prefix_operators else "CALL")
         base_expr = f"{self._method_select(node)}({','.join(self._expr(arg) for arg in node.arguments or [])})"
         for selector in node.selectors or []:
             if selector.__class__.__name__ == "MethodInvocation":
                 selector_parts = [f"{base_expr}.{selector.member}"]
                 selector_parts.extend(self._expr(arg) for arg in selector.arguments or [])
-                self._add(chunks, selector_parts, self._line(selector, self._line(node)))
+                self._add(chunks, selector_parts, self._line(selector, self._line(node)), "CALL")
                 for arg in selector.arguments or []:
                     self._walk(arg, chunks)
                 base_expr = f"{base_expr}.{selector.member}({','.join(self._expr(arg) for arg in selector.arguments or [])})"
@@ -251,20 +350,20 @@ class LexemeExtractor:
         return True
 
     def _handle_IfStatement(self, node, chunks: list[LexemeChunk]) -> bool:
-        self._add(chunks, ["if", self._expr(node.condition)], self._line(node))
+        self._add(chunks, ["if", self._expr(node.condition)], self._line(node), "CONTROL_FLOW")
         self._walk(node.condition, chunks)
         self._walk(node.then_statement, chunks)
         if node.else_statement is not None:
             if node.else_statement.__class__.__name__ == "IfStatement":
                 self._handle_elif_chain(node.else_statement, [self._expr(node.condition)], chunks)
             else:
-                self._add(chunks, ["else", f"not_{self._expr(node.condition)}"], self._line(node.else_statement))
+                self._add(chunks, ["else", f"not_{self._expr(node.condition)}"], self._line(node.else_statement), "CONTROL_FLOW")
                 self._walk(node.else_statement, chunks)
         return True
 
     def _handle_elif_chain(self, node, seen: list[str], chunks: list[LexemeChunk]) -> None:
         condition = self._expr(node.condition)
-        self._add(chunks, ["elif", condition], self._line(node))
+        self._add(chunks, ["elif", condition], self._line(node), "CONTROL_FLOW")
         seen.append(condition)
         self._walk(node.condition, chunks)
         self._walk(node.then_statement, chunks)
@@ -273,17 +372,17 @@ class LexemeExtractor:
         if node.else_statement.__class__.__name__ == "IfStatement":
             self._handle_elif_chain(node.else_statement, seen, chunks)
             return
-        self._add(chunks, ["else", *[f"not_{condition}" for condition in seen]], self._line(node.else_statement))
+        self._add(chunks, ["else", *[f"not_{condition}" for condition in seen]], self._line(node.else_statement), "CONTROL_FLOW")
         self._walk(node.else_statement, chunks)
 
     def _handle_WhileStatement(self, node, chunks: list[LexemeChunk]) -> bool:
-        self._add(chunks, ["while", self._expr(node.condition)], self._line(node))
+        self._add(chunks, ["while", self._expr(node.condition)], self._line(node), "CONTROL_FLOW")
         self._walk(node.condition, chunks)
         self._walk(node.body, chunks)
         return True
 
     def _handle_DoStatement(self, node, chunks: list[LexemeChunk]) -> bool:
-        self._add(chunks, ["do-while", self._expr(node.condition)], self._line(node))
+        self._add(chunks, ["do-while", self._expr(node.condition)], self._line(node), "CONTROL_FLOW")
         self._walk(node.body, chunks)
         self._walk(node.condition, chunks)
         return True
@@ -293,9 +392,9 @@ class LexemeExtractor:
         if control.__class__.__name__ == "EnhancedForControl":
             var_name = self._declaration_name(control.var)
             line = self._line(node)
-            self._add(chunks, ["for", var_name, self._expr(control.iterable)], line)
+            self._add(chunks, ["for", var_name, self._expr(control.iterable)], line, "CONTROL_FLOW")
             self._add(chunks, var_name, line, self._identifier_type(var_name))
-            self._add(chunks, [self._type_to_str(control.var.type), var_name], line)
+            self._add(chunks, [self._type_to_str(control.var.type), var_name], line, "DECLARATION")
             self._walk(control.iterable, chunks)
             self._walk(node.body, chunks)
             return True
@@ -314,7 +413,7 @@ class LexemeExtractor:
             parts.append(start)
         if step:
             parts.append(step)
-        self._add(chunks, parts, self._line(node))
+        self._add(chunks, parts, self._line(node), "CONTROL_FLOW")
 
         for item in init:
             if item.__class__.__name__ in {"LocalVariableDeclaration", "VariableDeclaration"}:
@@ -334,13 +433,14 @@ class LexemeExtractor:
         return value if isinstance(value, list) else [value]
 
     def _handle_SwitchStatement(self, node, chunks: list[LexemeChunk]) -> bool:
-        self._add(chunks, ["switch", self._expr(node.expression)], self._line(node))
+        self._add(chunks, ["switch", self._expr(node.expression)], self._line(node), "CONTROL_FLOW")
         self._walk(node.expression, chunks)
         for case in node.cases or []:
             self._walk(case, chunks)
         return True
 
     def _handle_Assignment(self, node, chunks: list[LexemeChunk]) -> bool:
+        self._add(chunks, self._expr(node), self._line(node), "ASSIGNMENT")
         self._walk(node.expressionl, chunks)
         self._walk(node.value, chunks)
         return True
@@ -412,6 +512,14 @@ class LexemeExtractor:
         if kind == "ClassCreator":
             args = ",".join(self._expr(arg) for arg in node.arguments or [])
             return f"new{self._type_to_str(node.type)}({args})"
+        if kind == "ArrayCreator":
+            dimensions = len(getattr(node, "dimensions", None) or [])
+            initializer = getattr(node, "initializer", None)
+            init_size = _initializer_size(initializer) if initializer is not None else 0
+            suffix = f"_init{init_size}" if init_size else ""
+            return f"new{self._type_to_str(node.type)}_array{dimensions}{suffix}"
+        if kind == "ArrayInitializer":
+            return f"array_init{_initializer_size(node)}"
         if kind == "LambdaExpression":
             params = ",".join(self._expr(param) for param in node.parameters or [])
             body = self._lambda_body_expr(node.body)
@@ -567,7 +675,7 @@ class LexemeExtractor:
         if not isinstance(lexeme, str):
             lexeme = self._join(lexeme)
         normalized = self._normalize(lexeme)
-        if normalized:
+        if normalized and len(normalized) <= self.MAX_LEXEME_CHARS:
             chunks.append(LexemeChunk(normalized, line, kind))
 
     def _join(self, parts: Iterable[str]) -> str:
@@ -579,7 +687,16 @@ class LexemeExtractor:
         return re.sub(r"\s+", "", str(value).strip())
 
     def _identifier_type(self, identifier: str) -> str:
-        return "JUNK" if identifier.lower() in self.IDENT_BLACKLIST else "NORMAL"
+        return "JUNK" if identifier.lower() in self.IDENT_BLACKLIST else "IDENTIFIER"
+
+    def _operator_type(self, operator: str) -> str:
+        if operator in {"&", "|", "^", "<<", ">>", ">>>"}:
+            return "BITWISE"
+        if operator in {"==", "!=", "<", ">", "<=", ">="}:
+            return "COMPARISON"
+        if operator in {"&&", "||"}:
+            return "LOGICAL"
+        return "ARITHMETIC"
 
     def _comment_normalize(self, value: str) -> str:
         return re.sub(r"\s+", "_", value.strip())
@@ -694,3 +811,12 @@ class LexemeExtractor:
             i += 1
         flush()
         return out
+
+
+def _initializer_size(node) -> int:
+    if node is None:
+        return 0
+    initializers = getattr(node, "initializers", None)
+    if isinstance(initializers, list):
+        return len(initializers)
+    return 0

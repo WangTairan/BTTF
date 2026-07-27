@@ -93,6 +93,9 @@
           border-radius: 8px; padding: 8px; margin-bottom: 6px;
         }
         .cluster h4 { margin: 0 0 6px 0; font-size: 13px; }
+        .metrics { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .metric { background: #f7f7f7; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+        .formula { flex: 1 1 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     </style>
 </head>
 <body>
@@ -166,6 +169,17 @@
       </div>
     </div>
   `;
+
+  const meta = rec.metadata || {};
+  const metrics = document.createElement('div');
+  metrics.className = 'metrics';
+  metrics.innerHTML = `
+    <div class="metric"><b>Generalized score</b> ${(meta.generalized_score ?? NaN).toFixed?.(4) ?? "n/a"}</div>
+    <div class="metric"><b>log vocabulary</b> ${(meta.log_vocabulary_size ?? NaN).toFixed?.(4) ?? "n/a"}</div>
+    <div class="metric"><b>noise ratio</b> ${(meta.noise_ratio ?? NaN).toFixed?.(4) ?? "n/a"}</div>
+    <div class="metric formula"><b>Formula</b> ${escapeHtml(meta.generalized_formula || "n/a")}</div>
+  `;
+  card.appendChild(metrics);
 
   const gridTop = document.createElement('div');
   gridTop.className = 'grid-top';

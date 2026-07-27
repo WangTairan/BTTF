@@ -7,17 +7,20 @@ methods and datasets can be added without changing unrelated experiments.
 
 Current method families:
 
-- RMC: the current Recursive Masking Complexity variant. It masks
-  control regions, asks the LLM to return exact mask replacements, and scores
-  hidden regions directly.
+- CognaScore: the active code-readability feature and supervised Ridge pipeline.
+  It extracts cognitive chunks, caches local embeddings, builds stable
+  chunk-view clustering feature tables, and materializes the current visualized
+  score.
+- RMC: Recursive Masking Complexity. It masks control regions, asks the LLM to
+  return exact mask replacements, and scores hidden regions directly.
 - Posnett: deterministic Java readability model.
 - Scalabrino: deterministic Java readability model using the released tool.
 - CognaScore: Java lexeme embedding and clustering method.
 - LLM: direct LLM readability scoring baseline.
 
 Method-specific details live in each package README, especially
-`src/methods/rmc/README.md`, `src/methods/posnett/README.md`,
-`src/methods/scalabrino/README.md`, and `src/methods/cognascore/README.md`.
+`src/methods/cognascore/README.md`, `src/methods/rmc/README.md`,
+`src/methods/posnett/README.md`, and `src/methods/scalabrino/README.md`.
 
 ## Layout
 
@@ -47,6 +50,7 @@ Registered datasets:
 | Key | Path | Type | Main metric |
 | --- | --- | --- | --- |
 | `mbjp` | `datasets/mbjp_dev_dataset/readability_dataset.json` | code, continuous | Spearman |
+| `buse` | `datasets/buse` | code, continuous | Spearman |
 | `scalabrino` | `datasets/scalabrino/dataset` | code, continuous | Spearman |
 | `jetbrains` | `datasets/jetbrains` | code, binary | best-threshold MCC |
 | `schnappinger` | `datasets/schnappinger` | code, continuous | Spearman |
@@ -105,9 +109,51 @@ python3 -m src.experiments.evaluate_method datasets/jetbrains --method cognascor
 Continuous datasets report Spearman correlation. Binary datasets such as
 JetBrains report MCC with the best threshold on that dataset.
 
-CognaScore intentionally excludes Dorn in the shared evaluator because its
-current extractor is Java-oriented and Dorn contains truncated fragments across
-three languages.
+CognaScore supports Dorn through the language-neutral lexical fallback in its
+chunk extractor. Continuous datasets report Spearman; JetBrains reports MCC.
+
+## CognaScore Feature Pipeline
+
+CognaScore uses two persistent stages for embedding-derived features:
+
+```text
+output/cognascore_embeddings/<embedding-model>/embeddings.sqlite
+output/cognascore_embedding_features/<dataset>/<embedding-model>/features.csv
+```
+
+The embedding cache is incremental: rerunning embeds only missing lexemes. When
+the extractor changes, use `--replace-sources` for the selected datasets so
+stale source references are removed before refreshed references are inserted.
+Feature-table generation supports checkpoint/resume for long clustering runs.
+
+Repair the current Nomic cache and feature table after extractor changes:
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache python3 -m src.methods.cognascore.runners.embeddings \
+  datasets/schnappinger \
+  --embedding-model nomic-ai/nomic-embed-text-v1.5 \
+  --device cpu \
+  --batch-size 8 \
+  --quiet \
+  --replace-sources
+```
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache python3 -m src.methods.cognascore.runners.embedding_features \
+  datasets/schnappinger \
+  --embedding-model nomic-ai/nomic-embed-text-v1.5 \
+  --max-vectors-per-task 512 \
+  --resume \
+  --update-all \
+  --checkpoint-every 1
+```
+
+Run the supervised Ridge materialization after base and embedding feature
+tables are current:
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache python3 -m src.methods.cognascore.runners.supervised_ridge
+```
 
 ## RMC Experiments
 

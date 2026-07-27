@@ -172,11 +172,7 @@ def load_items(path: Path) -> Iterable[DatasetItem]:
 
 def validate_method_dataset(args: argparse.Namespace) -> None:
     if not is_method_dataset_supported(args.method, args.dataset):
-        raise SystemExit(
-            "CognaScore does not support the Dorn dataset: its samples are "
-            "structurally truncated Java fragments rather than parseable "
-            "compilation units or class-member snippets."
-        )
+        raise SystemExit(f"{args.method} does not support dataset {args.dataset}.")
 
 
 def build_method(args: argparse.Namespace) -> MethodFn:
@@ -289,7 +285,19 @@ def write_summary(output_dir: Path, args: argparse.Namespace, rows: list[dict]) 
     mcc = None
     confusion_matrix = None
     predicted_positive_count = None
-    if binary:
+    if binary and args.method == "cognascore":
+        threshold = 0.5
+        actual = [int(float(row["readability_score"])) for row in valid]
+        predicted = [int(float(row["score"]) >= threshold) for row in valid]
+        mcc = matthews_correlation_coefficient(predicted, actual)
+        confusion_matrix = {
+            "true_positive": sum(1 for p, a in zip(predicted, actual) if p == 1 and a == 1),
+            "true_negative": sum(1 for p, a in zip(predicted, actual) if p == 0 and a == 0),
+            "false_positive": sum(1 for p, a in zip(predicted, actual) if p == 1 and a == 0),
+            "false_negative": sum(1 for p, a in zip(predicted, actual) if p == 0 and a == 1),
+        }
+        predicted_positive_count = sum(predicted)
+    elif binary:
         threshold, mcc, confusion_matrix, predicted_positive_count = best_binary_threshold(valid)
     elif not binary and len(valid) >= 2:
         rho = spearman(
@@ -317,7 +325,10 @@ def write_summary(output_dir: Path, args: argparse.Namespace, rows: list[dict]) 
         "error_count": sum(1 for row in rows if row.get("score") is None),
         "evaluation_metric": evaluation_metric,
         "classification_threshold": threshold,
-        "classification_threshold_policy": "best_on_dataset" if binary else None,
+        "classification_threshold_policy": (
+            "frozen_generalization_formula" if binary and args.method == "cognascore"
+            else "best_on_dataset" if binary else None
+        ),
         "classification_direction": "score>=threshold" if binary else None,
         "predicted_positive_count": predicted_positive_count,
         "spearman": rho,

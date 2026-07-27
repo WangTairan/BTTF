@@ -8,6 +8,11 @@ OUTPUT_POLICY_OVERWRITE = "overwrite"
 OUTPUT_POLICY_CONFIGURED_HISTORY = "configured_history"
 
 COGNASCORE_DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1.5"
+COGNASCORE_EMBEDDING_MODELS = (
+    COGNASCORE_DEFAULT_MODEL,
+    "jinaai/jina-embeddings-v2-base-code",
+    "Qwen/Qwen3-Embedding-0.6B",
+)
 COGNASCORE_DEFAULT_CACHE_DIR = Path("models")
 
 
@@ -41,6 +46,13 @@ DATASETS: dict[str, DatasetSpec] = {
     "scalabrino": DatasetSpec(
         key="scalabrino",
         path=Path("datasets/scalabrino/dataset"),
+        modality="code",
+        label_type="continuous",
+        primary_metric="spearman",
+    ),
+    "buse": DatasetSpec(
+        key="buse",
+        path=Path("datasets/buse"),
         modality="code",
         label_type="continuous",
         primary_metric="spearman",
@@ -116,9 +128,7 @@ METHODS: dict[str, MethodSpec] = {
     ),
 }
 
-UNSUPPORTED_METHOD_DATASETS = {
-    ("cognascore", "dorn"),
-}
+UNSUPPORTED_METHOD_DATASETS = set()
 
 
 def method_choices() -> tuple[str, ...]:

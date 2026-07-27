@@ -11,6 +11,13 @@ os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 
+SUPPORTED_EMBEDDING_MODELS = {
+    "nomic-ai/nomic-embed-text-v1.5": "Default general-purpose embedding model used by existing CognaScore runs.",
+    "jinaai/jina-embeddings-v2-base-code": "Code-oriented Jina embedding model for code/search/docstring style inputs.",
+    "Qwen/Qwen3-Embedding-0.6B": "Recent Qwen3 embedding model with multilingual, long-context, code-retrieval, classification, and clustering support.",
+}
+
+
 class NomicEmbedder:
     DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1.5"
     DEFAULT_CACHE_DIR = Path("models")
@@ -22,6 +29,7 @@ class NomicEmbedder:
         model_name: str = DEFAULT_MODEL,
         device: str | None = None,
         cache_dir: Path | str | None = DEFAULT_CACHE_DIR,
+        max_length: int | None = None,
     ) -> None:
         try:
             import torch
@@ -54,6 +62,8 @@ class NomicEmbedder:
         )
         self.model.eval()
         self.model.to(self.device)
+        self.model_name = model_name
+        self.max_length = max_length
 
     def embed_text(self, text: str) -> list[float]:
         return self.embed_texts([text])[0]
@@ -67,6 +77,7 @@ class NomicEmbedder:
             return_tensors="pt",
             padding=True,
             truncation=True,
+            max_length=self.max_length,
         )
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
 

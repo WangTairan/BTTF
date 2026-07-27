@@ -1,30 +1,56 @@
 # Local OS/editor files
 .DS_Store
+Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Python caches and virtual environments
 __pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
 .venv/
 venv/
 env/
+ENV/
+build/
+dist/
+*.egg-info/
 
 # Experiment outputs and historical run data
 output/
 output_history/
+output_*/
 backups/
+wandb/
+runs/
 
 # Local model/download caches
 models/
+.cache/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.bin
 
 # Temporary files
 *.tmp
 *.temp
 *.log
+.pycache_tmp/
+tmp/
+temp/
+.env
+.env.*
 
 # Keep the generated GitHub Pages visualization tracked.
 !docs/

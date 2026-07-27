@@ -1,14 +1,16 @@
 METHOD_LABELS = {
-    "rmc": "RMC",
+    "loc_baseline": "LOC baseline",
     "posnett": "Posnett",
     "scalabrino": "Scalabrino",
-    "cognascore": "CognaScore",
+    "cognascore": "CognaScore ML",
+    "cognascore_compact": "CognaScore Compact",
     "llm": "LLM prompt",
     "llm_prompt": "LLM",
 }
 
 DATASET_LABELS = {
     "mbjp": "MBJP",
+    "buse": "Buse",
     "scalabrino": "Scalabrino",
     "jetbrains": "JetBrains",
     "dorn": "Dorn",
@@ -17,15 +19,16 @@ DATASET_LABELS = {
 }
 
 METHOD_ORDER = (
-    "rmc",
+    "loc_baseline",
     "posnett",
     "scalabrino",
     "cognascore",
+    "cognascore_compact",
     "llm_prompt",
     "llm",
 )
 
-DATASET_ORDER = ("mbjp", "scalabrino", "jetbrains", "dorn", "schnappinger", "clear")
+DATASET_ORDER = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger", "clear")
 
 MODEL_LABELS = {
     "gpt41-nano": "4.1",
@@ -36,6 +39,10 @@ MODEL_LABELS = {
     "deepseek-v4-pro": "DSV4 Pro",
     "nomic-ai-nomic-embed-text-v1.5": "Nomic",
     "nomic-ai/nomic-embed-text-v1.5": "Nomic",
+    "jinaai-jina-embeddings-v2-base-code": "Jina Code",
+    "jinaai/jina-embeddings-v2-base-code": "Jina Code",
+    "Qwen-Qwen3-Embedding-0.6B": "Qwen3 0.6B",
+    "Qwen/Qwen3-Embedding-0.6B": "Qwen3 0.6B",
 }
 
 

@@ -22,7 +22,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("dataset", type=Path, help="Supported Java/code dataset path or directory.")
     add_scoring_args(parser)
     parser.add_argument("--limit", type=int)
-    parser.add_argument("--skip-errors", action="store_true")
     return parser.parse_args()
 
 
@@ -40,14 +39,9 @@ def main() -> None:
     progress = DatasetProgress(len(items))
     for index, item in enumerate(items, start=1):
         progress.running(index, item.task_id)
-        try:
-            record = scorer.process(item.content, task_id=item.task_id)
-            record = replace(record, metadata={**record.metadata, **item.metadata})
-            records.append(record)
-        except Exception as exc:
-            if not args.skip_errors:
-                raise
-            errors.append({"task_id": item.task_id, "error": repr(exc)})
+        record = scorer.process(item.content, task_id=item.task_id)
+        record = replace(record, metadata={**record.metadata, **item.metadata})
+        records.append(record)
     description = (
         f"model={args.embedding_model}, DBSCAN eps={args.eps}, minPts={args.min_pts}"
     )
@@ -65,7 +59,12 @@ def main() -> None:
             "error_count": len(errors),
         },
         "records": [
-            {"task_id": record.task_id, "score": record.avg_diameter}
+            {
+                "task_id": record.task_id,
+                "score": record.metadata.get("generalized_score"),
+                "formula": record.metadata.get("generalized_formula"),
+                "avg_cluster_diameter": record.avg_diameter,
+            }
             for record in records
         ],
         "errors": errors,

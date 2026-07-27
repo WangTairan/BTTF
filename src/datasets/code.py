@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from src.datasets.buse import load_dataset as load_buse_dataset
 from src.datasets.code_jsonl import load_dataset as load_code_jsonl_dataset
 from src.datasets.dorn import load_dataset as load_dorn_dataset
 from src.datasets.jetbrains import load_dataset as load_jetbrains_dataset
@@ -23,6 +24,8 @@ def load_code_dataset(path: Path) -> list[DatasetItem]:
             return load_schnappinger_dataset(path)
         if (path / "snippets_with_human_scores.csv").exists():
             return load_jetbrains_dataset(path)
+        if (path / "raw" / "readability-votes.csv").is_file() and (path / "snippets").is_dir():
+            return load_buse_dataset(path)
         raise ValueError(f"Unsupported code dataset directory: {path}")
 
     if path.suffix == ".jsonl":
@@ -31,6 +34,8 @@ def load_code_dataset(path: Path) -> list[DatasetItem]:
         return load_schnappinger_dataset(path)
     if path.name in {"snippets.csv", "snippets_with_human_scores.csv"}:
         return load_jetbrains_dataset(path)
+    if path.name == "readability-votes.csv":
+        return load_buse_dataset(path)
     if path.suffix == ".json":
         return load_mbjp_dataset(path)
     raise ValueError(f"Unsupported code dataset path: {path}")

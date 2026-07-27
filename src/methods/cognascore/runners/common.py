@@ -16,11 +16,7 @@ from ..results import model_slug
 
 def validate_supported_dataset(path: Path) -> None:
     if not is_method_dataset_supported("cognascore", path):
-        raise SystemExit(
-            "CognaScore does not support the Dorn dataset: its samples are "
-            "structurally truncated Java fragments rather than parseable "
-            "compilation units or class-member snippets."
-        )
+        raise SystemExit(f"CognaScore does not support dataset {path}.")
 
 
 def add_scoring_args(parser: argparse.ArgumentParser) -> None:

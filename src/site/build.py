@@ -12,7 +12,12 @@ from src.experiments.paths import safe_path_part
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.methods.llm_prompt import LLM_READABILITY_PROMPT_TEMPLATE
 from src.methods.posnett.method import JAVA_KEYWORDS, JAVA_OPERATORS, TOKEN_PATTERN, strip_comments
-from src.methods.rmc.prompts import CODE_MASK_JSON_PROMPT_TEMPLATE
+from src.methods.rmc.prompts import (
+    CODE_MASK_JSON_PROMPT_TEMPLATE,
+    GENERALIST_NEGATIVE_3SHOT_VARIANT,
+    GENERALIST_POSITIVE_3SHOT_VARIANT,
+    build_recovery_prompt,
+)
 from src.methods.rmc.scoring import (
     AGGREGATION_LABEL as RMC_AGGREGATION_LABEL,
     DEFAULT_CONTROL_CAPACITY as RMC_DEFAULT_CONTROL_CAPACITY,
@@ -42,7 +47,14 @@ from src.site.labels import (
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = ROOT / "output"
 DOCS_DIR = ROOT / "docs"
-RMC_METHODS = {"rmc"}
+RMC_METHODS = {"rmc", "rmc_generalist_negative", "rmc_generalist_positive"}
+SHOW_RMC_HISTORY_RUNS = False
+RMC_HISTORY_RUNS = {
+    "rmc_generalist_negative": ROOT
+    / "output_history/rmc_generalist_negative_3shot_full/rmc",
+    "rmc_generalist_positive": ROOT
+    / "output_history/rmc_generalist_positive_3shot_full/rmc",
+}
 
 _TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
 _RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
@@ -61,6 +73,8 @@ class Run:
     def label(self) -> str:
         if is_rmc_method(self.method):
             return f"{run_group_label(self.method, self.model)} on {dataset_label(self.dataset)}"
+        if self.method in {"cognascore", "cognascore_compact"}:
+            return f"{method_label(self.method)} on {dataset_label(self.dataset)}"
         model = f" · {short_model_label(self.model)}" if self.model else ""
         return f"{method_label(self.method)} on {dataset_label(self.dataset)}{model}"
 
@@ -139,10 +153,30 @@ def discover_runs() -> list[Run]:
         parts = rel.parts
         if len(parts) < 3:
             continue
+        if parts[0] == "history":
+            continue
         method = parts[0]
+        if is_rmc_method(method):
+            continue
         dataset = parts[1]
         model = infer_model(method, parts, data)
+        if method == "cognascore_compact" and model != "Qwen/Qwen3-Embedding-0.6B":
+            continue
         runs.append(Run(method=method, dataset=dataset, model=model, summary_path=path, data=data))
+    if SHOW_RMC_HISTORY_RUNS:
+        for method, history_root in RMC_HISTORY_RUNS.items():
+            for path in sorted(history_root.glob("*/gpt41-nano/summary.json")):
+                data = json.loads(path.read_text(encoding="utf-8"))
+                dataset = path.parent.parent.name
+                runs.append(
+                    Run(
+                        method=method,
+                        dataset=dataset,
+                        model=str(data.get("model") or "gpt41-nano"),
+                        summary_path=path,
+                        data=data,
+                    )
+                )
     return sorted(runs, key=lambda run: (method_rank(run.method), dataset_rank(run.dataset), run.model or ""))
 
 
@@ -151,7 +185,10 @@ def infer_model(method: str, parts: tuple[str, ...], data: dict[str, Any]) -> st
         return None
     value = data.get("model")
     if value:
-        return str(value)
+        model = str(value)
+        if method == "cognascore" and model == "nomic-ai-nomic-embed-text-v1.5":
+            return "nomic-ai/nomic-embed-text-v1.5"
+        return model
     if len(parts) >= 4:
         return parts[2]
     return None
@@ -356,8 +393,103 @@ def method_description(method: str) -> str:
         """
     if method == "cognascore":
         return """
-          <p class="muted">Our implementation embeds code lexemes and clusters them with DBSCAN; the score is the mean within-cluster diameter.</p>
-          <p class="muted">Key parameters: embedding model = nomic-ai/nomic-embed-text-v1.5, DBSCAN eps = 0.18, minPts = 2.</p>
+          <p class="muted wide">CognaScore ML is motivated by a cognitive view of code readability: a reader does not process code as a flat token stream, but maintains short-lived semantic chunks in working memory while tracking visual density, local irregularity, and relationships among related program elements. We therefore build an initial feature library from code layout, cognitive chunks, chunk types, embedding-space geometry, and automatic clustering over embedded chunks. The supervised model is used to test whether this feature space contains predictive readability signal.</p>
+          <figure class="feature-diagram">
+            <figcaption>
+              <span>Feature engineering view before selection</span>
+              <small>Left: conventional readability controls. Right: CognaScore features derived from cognitive chunks and embedding-space structure.</small>
+            </figcaption>
+            <div class="feature-diagram-flow">
+              <section class="feature-column traditional-column">
+                <div class="column-title">Traditional controls</div>
+                <div class="feature-box">
+                  <h3>Code size and lexical statistics</h3>
+                  <p>Code-scale and token-distribution controls.</p>
+                  <div class="feature-tags">
+                    <code>loc</code><code>vocabulary_size</code><code>token_count</code><code>halstead_volume</code><code>byte_entropy</code>
+                  </div>
+                </div>
+                <div class="feature-box">
+                  <h3>Visual layout and surface density</h3>
+                  <p>What the reader sees on screen.</p>
+                  <div class="feature-tags">
+                    <code>max_line_length</code><code>max_indent</code><code>blank_line_ratio</code><code>visual_operator_density</code><code>visual_identifier_area_ratio</code>
+                  </div>
+                </div>
+              </section>
+              <section class="source-column" aria-label="source-code-to-cognitive-chunks">
+                <div class="source-card">
+                  <span>Source code</span>
+                  <pre><code>for item in data:
+    score += weight(item)
+if score &gt; limit:
+    return score</code></pre>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="chunk-card">
+                  <span>Cognitive chunks</span>
+                  <div><code>control</code><code>call</code><code>identifier</code><code>literal</code></div>
+                </div>
+              </section>
+              <section class="feature-column cognascore-column">
+                <div class="column-title">CognaScore feature library</div>
+                <div class="cognascore-grid">
+                  <div class="feature-box embedding-box">
+                    <h3>Cognitive chunk inventory</h3>
+                    <p>Chunk count, coverage, and local unevenness.</p>
+                    <div class="feature-tags embedding-tags">
+                      <code>semantic_chunk_count</code><code>std_chunks_per_source_line</code><code>chunk_chars_cv</code><code>chunk_line_span_ratio</code>
+                    </div>
+                  </div>
+                  <div class="feature-box embedding-box">
+                    <h3>Type-aware chunk families</h3>
+                    <p>Chunk statistics split by cognitive role.</p>
+                    <div class="feature-tags embedding-tags">
+                      <code>type_identifier_count</code><code>type_call_count</code><code>type_control_flow_count</code><code>type_logical_count</code>
+                    </div>
+                  </div>
+                  <div class="feature-box embedding-box">
+                    <h3>Embedding-space geometry</h3>
+                    <p>Semantic concentration versus dispersion.</p>
+                    <div class="feature-tags embedding-tags">
+                      <code>embedding_pairwise_cosine_mean</code><code>embedding_effective_rank</code><code>embedding_first_pc_explained_variance</code>
+                    </div>
+                  </div>
+                  <div class="feature-box cluster-box">
+                    <h3>Automatic clustering</h3>
+                    <p>Adaptive grouping over embedded chunks.</p>
+                    <div class="feature-tags cluster-tags">
+                      <code>auto_dbscan_cluster_count</code><code>hdbscan_cluster_diameter_max</code><code>optics_reachability_mean</code><code>auto_kmeans_selected_k</code>
+                    </div>
+                  </div>
+                  <div class="feature-box embedding-box wide-box">
+                    <h3>Chunk-view variants</h3>
+                    <p>Recomputed over selected views to isolate cognitive channels.</p>
+                    <div class="feature-tags embedding-tags">
+                      <code>semantic_core</code><code>structural_core</code><code>data_core</code><code>logic_core</code><code>only_identifier</code><code>only_control_flow</code><code>no_junk</code>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </figure>
+          <p class="muted wide">The visualized run then applies feature selection and fits a Ridge model. Model-output features are excluded, including <code>generalized_score</code>.</p>
+          <p class="formula">training: Ridge(alpha = 1000), target = per-dataset rank-percentile readability, training datasets = Scalabrino + Schnappinger + Dorn.</p>
+          <p class="formula">evaluation: Scalabrino, Schnappinger, and Dorn headline metrics are repeated dataset-aware 80/20 held-out means. MBJP and JetBrains are diagnostic external results.</p>
+          <p class="muted">Embedding model for this visualized ML route: nomic-ai/nomic-embed-text-v1.5.</p>
+        """
+    if method == "cognascore_compact":
+        return """
+          <p class="muted">Compact CognaScore is the interpretability route: a 4-feature Ridge formula. It avoids noise-ratio features and uses interpretable layout, chunk-geometry, and embedding-clustering signals.</p>
+          <p class="formula">score = 1.43341466 - 0.30461071 * log1p(visual_operator_density) - 0.227365225 * sqrt(log_LOC) - 0.0463927146 * log1p(std_chunks_per_source_line) - 0.196472171 * log1p(qwen_only_identifier_auto_kmeans_cluster_diameter_max)</p>
+          <p class="formula">training: Ridge(alpha = 30), target = per-dataset rank-percentile readability, training datasets = Scalabrino + Schnappinger + Dorn + Buse.</p>
+          <p class="muted">This entry prioritizes a small, defensible formula. It is strongest on Buse, Schnappinger, Dorn, and JetBrains; Scalabrino remains lower than the high-feature route.</p>
+        """
+    if method == "loc_baseline":
+        return """
+          <p class="muted">A length-only sanity-check baseline. It predicts that shorter snippets are more readable and uses no syntax, token, chunk, embedding, or supervised feature information.</p>
+          <p class="formula">score = LOC</p>
+          <p class="formula">LOC is the number of non-empty source lines. Lower score means predicted more readable, so continuous Spearman correlations are expected to be negative.</p>
         """
     if method == "posnett":
         return """
@@ -382,7 +514,14 @@ def method_description(method: str) -> str:
 
 def rmc_prompt_for_method(method: str) -> tuple[str | None, str]:
     masked_code = "{masked_code}"
-    return None, CODE_MASK_JSON_PROMPT_TEMPLATE.format(masked_text=masked_code)
+    variants = {
+        "rmc_generalist_negative": GENERALIST_NEGATIVE_3SHOT_VARIANT,
+        "rmc_generalist_positive": GENERALIST_POSITIVE_3SHOT_VARIANT,
+    }
+    variant = variants.get(method)
+    if variant is None:
+        return None, CODE_MASK_JSON_PROMPT_TEMPLATE.format(masked_text=masked_code)
+    return None, build_recovery_prompt(masked_code, variant=variant)
 
 
 def dataset_description(dataset: str, items) -> str:
@@ -476,6 +615,7 @@ def format_stat_number(value: float) -> str:
 def dataset_note(dataset: str) -> str:
     notes = {
         "mbjp": "MBJP is a small Java programming readability dataset with continuous human scores.",
+        "buse": "Buse contains 100 short Java snippets with averaged human Likert readability ratings from the Buse and Weimer study.",
         "scalabrino": "Scalabrino contains Java snippets with continuous readability scores from the original dataset.",
         "jetbrains": "JetBrains contains Java snippets with binary human readability labels.",
         "dorn": "Dorn is the original mixed-language readability dataset with CUDA, Java, and Python snippets.",
@@ -550,6 +690,19 @@ def readable_run_config_items(run: Run) -> list[tuple[str, str]]:
         model = data.get("embedding_model") or run.model
         if model:
             items.append(("Embeddings", short_model_label(str(model)) or str(model)))
+        score_model = data.get("score_model") or {}
+        if isinstance(score_model, dict):
+            if score_model.get("selected_feature_count") is not None:
+                items.append(("Score Model", f"{score_model['selected_feature_count']} selected features + Ridge"))
+            if score_model.get("training_sample_count") is not None:
+                datasets = score_model.get("training_datasets")
+                if isinstance(datasets, list) and datasets:
+                    dataset_text = " + ".join(str(dataset) for dataset in datasets)
+                    items.append(("Training", f"{score_model['training_sample_count']} samples from {dataset_text}"))
+                else:
+                    items.append(("Training", f"{score_model['training_sample_count']} samples"))
+            if score_model.get("training_policy") is not None:
+                items.append(("Evaluation Policy", str(score_model["training_policy"])))
         dbscan = data.get("dbscan") or {}
         if isinstance(dbscan, dict) and dbscan:
             parts = []
@@ -833,7 +986,9 @@ def cognascore_panel(panel_id: str, item, run: Run) -> str:
     row = run_row_by_task(run).get(item.task_id, {})
     result = row.get("result", {}) if isinstance(row.get("result"), dict) else {}
     metrics = [
-        ("Score", format_metric(as_float(row.get("score")))),
+        ("Generalized Readability Score", format_metric(as_float(row.get("score")))),
+        ("log(1 + Vocabulary Size)", format_metric(as_float(result.get("log_vocabulary_size")))),
+        ("Noise Ratio", format_metric(as_float(result.get("noise_ratio")))),
         ("Average Cluster Diameter", format_metric(as_float(result.get("avg_cluster_diameter")))),
         ("Clusters", str(result.get("cluster_count", "n/a"))),
         ("Lexemes", str(result.get("lexeme_count", "n/a"))),
@@ -845,6 +1000,7 @@ def cognascore_panel(panel_id: str, item, run: Run) -> str:
         <article>
           <h3>Cluster Summary</h3>
           {definition_list(metrics)}
+          <p class="muted evidence-note"><strong>Formula:</strong> {escape(str(result.get("formula", "n/a")))}</p>
           <p class="muted evidence-note">The current stored CognaScore output contains aggregate cluster statistics per sample. Detailed cluster membership can be added here if future runs persist per-lexeme cluster assignments.</p>
         </article>
         <article>
@@ -1394,12 +1550,16 @@ def run_sort_key(run: Run) -> str:
 
 
 def run_group_key(run: Run) -> tuple[str, str | None]:
+    if run.method in {"cognascore", "cognascore_compact"}:
+        return run.method, None
     if run.model:
         return run.method, run.model
     return run.method, None
 
 
 def run_group_label(method: str, model: str | None) -> str:
+    if method in {"cognascore", "cognascore_compact"}:
+        return method_label(method)
     if model is None:
         return method_label(method)
     short = short_model_label(model) or model
@@ -1415,6 +1575,8 @@ def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
 
 def short_run_label(run: Run) -> str:
     model = short_model_label(run.model)
+    if run.method in {"cognascore", "cognascore_compact"}:
+        return method_label(run.method)
     if is_rmc_method(run.method) and model:
         return f"{method_label(run.method)} {model}"
     if model:
@@ -1624,7 +1786,162 @@ h3 { margin: 0 0 10px; font-size: 15px; }
   text-transform: uppercase;
 }
 .muted { color: var(--muted); max-width: 620px; margin: 0; }
+.muted.wide { max-width: 960px; }
 .llm-reasoning { max-width: 760px; line-height: 1.55; }
+.feature-diagram {
+  margin: 22px 0;
+  padding: 0;
+}
+.feature-diagram figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 12px;
+  color: var(--text);
+  font-weight: 750;
+}
+.feature-diagram figcaption small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.feature-diagram-flow {
+  display: grid;
+  grid-template-columns: minmax(210px, .9fr) minmax(190px, .75fr) minmax(420px, 1.8fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.feature-column {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+.traditional-column {
+  background: #fbfaf7;
+  border-color: #e2d8c4;
+}
+.cognascore-column {
+  background: #f8fbfd;
+  border-color: #cfe0ea;
+}
+.column-title {
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.cognascore-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.feature-box {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px;
+  background: rgba(255,255,255,.74);
+}
+.embedding-box {
+  border-color: #d8ccef;
+  background: #fbf8ff;
+}
+.cluster-box {
+  border-color: #bfdced;
+  background: #f4fbff;
+}
+.wide-box { grid-column: 1 / -1; }
+.feature-box h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.feature-box p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.source-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+.source-card,
+.chunk-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+.source-card span,
+.chunk-card span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.source-card pre {
+  margin: 0;
+  padding: 8px;
+  max-width: none;
+  max-height: none;
+  font-size: 11px;
+}
+.chunk-card div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chunk-card code {
+  padding: 3px 7px;
+  border: 1px solid #cbbff0;
+  border-radius: 999px;
+  background: #f4f0ff;
+  color: #4b357f;
+  font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.flow-arrow {
+  align-self: center;
+  color: var(--accent);
+  font-size: 24px;
+  font-weight: 750;
+}
+.figure-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.feature-tags code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 7px;
+  border: 1px solid #cfd7de;
+  border-radius: 999px;
+  background: #f7f9fa;
+  color: #2d3942;
+  font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.feature-tags.embedding-tags code {
+  border-color: #cbbff0;
+  background: #f4f0ff;
+  color: #4b357f;
+}
+.feature-tags.cluster-tags code {
+  border-color: #b6d9f0;
+  background: #eef8ff;
+  color: #195d82;
+}
 .matrix-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; }
 th, td { border-bottom: 1px solid var(--line); padding: 12px 10px; text-align: left; vertical-align: top; }
@@ -1716,6 +2033,156 @@ dd { margin: 0; overflow-wrap: anywhere; }
   background: #fbfcfd;
   font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+.method-hero {
+  max-width: 920px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid #d7e4ea;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(23,107,135,.12), transparent 34%),
+    linear-gradient(135deg, #fbfdfe, #f5fafc);
+}
+.method-hero p:last-child {
+  margin: 0;
+  color: #34424d;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.feature-figure {
+  margin: 18px 0 20px;
+  max-width: 1040px;
+}
+.feature-figure figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 12px;
+  color: #26333d;
+}
+.feature-figure figcaption span {
+  font-size: 17px;
+  font-weight: 760;
+}
+.feature-figure figcaption small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.feature-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.feature-group {
+  position: relative;
+  min-height: 170px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+.feature-group::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: #9aa3ab;
+}
+.feature-group-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.feature-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eef2f5;
+  color: #34424d;
+  font-weight: 800;
+}
+.feature-group h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.feature-group p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.feature-list li {
+  min-height: 50px;
+  padding: 9px 10px;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 10px;
+  background: rgba(248,250,252,.88);
+}
+.feature-list code {
+  display: block;
+  color: #18242d;
+  font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.feature-list span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+.code-group::before,
+.visual-group::before { background: #8c98a4; }
+.code-group .feature-icon,
+.visual-group .feature-icon { background: #eef2f5; color: #34424d; }
+.embedding-group {
+  border-color: #d8c9f2;
+  background: linear-gradient(180deg, #fff, #fbf8ff);
+}
+.embedding-group::before { background: #8f63d8; }
+.embedding-group .feature-icon { background: #efe8fb; color: #6d42b8; }
+.cluster-group {
+  border-color: #b9d9ee;
+  background: linear-gradient(180deg, #fff, #f6fbff);
+}
+.cluster-group::before { background: #2178a8; }
+.cluster-group .feature-icon { background: #e5f3fb; color: #176b87; }
+.feature-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.feature-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.feature-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+.legend-code { background: #8c98a4; }
+.legend-embedding { background: #8f63d8; }
+.legend-cluster { background: #2178a8; }
 pre {
   max-width: min(880px, calc(100vw - 80px));
   max-height: 420px;
@@ -1883,6 +2350,10 @@ pre {
   .panel { padding: 16px; }
   .panel-head, .grid.two { display: block; }
   .grid.two .panel { margin-bottom: 14px; }
+  .feature-diagram-flow { grid-template-columns: 1fr; }
+  .cognascore-grid { grid-template-columns: 1fr; }
+  .feature-diagram figcaption { display: block; }
+  .feature-diagram figcaption small { display: block; margin-top: 4px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   dl { grid-template-columns: 1fr; }
 }
