@@ -1,8 +1,10 @@
 # Code readability model papers
 
-This folder keeps a selective local paper set for CognaScore-related baselines and competitors.
+This file records a selective reading list for CognaScore-related baselines and
+competitors. Local PDF copies, when available, live in the ignored
+`bib/local_papers/` directory and are not part of the public repository.
 
-## Downloaded PDFs
+## Locally retained papers
 
 - `BuseWeimer_2010_LearningMetricCodeReadability.pdf` — original learned readability metric; classic baseline with surface/code features.
 - `PosnettHindleDevanbu_2011_SimplerModelSoftwareReadability.pdf` — sparse readability model using size/entropy-style metrics; important simple baseline.

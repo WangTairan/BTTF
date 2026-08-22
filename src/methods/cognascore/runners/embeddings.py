@@ -14,7 +14,15 @@ from src.experiments.registry import (
 from ..embedding_cache import EmbeddingCache, SourceReference, embedding_cache_path
 from ..embeddings import NomicEmbedder
 from ..extractors.python import LexemeExtractor
-from .common import dataset_output_name, load_items
+from ..semantic_context import ANCHOR_DATASET, WHOLE_CODE_CONTEXT_TYPE, context_anchor_groups
+from ..semantic_context import (
+    DEFAULT_WHOLE_CODE_CONTEXT_MAX_CHARS,
+    DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_CHARS,
+    DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_OVERLAP,
+    whole_code_context_segments,
+)
+from ..dataset_io import dataset_output_name, load_items
+from ..paths import EMBEDDING_CACHE_ROOT
 
 
 DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger")
@@ -30,10 +38,33 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--embedding-model", default=COGNASCORE_DEFAULT_MODEL)
     parser.add_argument("--models", type=Path, default=COGNASCORE_DEFAULT_CACHE_DIR)
-    parser.add_argument("--output", type=Path, default=Path("output/cognascore_embeddings"))
+    parser.add_argument("--output", type=Path, default=EMBEDDING_CACHE_ROOT)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--device", default=None, help="cpu, cuda, mps, or auto.")
-    parser.add_argument("--max-length", type=int, help="Maximum tokenizer sequence length for embedding forward passes.")
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=512,
+        help="Maximum tokenizer sequence length for embedding forward passes. Defaults to 512 for bounded whole-code context embeddings.",
+    )
+    parser.add_argument(
+        "--whole-code-max-chars",
+        type=int,
+        default=0,
+        help="Optional head+tail character cap before segmenting whole-code semantic-context sources. Defaults to disabled.",
+    )
+    parser.add_argument(
+        "--whole-code-segment-chars",
+        type=int,
+        default=DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_CHARS,
+        help="Character length of each whole-code semantic-context segment. Use <=0 to disable segmentation.",
+    )
+    parser.add_argument(
+        "--whole-code-segment-overlap",
+        type=int,
+        default=DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_OVERLAP,
+        help="Character overlap between adjacent whole-code semantic-context segments.",
+    )
     parser.add_argument(
         "--missing-order",
         choices=("source", "shortest-first"),
@@ -65,6 +96,9 @@ def main() -> None:
         extractor=extractor,
         limit_per_dataset=args.limit_per_dataset,
         quiet=args.quiet,
+        whole_code_max_chars=args.whole_code_max_chars if args.whole_code_max_chars > 0 else None,
+        whole_code_segment_chars=args.whole_code_segment_chars,
+        whole_code_segment_overlap=args.whole_code_segment_overlap,
     )
     cache_path = embedding_cache_path(args.output, args.embedding_model)
     with EmbeddingCache(cache_path, model_name=args.embedding_model) as cache:
@@ -72,6 +106,12 @@ def main() -> None:
             dataset_names = [dataset_output_name(path) for path in dataset_paths]
             print(f"Deleting existing source references for datasets: {', '.join(dataset_names)}", flush=True)
             cache.delete_sources_for_datasets(dataset_names)
+        else:
+            dataset_names = [dataset_output_name(path) for path in dataset_paths]
+            cache.delete_sources_for_datasets_and_chunk_types(
+                [*dataset_names, ANCHOR_DATASET],
+                [WHOLE_CODE_CONTEXT_TYPE, *context_anchor_groups().keys()],
+            )
         print(f"Writing source references: {len(references)} rows", flush=True)
         cache.upsert_sources(references)
         missing = cache.missing_texts(unique_texts)
@@ -116,10 +156,26 @@ def _collect_references(
     extractor: LexemeExtractor,
     limit_per_dataset: int | None,
     quiet: bool,
+    whole_code_max_chars: int | None = DEFAULT_WHOLE_CODE_CONTEXT_MAX_CHARS,
+    whole_code_segment_chars: int = DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_CHARS,
+    whole_code_segment_overlap: int = DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_OVERLAP,
 ) -> tuple[list[SourceReference], list[str]]:
     references: list[SourceReference] = []
     text_seen: set[str] = set()
     unique_texts: list[str] = []
+    for task_id, anchors in context_anchor_groups().items():
+        for anchor in anchors:
+            reference = SourceReference(
+                dataset=ANCHOR_DATASET,
+                task_id=task_id,
+                chunk_type=task_id,
+                text=anchor.code,
+                count=1,
+            )
+            references.append(reference)
+            if reference.text not in text_seen:
+                text_seen.add(reference.text)
+                unique_texts.append(reference.text)
     for path in dataset_paths:
         dataset = dataset_output_name(path)
         items = load_items(path)
@@ -129,7 +185,14 @@ def _collect_references(
         for index, item in enumerate(items, start=1):
             if not quiet:
                 print(f"[{index}/{len(items)}] {dataset} {item.task_id}", flush=True)
-            item_references = _references_for_item(dataset, item, extractor)
+            item_references = _references_for_item(
+                dataset,
+                item,
+                extractor,
+                whole_code_max_chars=whole_code_max_chars,
+                whole_code_segment_chars=whole_code_segment_chars,
+                whole_code_segment_overlap=whole_code_segment_overlap,
+            )
             references.extend(item_references)
             for reference in item_references:
                 if reference.text not in text_seen:
@@ -142,10 +205,30 @@ def _references_for_item(
     dataset: str,
     item: DatasetItem,
     extractor: LexemeExtractor,
+    *,
+    whole_code_max_chars: int | None = DEFAULT_WHOLE_CODE_CONTEXT_MAX_CHARS,
+    whole_code_segment_chars: int = DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_CHARS,
+    whole_code_segment_overlap: int = DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_OVERLAP,
 ) -> list[SourceReference]:
     chunks, _ = extractor.extract_with_member_fallback(item.content)
     counts: Counter[tuple[str, str]] = Counter((chunk.type, chunk.lexeme) for chunk in chunks)
     return [
+        *[
+        SourceReference(
+            dataset=dataset,
+            task_id=item.task_id,
+            chunk_type=WHOLE_CODE_CONTEXT_TYPE,
+            text=segment,
+            count=1,
+        )
+        for segment in whole_code_context_segments(
+            item.content,
+            segment_chars=whole_code_segment_chars,
+            overlap_chars=whole_code_segment_overlap,
+            max_total_chars=whole_code_max_chars,
+        )
+        ],
+        *[
         SourceReference(
             dataset=dataset,
             task_id=item.task_id,
@@ -154,6 +237,7 @@ def _references_for_item(
             count=count,
         )
         for (chunk_type, text), count in sorted(counts.items())
+        ],
     ]
 
 

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from src.experiments.registry import COGNASCORE_DEFAULT_CACHE_DIR, COGNASCORE_EMBEDDING_MODELS
+from src.methods.cognascore.embeddings import MODEL_LOAD_KWARGS
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,6 +46,7 @@ def main() -> None:
             model_name,
             trust_remote_code=True,
             cache_dir=str(args.cache_dir),
+            **MODEL_LOAD_KWARGS.get(model_name, {}),
         )
     print("Done.", flush=True)
 

@@ -7,4 +7,4 @@ from dataclasses import dataclass
 class LexemeChunk:
     lexeme: str
     line: int
-    type: str = "NORMAL"
+    type: str

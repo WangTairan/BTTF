@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-DEFAULT_OUTPUT_ROOT = Path("output")
+DEFAULT_RESULTS_ROOT = Path("results/methods")
 
 
 def safe_path_part(value: str) -> str:
@@ -20,13 +20,13 @@ def dataset_name_for_path(path: Path) -> str:
     return path.parent.name
 
 
-def output_dir(
-    output_root: Path | None,
+def result_dir(
+    results_root: Path | None,
     method: str,
     dataset_name: str,
     *parts: str | None,
 ) -> Path:
-    path = (output_root or DEFAULT_OUTPUT_ROOT) / safe_path_part(method) / safe_path_part(dataset_name)
+    path = (results_root or DEFAULT_RESULTS_ROOT) / safe_path_part(method) / safe_path_part(dataset_name)
     for part in parts:
         if part is not None:
             path /= safe_path_part(part)

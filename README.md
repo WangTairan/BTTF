@@ -1,292 +1,178 @@
-# Code Readability Method Suite
+# CognaScore: Code Readability Research Suite
 
-This repository is a shared experiment workspace for code and natural-language
-readability methods. It keeps datasets, method implementations, runners, result
-outputs, and the GitHub Pages visualization in separate directories so new
-methods and datasets can be added without changing unrelated experiments.
+This repository contains CognaScore and a reproducible evaluation suite for
+code-readability research. CognaScore represents source code with typed
+cognitive chunks, conventional code measurements, embedding-space geometry,
+and adaptive clustering summaries.
 
-Current method families:
+Two CognaScore routes are retained:
 
-- CognaScore: the active code-readability feature and supervised Ridge pipeline.
-  It extracts cognitive chunks, caches local embeddings, builds stable
-  chunk-view clustering feature tables, and materializes the current visualized
-  score.
-- RMC: Recursive Masking Complexity. It masks control regions, asks the LLM to
-  return exact mask replacements, and scores hidden regions directly.
-- Posnett: deterministic Java readability model.
-- Scalabrino: deterministic Java readability model using the released tool.
-- CognaScore: Java lexeme embedding and clustering method.
-- LLM: direct LLM readability scoring baseline.
+- **CognaScore ML** uses data-driven stability screening and a Ridge model. The
+  frozen development model uses 24 features.
+- **CognaScore Compact** is restricted to at most five features and exposes a
+  short linear formula.
 
-Method-specific details live in each package README, especially
-`src/methods/cognascore/README.md`, `src/methods/rmc/README.md`,
-`src/methods/posnett/README.md`, and `src/methods/scalabrino/README.md`.
+The comparison implementations are retained unchanged as separate method
+families: RMC, Posnett, Scalabrino, and direct LLM scoring.
 
-## Layout
+## Repository structure
 
 ```text
-datasets/              Original and derived datasets
-docs/                  Static visualization site for GitHub Pages
-examples/              Small local examples
-mask_playground/       Interactive single-mask recovery lab
-models/                Local model/cache files
-output/                Experiment outputs
-src/datasets/          Dataset adapters
-src/experiments/       Shared evaluation, paths, registry, statistics
-src/methods/           Method implementations and method-specific runners
-src/services/          LLM provider abstraction
-src/site/              Static site generator
+datasets/              Input datasets and dataset-specific notes
+experiments/           Model-development and paper-analysis scripts
+figures/               Reproducible paper figures and their source data
+scripts/               End-to-end maintenance commands
+src/datasets/          Stable dataset adapters
+src/experiments/       Shared evaluation, metrics, paths, and registry
+src/methods/           Stable method and feature-production code
+src/site/              Static result-site generator
+docs/                  Generated, tracked result site
+artifacts/             Rebuildable embedding and feature caches
+results/               Method results and experiment analyses
+models/                Downloaded third-party model weights
+bib/local_papers/      Local reading copies of papers (ignored by Git)
 ```
 
-Dataset adapters return common `DatasetItem` objects. Method implementations
-stay under `src/methods/<method>/`. Shared dataset/method registration is in
-`src/experiments/registry.py`; path construction is in
-`src/experiments/paths.py`.
+Reusable data loading, feature production, and frozen scoring live under
+`src/`; feature selection, sweeps, ablations, and paper-figure generation live
+under `experiments/`.
+
+## Installation
+
+Python 3.11 is recommended.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Embedding models are downloaded to `models/` on first use or through the
+CognaScore download runner. Generated vectors live under `artifacts/`, not
+beside the model weights. Large artifacts and results are intentionally not
+versioned.
 
 ## Datasets
 
-Registered datasets:
+The six established development/evaluation datasets are MBJP, Buse,
+Scalabrino, JetBrains, Dorn, and Schnappinger. Two additional registered
+datasets are retained as first-class evaluation datasets:
 
-| Key | Path | Type | Main metric |
-| --- | --- | --- | --- |
-| `mbjp` | `datasets/mbjp_dev_dataset/readability_dataset.json` | code, continuous | Spearman |
-| `buse` | `datasets/buse` | code, continuous | Spearman |
-| `scalabrino` | `datasets/scalabrino/dataset` | code, continuous | Spearman |
-| `jetbrains` | `datasets/jetbrains` | code, binary | best-threshold MCC |
-| `schnappinger` | `datasets/schnappinger` | code, continuous | Spearman |
-| `dorn` | `datasets/dorn/dataset` | code, continuous | Spearman |
-| `clear` | `datasets/CLEAR-Corpus-main/CLEAR_corpus_final.xlsx` | natural language, continuous | Spearman |
-| `clear_dev` | `datasets/clear_dev_dataset/readability_dataset.xlsx` | natural language, continuous | Spearman |
+- `generated_readability_90`: 90 generated Java examples with low, normal, or
+  high readability instructions;
+- `generated_binary_readability`: 200 Java examples split into high- and
+  low-readability classes.
 
-Dorn is the original three-language dataset (`cuda`, `java`, `python`). The RMC
-Dorn runner currently uses a token/fragment control matcher instead of Java AST
-parsing so all three languages can be included.
+Their canonical paths, labels, metrics, and reconstruction command are
+documented in [`datasets/README.md`](datasets/README.md). Dataset adapters
+return a common `DatasetItem` representation and are registered in
+[`src/experiments/registry.py`](src/experiments/registry.py).
 
-## Outputs
+## CognaScore pipeline
 
-Outputs are organized by method and dataset:
+The stable feature pipeline has three persistent stages:
 
-```text
-output/<method>/<dataset>/...
-```
+1. extract base, visual, chunk, type-inventory, and compression features;
+2. cache chunk embeddings once per embedding model;
+3. derive embedding-geometry and adaptive-clustering tables from the cache.
 
-Deterministic methods such as Posnett and Scalabrino write stable summaries and
-overwrite reruns:
-
-```text
-output/posnett/<dataset>/summary.json
-output/scalabrino/<dataset>/summary.json
-```
-
-Model-dependent methods keep the model layer:
-
-```text
-output/cognascore/<dataset>/<embedding-model>/summary.json
-output/rmc/<dataset>/<llm-model>/summary.json
-```
-
-RMC result folders contain run-level and per-task configuration data so masking
-and model parameters remain recoverable.
-
-## Standard Method Evaluation
-
-Use the shared evaluator for deterministic and direct scoring methods:
+To refresh sources after changing the extractor, then rebuild and validate all
+five embedding-model feature tables, run:
 
 ```bash
-python3 -m src.experiments.evaluate_method \
-  datasets/mbjp_dev_dataset/readability_dataset.json \
-  --method posnett
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  bash scripts/refresh_cognascore_after_extractor_change.sh
 ```
 
-Examples:
+If embeddings and source references are already current, rebuild feature
+tables without recomputing vectors:
 
 ```bash
-python3 -m src.experiments.evaluate_method datasets/mbjp_dev_dataset/readability_dataset.json --method posnett
-python3 -m src.experiments.evaluate_method datasets/scalabrino/dataset --method scalabrino
-python3 -m src.experiments.evaluate_method datasets/jetbrains --method cognascore
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  REBUILD_EMBEDDING_FEATURES=0 \
+  bash scripts/rebuild_cognascore_feature_tables.sh
 ```
 
-Continuous datasets report Spearman correlation. Binary datasets such as
-JetBrains report MCC with the best threshold on that dataset.
-
-CognaScore supports Dorn through the language-neutral lexical fallback in its
-chunk extractor. Continuous datasets report Spearman; JetBrains reports MCC.
-
-## CognaScore Feature Pipeline
-
-CognaScore uses two persistent stages for embedding-derived features:
-
-```text
-output/cognascore_embeddings/<embedding-model>/embeddings.sqlite
-output/cognascore_embedding_features/<dataset>/<embedding-model>/features.csv
-```
-
-The embedding cache is incremental: rerunning embeds only missing lexemes. When
-the extractor changes, use `--replace-sources` for the selected datasets so
-stale source references are removed before refreshed references are inserted.
-Feature-table generation supports checkpoint/resume for long clustering runs.
-
-Repair the current Nomic cache and feature table after extractor changes:
+Validate existing tables directly:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache python3 -m src.methods.cognascore.runners.embeddings \
-  datasets/schnappinger \
-  --embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  --device cpu \
-  --batch-size 8 \
-  --quiet \
-  --replace-sources
+python -m src.methods.cognascore.runners.validate_feature_tables \
+  --embedding-model nomic-ai/nomic-embed-text-v1.5
 ```
+
+See [`src/methods/cognascore/README.md`](src/methods/cognascore/README.md) for
+the feature schema and stable runners.
+
+## Model development and frozen scores
+
+Research-only selection code is isolated under `experiments/cognascore/`.
+The current five-model consensus experiment is invoked as:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache python3 -m src.methods.cognascore.runners.embedding_features \
-  datasets/schnappinger \
-  --embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  --max-vectors-per-task 512 \
-  --resume \
-  --update-all \
-  --checkpoint-every 1
+python -m experiments.cognascore.consensus_selection \
+  --select-top 24 \
+  --candidate-limit 220 \
+  --c 0.08 \
+  --ridge-alpha 200 \
+  --stability-rounds 200 \
+  --final-embedding-model nomic-ai/nomic-embed-text-v1.5 \
+  -o results/experiments/cognascore/ml_6dataset_5model_consensus24
 ```
 
-Run the supervised Ridge materialization after base and embedding feature
-tables are current:
+This is a development experiment, not the production feature extractor. It
+runs independent screens for the five embedding-model instantiations,
+aggregates their canonical feature rankings, filters redundant candidates, and
+fits the final Ridge model with one chosen embedding instantiation.
+
+Materialize the retained scoring routes from existing feature tables:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache python3 -m src.methods.cognascore.runners.supervised_ridge
+python -m src.methods.cognascore.runners.supervised_ridge
+python -m src.methods.cognascore.runners.compact_formula
 ```
 
-## RMC Experiments
+The frozen ML runner fits its reported model on Buse, Dorn, and Scalabrino and
+writes predictions for all registered report datasets. Selection experiments
+and their outputs remain separate so exploratory results cannot silently
+replace the frozen scorer.
 
-RMC masks code or text, asks a recovery model to fill the masks, and compares
-the recovered result with the original using sequence similarity. Current code
-experiments use:
+## Comparison methods
 
-```text
-model: gpt41-nano
-similarity: sequence
-granularity: control
-ast_min_tokens: 3
-max_combination_size: 1
-max_samples_per_stratum: unlimited unless explicitly provided
-```
-
-Code prompts are language-neutral. They no longer mention Java, so the same
-prompt can be used for Java, CUDA, and Python fragments.
-
-Run current masked RMC code datasets from small to large:
+The shared evaluator supports deterministic and direct-scoring comparison
+methods:
 
 ```bash
-python3 -m src.methods.rmc.runners.mbjp \
-  --model gpt41-nano \
-  --ast-granularity control \
-  --ast-min-tokens 3 \
-  --max-combination-size 1
+python -m src.experiments.evaluate_method \
+  datasets/scalabrino/dataset --method posnett
+
+python -m src.experiments.evaluate_method \
+  datasets/scalabrino/dataset --method scalabrino
 ```
+
+Method-specific instructions are in [`src/methods/README.md`](src/methods/README.md).
+
+## Result site and paper figures
+
+Generate the tracked result site:
 
 ```bash
-python3 -m src.methods.rmc.runners.dorn \
-  --model gpt41-nano \
-  --ast-granularity control \
-  --ast-min-tokens 3 \
-  --max-combination-size 1
+python -m src.site.build
 ```
+
+Generate the six-dataset feature-count sensitivity figure:
 
 ```bash
-python3 -m src.methods.rmc.runners.jetbrains \
-  --model gpt41-nano \
-  --ast-granularity control \
-  --ast-min-tokens 3 \
-  --max-combination-size 1
+python -m experiments.cognascore.figures.plot_feature_count_sensitivity
 ```
 
-```bash
-python3 -m src.methods.rmc.runners.scalabrino \
-  --model gpt41-nano \
-  --ast-granularity control \
-  --ast-min-tokens 3 \
-  --max-combination-size 1
-```
+The script writes both the PDF and its plotted CSV data to `figures/`.
 
-Expected recovery counts for the current control configuration:
+## Reproducibility notes
 
-```text
-MBJP         69
-Dorn       1149
-JetBrains   651
-Scalabrino  733
-```
-
-Use `--skip-existing` to resume after interruption without rewriting completed
-`result.json` files. Omit it when intentionally rerunning after a prompt or
-configuration change.
-
-Useful RMC controls:
-
-- `--limit N`: run the first `N` selected items.
-- `--start N`: start after filtering at index `N`.
-- `--task-id ID`: run a specific task; can be repeated.
-- `--skip-existing`: reuse existing completed task outputs.
-- `--mock-recover`: run deterministic local recovery for smoke tests.
-- `--max-samples-per-stratum N`: sample at most `N` combinations per stratum;
-  if omitted, all non-overlapping combinations up to `--max-combination-size`
-  are used.
-
-## Visualization Site
-
-The static site is generated into `docs/`:
-
-```bash
-python3 -m src.site.build
-```
-
-The homepage is a method-by-dataset result matrix. Dataset and run pages list
-samples with sortable columns such as human label/score, method scores, and
-LOC. Sample pages use one shared view for all entry points and show the source
-code plus method-specific evidence, such as Posnett tokens, RMC hard control
-regions, CognaScore cluster summaries, and LLM scores with reasoning.
-
-## Mask Recovery Lab
-
-The local Lab supports interactive single-region experiments across the code
-datasets. Select source code on the left, inspect or edit the system-prompt and
-few-shot sections, choose a model, and run one recovery. The mask task is
-generated from the current selection and is not stored in the three per-template
-custom prompt caches.
-
-```bash
-python3 -m mask_playground.server
-```
-
-Open `http://127.0.0.1:8765`. The result panel reports exact match, sequence,
-token Jaccard, token cosine, and BLEU. Edit distance and other quadratic
-dynamic-programming metrics are intentionally excluded from this interface.
-
-## LLM Keys
-
-Set the provider key required by the selected model alias in
-`src/services/llm.py`:
-
-```bash
-export OPENAI_API_KEY=...
-export GROQ_API_KEY=...
-export OPENROUTER_API_KEY=...
-export DEEPSEEK_API_KEY=...
-```
-
-Clients and keys are loaded lazily. The repository and Lab can start with only
-some keys configured; a missing key is reported immediately only when a model
-from that provider is run.
-
-For supported providers, dataset RMC runs use batch recovery and store
-`.batch_state.json` so interrupted submitted batches can resume polling instead
-of submitting duplicate requests.
-
-## Development Notes
-
-- Add datasets under `src/datasets/<dataset>/` and register them in
-  `src/experiments/registry.py`.
-- Add methods under `src/methods/<method>/`; method-specific runners belong in
-  the method package.
-- Keep generated results under `output/`; keep visualization output under
-  `docs/`.
-- Prefer smoke tests with `--mock-recover --limit 1` before long LLM runs.
+- `artifacts/` contains rebuildable intermediate data and is ignored by Git.
+- `results/` contains method and experiment results and is ignored by Git.
+- `models/` contains downloaded model weights and is ignored by Git.
+- `docs/` and `figures/` are publication artifacts and may be versioned.
+- local paper PDFs under `bib/` are ignored; citation metadata may be tracked.
+- commands fail on missing dependencies, incomplete caches, and schema
+  mismatches rather than silently falling back.

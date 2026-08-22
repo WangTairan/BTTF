@@ -17,6 +17,8 @@ DATASETS: dict[str, Path] = {
     "jetbrains": Path("datasets/jetbrains"),
     "dorn": Path("datasets/dorn/dataset"),
     "schnappinger": Path("datasets/schnappinger"),
+    "generated_readability_90": Path("datasets/readability_dataset_90.jsonl"),
+    "generated_binary_readability": Path("datasets/readability_binary.jsonl"),
 }
 
 
@@ -134,8 +136,8 @@ def main() -> None:
     parser.add_argument(
         "--output-root",
         type=Path,
-        default=Path("output"),
-        help="Root output directory.",
+        default=Path("results/methods"),
+        help="Root method-results directory.",
     )
     parser.add_argument(
         "--dataset",

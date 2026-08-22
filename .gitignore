@@ -24,8 +24,11 @@ build/
 dist/
 *.egg-info/
 
-# Experiment outputs and historical run data
-output/
+# Generated artifacts, method results, and historical run data
+artifacts/**
+!artifacts/README.md
+results/**
+!results/README.md
 output_history/
 output_*/
 backups/
@@ -41,6 +44,10 @@ models/
 *.pth
 *.onnx
 *.bin
+
+# Locally retained papers; the tracked bibliography contains citations only
+bib/**/*.pdf
+bib/local_papers/
 
 # Temporary files
 *.tmp

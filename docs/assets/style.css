@@ -220,6 +220,38 @@ h3 { margin: 0 0 10px; font-size: 15px; }
   color: #195d82;
 }
 .matrix-wrap { overflow-x: auto; }
+.method-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+.method-filter {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f7f9fa;
+  color: var(--text);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.method-filter[draggable="true"] { cursor: grab; }
+.method-filter.dragging {
+  opacity: .55;
+  cursor: grabbing;
+}
+.method-filter.active {
+  border-color: #9fc7d5;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.method-filter:not(.active) {
+  color: var(--muted);
+  text-decoration: line-through;
+}
 table { border-collapse: collapse; width: 100%; }
 th, td { border-bottom: 1px solid var(--line); padding: 12px 10px; text-align: left; vertical-align: top; }
 th { font-weight: 700; color: #2b333a; background: #fafbfc; }

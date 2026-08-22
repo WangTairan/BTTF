@@ -16,25 +16,30 @@ except ImportError:  # pragma: no cover
 class LexemeExtractor:
     MAX_LEXEME_CHARS = 256
 
-    IDENT_BLACKLIST = {
-        "aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff", "gggg", "hhhh",
-        "llll", "mmmm", "nnnn", "oooo", "pppp", "qqqq", "rrrr", "tttt", "wwww",
-    }
-
     IMPORT_RE = re.compile(r"^\s*import\s+(?:static\s+)?([^;]+);")
     MEMBER_SNIPPET_PREFIX = "class Snippet {\n"
     MEMBER_SNIPPET_SUFFIX = "\n}\n"
+    METHOD_BODY_SNIPPET_PREFIX = "class Snippet {\nvoid __snippet__() {\n"
+    METHOD_BODY_SNIPPET_SUFFIX = "\n}\n}\n"
     FALLBACK_TOKEN_RE = re.compile(
         r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|'
         r'\b(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d+)?)\b|'
         r'\b[A-Za-z_]\w*\b|'
         r'==|!=|<=|>=|&&|\|\||<<|>>|\+\+|--|\+=|-=|\*=|/=|%=|'
-        r'[+\-*/%<>&|^~=!]'
+        r'[()+\-*/%<>&|^~=!]'
     )
-    CONTROL_WORDS = {"if", "else", "for", "while", "do", "switch", "case", "catch", "try"}
+    CONTROL_WORDS = {
+        "if", "else", "for", "while", "do", "switch", "case", "catch", "try",
+        "return", "break", "continue",
+    }
     DECLARATION_WORDS = {
         "class", "struct", "enum", "interface", "def", "function", "void", "int",
         "long", "short", "float", "double", "char", "bool", "boolean", "string", "String",
+    }
+    MODIFIER_WORDS = {
+        "public", "private", "protected", "static", "final", "abstract", "native",
+        "synchronized", "volatile", "transient", "const", "unsigned", "signed",
+        "extern", "inline", "__global__", "__device__", "__host__",
     }
 
     def require_parser(self) -> None:
@@ -51,29 +56,35 @@ class LexemeExtractor:
         return chunks
 
     def extract_with_member_fallback(self, source: str) -> tuple[list[LexemeChunk], bool]:
+        chunks, mode = self.extract_with_fallback_mode(source)
+        return chunks, mode != "direct_ast"
+
+    def extract_with_fallback_mode(self, source: str) -> tuple[list[LexemeChunk], str]:
+        """Extract chunks and return the parsing mode used for diagnostics."""
         self._require_parser()
-        parse_errors = (javalang.parser.JavaSyntaxError, javalang.tokenizer.LexerError)
+        parse_errors = (javalang.parser.JavaSyntaxError, javalang.tokenizer.LexerError, TypeError)
         try:
-            return self.extract(source), False
+            return self.extract(source), "direct_ast"
         except parse_errors as initial_error:
-            wrapped_source = self.MEMBER_SNIPPET_PREFIX + source + self.MEMBER_SNIPPET_SUFFIX
-            try:
-                wrapped_chunks = self.extract(wrapped_source)
-            except parse_errors:
-                chunks = self._extract_lexical_fallback(source)
-                if not chunks:
-                    raise initial_error
-                return chunks, True
-            chunks = [
-                replace(chunk, line=chunk.line - 1)
-                for chunk in wrapped_chunks
-                if chunk.line > 1
-            ]
+            for mode, prefix, suffix, line_offset in (
+                ("member_ast", self.MEMBER_SNIPPET_PREFIX, self.MEMBER_SNIPPET_SUFFIX, 1),
+                ("method_body_ast", self.METHOD_BODY_SNIPPET_PREFIX, self.METHOD_BODY_SNIPPET_SUFFIX, 2),
+            ):
+                try:
+                    wrapped_chunks = self.extract(prefix + source + suffix)
+                except parse_errors:
+                    continue
+                chunks = [
+                    replace(chunk, line=chunk.line - line_offset)
+                    for chunk in wrapped_chunks
+                    if chunk.line > line_offset
+                ]
+                if chunks:
+                    return chunks, mode
+            chunks = self._extract_lexical_fallback(source)
             if not chunks:
-                lexical_chunks = self._extract_lexical_fallback(source)
-                if lexical_chunks:
-                    return lexical_chunks, True
-            return chunks, True
+                raise initial_error
+            return chunks, "lexical"
 
     def _extract_lexical_fallback(self, source: str) -> list[LexemeChunk]:
         """Extract language-neutral semantic chunks from incomplete or non-Java code."""
@@ -88,10 +99,14 @@ class LexemeExtractor:
             tokens = self.FALLBACK_TOKEN_RE.findall(line)
             for index, token in enumerate(tokens):
                 next_token = tokens[index + 1] if index + 1 < len(tokens) else ""
+                if token in {"(", ")"}:
+                    continue
                 if token in self.CONTROL_WORDS:
                     kind, lexeme = "CONTROL_FLOW", token
                 elif token in self.DECLARATION_WORDS:
                     kind, lexeme = "DECLARATION", token
+                elif token in self.MODIFIER_WORDS:
+                    continue
                 elif token in logical:
                     kind, lexeme = "LOGICAL", token
                 elif token in comparison:
@@ -107,7 +122,7 @@ class LexemeExtractor:
                 elif next_token == "(" and token not in self.CONTROL_WORDS:
                     kind, lexeme = "CALL", f"call_{self._normalize(token)}"
                 else:
-                    kind, lexeme = self._identifier_type(token), self._normalize(token)
+                    kind, lexeme = "IDENTIFIER", self._normalize(token)
                 self._add(chunks, lexeme, line_no, kind)
         return chunks
 
@@ -233,7 +248,7 @@ class LexemeExtractor:
         name = self._normalize(getattr(node, "name", ""))
         extends = self._type_to_str(getattr(node, "extends", None))
         implements = [self._type_to_str(item) for item in getattr(node, "implements", None) or []]
-        self._add(chunks, name, line, self._identifier_type(name))
+        self._add(chunks, name, line, "IDENTIFIER")
         self._add(chunks, [kind_name, name, extends, *implements], line, "DECLARATION")
         for child in self._children(node):
             self._walk(child, chunks)
@@ -244,7 +259,7 @@ class LexemeExtractor:
         name = self._normalize(getattr(node, "name", ""))
         params = [self._normalize(param.name) for param in getattr(node, "parameters", None) or []]
         self._add(chunks, ["constructor", name, *params], line, "DECLARATION")
-        self._add(chunks, name, line, self._identifier_type(name))
+        self._add(chunks, name, line, "IDENTIFIER")
         for child in self._children(node):
             self._walk(child, chunks)
         return True
@@ -255,7 +270,7 @@ class LexemeExtractor:
         for declarator in getattr(node, "declarators", None) or []:
             name = self._normalize(declarator.name)
             declarator_line = self._line(declarator, line)
-            self._add(chunks, name, declarator_line, self._identifier_type(name))
+            self._add(chunks, name, declarator_line, "IDENTIFIER")
             self._add(chunks, [type_name, name], declarator_line, "DECLARATION")
             if declarator.initializer is not None:
                 self._add(chunks, f"def_{name}", declarator_line, "DECLARATION")
@@ -267,7 +282,7 @@ class LexemeExtractor:
         line = self._line(node)
         name = self._normalize(node.name)
         type_name = self._type_to_str(node.type)
-        self._add(chunks, name, line, self._identifier_type(name))
+        self._add(chunks, name, line, "IDENTIFIER")
         self._add(chunks, [type_name, name], line, "DECLARATION")
         return True
 
@@ -276,7 +291,7 @@ class LexemeExtractor:
         line = self._line(node)
         for declarator in node.declarators or []:
             name = self._normalize(declarator.name)
-            self._add(chunks, name, self._line(declarator, line), self._identifier_type(name))
+            self._add(chunks, name, self._line(declarator, line), "IDENTIFIER")
             self._add(chunks, [type_name, name], self._line(declarator, line), "DECLARATION")
             if declarator.initializer is not None:
                 self._add(chunks, f"def_{name}", self._line(declarator, line), "DECLARATION")
@@ -293,7 +308,7 @@ class LexemeExtractor:
         qualifier = self._normalize(getattr(node, "qualifier", ""))
         static_like_qualifier = bool(qualifier) and qualifier[0].isupper()
         if name and not static_like_qualifier:
-            self._add(chunks, name, line, self._identifier_type(name))
+            self._add(chunks, name, line, "IDENTIFIER")
         for op in node.prefix_operators or []:
             self._add(chunks, f"{op}{name}", line, "BITWISE" if op == "~" else "ARITHMETIC")
         for op in node.postfix_operators or []:
@@ -393,7 +408,7 @@ class LexemeExtractor:
             var_name = self._declaration_name(control.var)
             line = self._line(node)
             self._add(chunks, ["for", var_name, self._expr(control.iterable)], line, "CONTROL_FLOW")
-            self._add(chunks, var_name, line, self._identifier_type(var_name))
+            self._add(chunks, var_name, line, "IDENTIFIER")
             self._add(chunks, [self._type_to_str(control.var.type), var_name], line, "DECLARATION")
             self._walk(control.iterable, chunks)
             self._walk(node.body, chunks)
@@ -671,7 +686,13 @@ class LexemeExtractor:
             return expression
         return ""
 
-    def _add(self, chunks: list[LexemeChunk], lexeme: str | Iterable[str], line: int, kind: str = "NORMAL") -> None:
+    def _add(
+        self,
+        chunks: list[LexemeChunk],
+        lexeme: str | Iterable[str],
+        line: int,
+        kind: str,
+    ) -> None:
         if not isinstance(lexeme, str):
             lexeme = self._join(lexeme)
         normalized = self._normalize(lexeme)
@@ -686,13 +707,10 @@ class LexemeExtractor:
             return ""
         return re.sub(r"\s+", "", str(value).strip())
 
-    def _identifier_type(self, identifier: str) -> str:
-        return "JUNK" if identifier.lower() in self.IDENT_BLACKLIST else "IDENTIFIER"
-
     def _operator_type(self, operator: str) -> str:
         if operator in {"&", "|", "^", "<<", ">>", ">>>"}:
             return "BITWISE"
-        if operator in {"==", "!=", "<", ">", "<=", ">="}:
+        if operator in {"==", "!=", "<", ">", "<=", ">=", "instanceof"}:
             return "COMPARISON"
         if operator in {"&&", "||"}:
             return "LOGICAL"
@@ -737,13 +755,30 @@ class LexemeExtractor:
         return "".join(result)
 
     def _is_regex(self, value: str) -> bool:
-        if len(value) < 2:
+        if len(value) < 2 or not self._looks_like_regex(value):
             return False
         try:
             re.compile(value)
             return True
         except re.error:
             return False
+
+    def _looks_like_regex(self, value: str) -> bool:
+        """Conservatively identify strings that intentionally use regex syntax."""
+        if re.search(r"\\[dDsSwWbBAZzG]", value):
+            return True
+        if re.search(r"\\[.^$*+?{}\[\]|()]", value):
+            return True
+        if re.search(r"\[[^\]\n]*(?:\^|-|\\)[^\]\n]*\]", value):
+            return True
+        regex_context = any(marker in value for marker in ("^", "$", "|", "\\", "(", ")"))
+        if (".*" in value or ".+" in value) and regex_context:
+            return True
+        if (value.startswith("^") or value.endswith("$")) and len(value) > 2:
+            return True
+        if "|" in value and "||" not in value and regex_context:
+            return True
+        return False
 
     def _tokenize_regex(self, value: str) -> list[str]:
         out: list[str] = []

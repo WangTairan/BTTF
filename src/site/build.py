@@ -45,20 +45,20 @@ from src.site.labels import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIR = ROOT / "output"
+RESULTS_DIR = ROOT / "results" / "methods"
 DOCS_DIR = ROOT / "docs"
 RMC_METHODS = {"rmc", "rmc_generalist_negative", "rmc_generalist_positive"}
 SHOW_RMC_HISTORY_RUNS = False
-RMC_HISTORY_RUNS = {
-    "rmc_generalist_negative": ROOT
-    / "output_history/rmc_generalist_negative_3shot_full/rmc",
-    "rmc_generalist_positive": ROOT
-    / "output_history/rmc_generalist_positive_3shot_full/rmc",
-}
+RMC_HISTORY_RUNS: dict[str, Path] = {}
 
 _TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
 _RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
 _DATASET_TOTAL_CACHE: dict[str, int | None] = {}
+COGNASCORE_ML_METHODS = {
+    "cognascore_ml_consensus24",
+}
+HIDDEN_METHODS: set[str] = set()
+HIDDEN_DATASETS: set[str] = set()
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class Run:
     def label(self) -> str:
         if is_rmc_method(self.method):
             return f"{run_group_label(self.method, self.model)} on {dataset_label(self.dataset)}"
-        if self.method in {"cognascore", "cognascore_compact"}:
+        if self.method in COGNASCORE_ML_METHODS or self.method == "cognascore_compact":
             return f"{method_label(self.method)} on {dataset_label(self.dataset)}"
         model = f" · {short_model_label(self.model)}" if self.model else ""
         return f"{method_label(self.method)} on {dataset_label(self.dataset)}{model}"
@@ -145,20 +145,28 @@ def main() -> None:
 
 def discover_runs() -> list[Run]:
     runs = []
-    for path in sorted(OUTPUT_DIR.glob("**/summary.json")):
+    for path in sorted(RESULTS_DIR.glob("**/summary.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
         if data.get("mock_recover") is True:
             continue
-        rel = path.relative_to(OUTPUT_DIR)
+        rel = path.relative_to(RESULTS_DIR)
         parts = rel.parts
         if len(parts) < 3:
             continue
         if parts[0] == "history":
             continue
         method = parts[0]
+        if method in HIDDEN_METHODS:
+            continue
         if is_rmc_method(method):
             continue
+        if method not in METHOD_ORDER:
+            continue
         dataset = parts[1]
+        if dataset in HIDDEN_DATASETS:
+            continue
         model = infer_model(method, parts, data)
         if method == "cognascore_compact" and model != "Qwen/Qwen3-Embedding-0.6B":
             continue
@@ -186,7 +194,7 @@ def infer_model(method: str, parts: tuple[str, ...], data: dict[str, Any]) -> st
     value = data.get("model")
     if value:
         model = str(value)
-        if method == "cognascore" and model == "nomic-ai-nomic-embed-text-v1.5":
+        if method in COGNASCORE_ML_METHODS and model == "nomic-ai-nomic-embed-text-v1.5":
             return "nomic-ai/nomic-embed-text-v1.5"
         return model
     if len(parts) >= 4:
@@ -225,16 +233,22 @@ def write_index(runs: list[Run]) -> None:
         f'<th><a href="datasets/{slugify(dataset)}.html">{escape(dataset_label(dataset))}</a></th>'
         for dataset in datasets
     )
+    controls = []
     rows = []
     for group in run_groups:
         method, model = group
+        group_id = slugify("__".join(part for part in (method, model) if part))
+        label = run_group_label(method, model)
+        controls.append(
+            f'<button class="method-filter active" type="button" draggable="true" data-method-group="{escape(group_id)}" '
+            f'aria-pressed="true">{escape(label)}</button>'
+        )
         cells = []
         for dataset in datasets:
             cell_runs = by_cell.get((group, dataset), [])
             cells.append(f"<td>{render_run_cell(cell_runs, best_runs)}</td>")
-        label = run_group_label(method, model)
         rows.append(
-            "<tr>"
+            f'<tr data-method-group="{escape(group_id)}">'
             f'<th><a href="methods/{slugify(method)}.html">{escape(label)}</a></th>'
             + "".join(cells)
             + "</tr>"
@@ -247,8 +261,11 @@ def write_index(runs: list[Run]) -> None:
           <h1>Code Readability Results</h1>
         </div>
       </div>
+      <div class="method-filters" data-method-filters>
+        {''.join(controls)}
+      </div>
       <div class="matrix-wrap">
-        <table class="matrix">
+        <table class="matrix" data-result-matrix>
           <thead><tr><th>Method / Dataset</th>{header}</tr></thead>
           <tbody>{''.join(rows)}</tbody>
         </table>
@@ -279,8 +296,10 @@ def render_run_cell(runs: list[Run], best_runs: set[str]) -> str:
         value = format_metric(run.metric_value)
         coverage = format_coverage(run)
         class_name = "result-link best" if run.slug in best_runs else "result-link"
+        score = run.metric_value
+        score_attr = "" if score is None else f' data-score="{float(score)}"'
         links.append(
-            f'<a class="{class_name}" href="runs/{run.slug}.html">'
+            f'<a class="{class_name}" href="runs/{run.slug}.html" data-dataset="{escape(run.dataset)}"{score_attr}>'
             f"<strong>{escape(value)}</strong>"
             f"<span>{escape(run.metric_name)}</span>"
             f'<small>{escape(coverage)}</small>'
@@ -391,8 +410,16 @@ def method_description(method: str) -> str:
           <h2>User Prompt</h2>
           <pre class="code-block"><code>{escape(user_prompt)}</code></pre>
         """
-    if method == "cognascore":
-        return """
+    if method in COGNASCORE_ML_METHODS:
+        training_note = (
+            "This Consensus-24 ML route first ranks features independently under five "
+            "embedding models, then retains a compact consensus set whose feature names "
+            "are stable across embedding spaces. After the feature set is fixed, the final "
+            "readability score is fitted with Ridge regression using the Nomic feature "
+            "instantiation. The selected 24 features are evaluated on MBJP, Buse, Dorn, "
+            "Scalabrino, Schnappinger, and JetBrains."
+        )
+        return f"""
           <p class="muted wide">CognaScore ML is motivated by a cognitive view of code readability: a reader does not process code as a flat token stream, but maintains short-lived semantic chunks in working memory while tracking visual density, local irregularity, and relationships among related program elements. We therefore build an initial feature library from code layout, cognitive chunks, chunk types, embedding-space geometry, and automatic clustering over embedded chunks. The supervised model is used to test whether this feature space contains predictive readability signal.</p>
           <figure class="feature-diagram">
             <figcaption>
@@ -452,42 +479,83 @@ if score &gt; limit:
                     <h3>Embedding-space geometry</h3>
                     <p>Semantic concentration versus dispersion.</p>
                     <div class="feature-tags embedding-tags">
-                      <code>embedding_pairwise_cosine_mean</code><code>embedding_effective_rank</code><code>embedding_first_pc_explained_variance</code>
+                      <code>embedding_mean_cosine_to_centroid</code><code>embedding_pairwise_cosine_std</code><code>embedding_effective_rank</code><code>embedding_first_pc_explained_variance</code>
                     </div>
                   </div>
                   <div class="feature-box cluster-box">
                     <h3>Automatic clustering</h3>
                     <p>Adaptive grouping over embedded chunks.</p>
                     <div class="feature-tags cluster-tags">
-                      <code>auto_dbscan_cluster_count</code><code>hdbscan_cluster_diameter_max</code><code>optics_reachability_mean</code><code>auto_kmeans_selected_k</code>
+                      <code>hdbscan_noise_ratio</code><code>optics_reachability_mean</code><code>auto_kmeans_selected_k</code><code>auto_agglo_cluster_count</code>
                     </div>
                   </div>
                   <div class="feature-box embedding-box wide-box">
                     <h3>Chunk-view variants</h3>
                     <p>Recomputed over selected views to isolate cognitive channels.</p>
                     <div class="feature-tags embedding-tags">
-                      <code>semantic_core</code><code>structural_core</code><code>data_core</code><code>logic_core</code><code>only_identifier</code><code>only_control_flow</code><code>no_junk</code>
+                      <code>all</code><code>only_identifier</code><code>semantic_core</code><code>structural_core</code>
                     </div>
                   </div>
                 </div>
               </section>
             </div>
           </figure>
-          <p class="muted wide">The visualized run then applies feature selection and fits a Ridge model. Model-output features are excluded, including <code>generalized_score</code>.</p>
-          <p class="formula">training: Ridge(alpha = 1000), target = per-dataset rank-percentile readability, training datasets = Scalabrino + Schnappinger + Dorn.</p>
-          <p class="formula">evaluation: Scalabrino, Schnappinger, and Dorn headline metrics are repeated dataset-aware 80/20 held-out means. MBJP and JetBrains are diagnostic external results.</p>
-          <p class="muted">Embedding model for this visualized ML route: nomic-ai/nomic-embed-text-v1.5.</p>
+          <p class="muted wide">The initial ML feature table contains code-scale, visual-layout, chunk-inventory, identifier-quality, type-aware chunk, compression, embedding-geometry, semantic-context, and adaptive-clustering features. The stable schema contains 111 base features plus 108 embedding-derived features for each model. Feature selection is performed as a cross-embedding consensus: L1 logistic stability screening is run separately under Nomic, Jina Code, Qwen3, Snowflake Arctic, and Voyage Nano; canonical feature names are aggregated and redundant candidates are filtered. The final score is a Ridge model over the fixed consensus feature set. {escape(training_note)}</p>
+          <section class="method-note">
+            <h2>Final Consensus-24 feature set</h2>
+            <p class="muted wide">The final ML model uses 24 selected features: 19 base/CognaScore features, 4 embedding-derived features, and 1 compression feature. Each feature below is instantiated with the Nomic feature table for the final Ridge model.</p>
+            <table class="records compact-feature-table">
+              <thead><tr><th>Feature</th><th>One-sentence interpretation</th></tr></thead>
+              <tbody>
+                <tr><td><code>base__visual_operator_density</code></td><td>Measures how densely operator symbols occupy the visible code area, capturing local symbolic load.</td></tr>
+                <tr><td><code>base__byte_entropy</code></td><td>Measures character-level textual entropy, used as a broad proxy for lexical irregularity.</td></tr>
+                <tr><td><code>base__blank_line_ratio</code></td><td>Measures the fraction of empty lines, capturing visual separation and spacing in the snippet.</td></tr>
+                <tr><td><code>base__chunk_y_std</code></td><td>Measures vertical dispersion of extracted cognitive chunks across the code layout.</td></tr>
+                <tr><td><code>base__visual_identifier_area_ratio</code></td><td>Measures how much visible code area is occupied by identifiers rather than other token classes.</td></tr>
+                <tr><td><code>base__type_literal_ratio</code></td><td>Measures the fraction of chunks classified as literal constants.</td></tr>
+                <tr><td><code>base__visual_period_y_mean</code></td><td>Measures the average vertical position of period/dot tokens, which often mark member access or qualified names.</td></tr>
+                <tr><td><code>embedding__structural_core__auto_kmeans_selected_k</code></td><td>Measures the automatically selected number of semantic clusters among structural-core chunks.</td></tr>
+                <tr><td><code>base__max_line_length</code></td><td>Measures the longest source line, capturing the worst-case horizontal reading span.</td></tr>
+                <tr><td><code>embedding__only_identifier__embedding_first_pc_explained_variance</code></td><td>Measures whether identifier embeddings collapse along one dominant semantic direction.</td></tr>
+                <tr><td><code>base__chunk_chars_cv</code></td><td>Measures coefficient of variation in chunk character lengths, capturing uneven chunk size.</td></tr>
+                <tr><td><code>base__type_unused_import_count</code></td><td>Counts imports detected as unused, acting as a sparse signal of dead or distracting dependencies.</td></tr>
+                <tr><td><code>base__type_regex_ratio</code></td><td>Measures the fraction of chunks associated with regular-expression content.</td></tr>
+                <tr><td><code>base__visual_keyword_area_ratio</code></td><td>Measures how much visible area is occupied by language keywords.</td></tr>
+                <tr><td><code>base__std_indent</code></td><td>Measures dispersion of indentation depth across lines.</td></tr>
+                <tr><td><code>base__type_bitwise_ratio</code></td><td>Measures the fraction of chunks involving bitwise operations or masks.</td></tr>
+                <tr><td><code>embedding__structural_core__optics_cluster_type_entropy_mean</code></td><td>Measures average chunk-type entropy inside OPTICS clusters over structural-core embeddings.</td></tr>
+                <tr><td><code>base__indent_transition_mean</code></td><td>Measures average line-to-line indentation change, capturing control-structure movement in the visual layout.</td></tr>
+                <tr><td><code>base__identifier_single_letter_ratio</code></td><td>Measures the fraction of identifiers that are single-letter names.</td></tr>
+                <tr><td><code>base__log_max_chunk_chars</code></td><td>Log-transforms the largest chunk length, capturing the largest local cognitive unit while reducing scale dominance.</td></tr>
+                <tr><td><code>embedding__structural_core__optics_noise_ratio</code></td><td>Measures the fraction of structural-core chunks treated as noise by adaptive OPTICS clustering.</td></tr>
+                <tr><td><code>base__identifier_length_cv</code></td><td>Measures variability in identifier length, capturing inconsistency in naming scale.</td></tr>
+                <tr><td><code>compression__zlib_line_ratio_std</code></td><td>Measures the line-to-line variability of zlib compression ratio, capturing uneven repetition or regularity across source lines.</td></tr>
+                <tr><td><code>base__long_line_ratio_100</code></td><td>Measures the fraction of source lines longer than 100 characters, capturing extreme horizontal reading burden.</td></tr>
+              </tbody>
+            </table>
+            <h3>Collinearity and sparsity</h3>
+            <p class="muted wide">The final 24 features are not strongly redundant: no pair has Pearson or Spearman correlation above 0.9, and only two pairs exceed 0.8. The main overlap is expected: short-identifier ratio and single-letter identifier ratio both measure short-name behavior. Overall sparsity is moderate, although a few rare-pattern features such as regex, bitwise operations, and unused imports are active only in a small subset of samples.</p>
+          </section>
         """
     if method == "cognascore_compact":
         return """
-          <p class="muted">Compact CognaScore is the interpretability route: a 4-feature Ridge formula. It avoids noise-ratio features and uses interpretable layout, chunk-geometry, and embedding-clustering signals.</p>
+          <p class="muted">CognaScore Compact is the interpretable route. It keeps the model linear after simple monotonic transformations and uses four features that represent visible density, code scale, local chunk irregularity, and semantic dispersion among identifier chunks.</p>
           <p class="formula">score = 1.43341466 - 0.30461071 * log1p(visual_operator_density) - 0.227365225 * sqrt(log_LOC) - 0.0463927146 * log1p(std_chunks_per_source_line) - 0.196472171 * log1p(qwen_only_identifier_auto_kmeans_cluster_diameter_max)</p>
           <p class="formula">training: Ridge(alpha = 30), target = per-dataset rank-percentile readability, training datasets = Scalabrino + Schnappinger + Dorn + Buse.</p>
-          <p class="muted">This entry prioritizes a small, defensible formula. It is strongest on Buse, Schnappinger, Dorn, and JetBrains; Scalabrino remains lower than the high-feature route.</p>
+          <table class="records compact-feature-table">
+            <thead><tr><th>Feature</th><th>Interpretation</th></tr></thead>
+            <tbody>
+              <tr><td><code>visual_operator_density</code></td><td>Operator characters per visible code area. Higher density means the reader sees more symbolic operations in a small visual region.</td></tr>
+              <tr><td><code>log_LOC</code></td><td>Log-transformed non-empty lines of code. It controls for code scale while reducing the dominance of very long snippets.</td></tr>
+              <tr><td><code>std_chunks_per_source_line</code></td><td>Line-level unevenness of CognaScore chunks. Larger values indicate that cognitive chunks are concentrated irregularly across lines.</td></tr>
+              <tr><td><code>qwen_only_identifier_auto_kmeans_cluster_diameter_max</code></td><td>Maximum semantic diameter among automatically selected K-means clusters over identifier chunks. Larger values indicate more dispersed naming concepts within the same identifier view.</td></tr>
+            </tbody>
+          </table>
+          <p class="muted">The formula follows a single principle: readable code should be visually sparse, moderate in scale, locally even, and semantically concentrated. All four learned coefficients are negative, so increases in these burden signals lower the predicted readability score. This entry prioritizes a small, defensible formula; it is strongest on Buse, Schnappinger, Dorn, and JetBrains, while Scalabrino is better handled by the high-feature ML route.</p>
         """
     if method == "loc_baseline":
         return """
-          <p class="muted">A length-only sanity-check baseline. It predicts that shorter snippets are more readable and uses no syntax, token, chunk, embedding, or supervised feature information.</p>
+          <p class="muted">A length-only control. It predicts that shorter snippets are more readable and uses no syntax, token, chunk, embedding, or supervised feature information.</p>
           <p class="formula">score = LOC</p>
           <p class="formula">LOC is the number of non-empty source lines. Lower score means predicted more readable, so continuous Spearman correlations are expected to be negative.</p>
         """
@@ -620,7 +688,6 @@ def dataset_note(dataset: str) -> str:
         "jetbrains": "JetBrains contains Java snippets with binary human readability labels.",
         "dorn": "Dorn is the original mixed-language readability dataset with CUDA, Java, and Python snippets.",
         "schnappinger": "Schnappinger contains Java class-level examples with continuous readability labels derived from the study probabilities.",
-        "clear": "CLEAR is a natural-language readability corpus, not a code dataset.",
     }
     return notes.get(dataset, "Dataset statistics are computed from the local adapter output.")
 
@@ -686,7 +753,7 @@ def readable_run_config_items(run: Run) -> list[tuple[str, str]]:
         if data.get("similarity") is not None:
             items.append(("Recovery Match", readable_similarity(data.get("similarity"))))
         return items
-    if run.method == "cognascore":
+    if run.method in COGNASCORE_ML_METHODS:
         model = data.get("embedding_model") or run.model
         if model:
             items.append(("Embeddings", short_model_label(str(model)) or str(model)))
@@ -703,15 +770,6 @@ def readable_run_config_items(run: Run) -> list[tuple[str, str]]:
                     items.append(("Training", f"{score_model['training_sample_count']} samples"))
             if score_model.get("training_policy") is not None:
                 items.append(("Evaluation Policy", str(score_model["training_policy"])))
-        dbscan = data.get("dbscan") or {}
-        if isinstance(dbscan, dict) and dbscan:
-            parts = []
-            if dbscan.get("eps") is not None:
-                parts.append(f"radius {dbscan['eps']}")
-            if dbscan.get("min_samples") is not None:
-                parts.append(f"min samples {dbscan['min_samples']}")
-            if parts:
-                items.append(("Clustering", ", ".join(parts)))
         return items
     metric = data.get("evaluation_metric")
     if metric:
@@ -731,8 +789,6 @@ def readable_masking(data: dict[str, Any]) -> str:
         if dataset == "dorn":
             return "Control-flow regions in CUDA, Java, and Python fragments"
         return "Control-flow regions from token matching"
-    if strategy.startswith("natural_language"):
-        return "Natural-language passages"
     return "Masked source regions"
 
 
@@ -740,8 +796,6 @@ def readable_granularity(value: Any) -> str:
     labels = {
         "control": "Control statements",
         "statement": "Statements",
-        "sentence": "Sentences",
-        "paragraph": "Paragraphs",
     }
     return labels.get(str(value), str(value).replace("_", " ").title())
 
@@ -882,8 +936,8 @@ def sample_mode_panels(item, runs: list[Run]) -> str:
             panels.append(posnett_panel(panel_id, item, run))
         elif is_rmc_method(run.method):
             panels.append(rmc_panel(panel_id, item, run))
-        elif run.method == "cognascore":
-            panels.append(cognascore_panel(panel_id, item, run))
+        elif run.method in COGNASCORE_ML_METHODS:
+            panels.append(cognascore_ml_panel(panel_id, item, run))
         elif run.method in {"llm", "llm_prompt"}:
             panels.append(llm_panel(panel_id, item, run))
         else:
@@ -982,26 +1036,25 @@ def rmc_panel(panel_id: str, item, run: Run) -> str:
     """
 
 
-def cognascore_panel(panel_id: str, item, run: Run) -> str:
+def cognascore_ml_panel(panel_id: str, item, run: Run) -> str:
     row = run_row_by_task(run).get(item.task_id, {})
     result = row.get("result", {}) if isinstance(row.get("result"), dict) else {}
+    score_model = run.data.get("score_model", {})
+    if not isinstance(score_model, dict):
+        score_model = {}
     metrics = [
-        ("Generalized Readability Score", format_metric(as_float(row.get("score")))),
-        ("log(1 + Vocabulary Size)", format_metric(as_float(result.get("log_vocabulary_size")))),
-        ("Noise Ratio", format_metric(as_float(result.get("noise_ratio")))),
-        ("Average Cluster Diameter", format_metric(as_float(result.get("avg_cluster_diameter")))),
-        ("Clusters", str(result.get("cluster_count", "n/a"))),
-        ("Lexemes", str(result.get("lexeme_count", "n/a"))),
-        ("Noise Lexemes", str(result.get("noise_lexeme_count", "n/a"))),
+        ("Predicted readability", format_metric(as_float(row.get("score")))),
+        ("Score model", str(result.get("score_model", score_model.get("name", "n/a")))),
+        ("Selected features", str(score_model.get("selected_feature_count", "n/a"))),
+        ("Ridge alpha", str(score_model.get("ridge_alpha", "n/a"))),
     ]
     return f"""
     <div class="mode-panel" id="{escape(panel_id)}">
       <div class="grid two">
         <article>
-          <h3>Cluster Summary</h3>
+          <h3>CognaScore ML prediction</h3>
           {definition_list(metrics)}
-          <p class="muted evidence-note"><strong>Formula:</strong> {escape(str(result.get("formula", "n/a")))}</p>
-          <p class="muted evidence-note">The current stored CognaScore output contains aggregate cluster statistics per sample. Detailed cluster membership can be added here if future runs persist per-lexeme cluster assignments.</p>
+          <p class="muted evidence-note">This is the output of the frozen selected-feature Ridge model. Feature-selection experiments are kept separately from the materialized score.</p>
         </article>
         <article>
           <h3>Code</h3>
@@ -1550,7 +1603,7 @@ def run_sort_key(run: Run) -> str:
 
 
 def run_group_key(run: Run) -> tuple[str, str | None]:
-    if run.method in {"cognascore", "cognascore_compact"}:
+    if run.method in COGNASCORE_ML_METHODS or run.method == "cognascore_compact":
         return run.method, None
     if run.model:
         return run.method, run.model
@@ -1558,7 +1611,7 @@ def run_group_key(run: Run) -> tuple[str, str | None]:
 
 
 def run_group_label(method: str, model: str | None) -> str:
-    if method in {"cognascore", "cognascore_compact"}:
+    if method in COGNASCORE_ML_METHODS or method == "cognascore_compact":
         return method_label(method)
     if model is None:
         return method_label(method)
@@ -1575,7 +1628,7 @@ def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
 
 def short_run_label(run: Run) -> str:
     model = short_model_label(run.model)
-    if run.method in {"cognascore", "cognascore_compact"}:
+    if run.method in COGNASCORE_ML_METHODS or run.method == "cognascore_compact":
         return method_label(run.method)
     if is_rmc_method(run.method) and model:
         return f"{method_label(run.method)} {model}"
@@ -1943,6 +1996,38 @@ h3 { margin: 0 0 10px; font-size: 15px; }
   color: #195d82;
 }
 .matrix-wrap { overflow-x: auto; }
+.method-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+.method-filter {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f7f9fa;
+  color: var(--text);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.method-filter[draggable="true"] { cursor: grab; }
+.method-filter.dragging {
+  opacity: .55;
+  cursor: grabbing;
+}
+.method-filter.active {
+  border-color: #9fc7d5;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.method-filter:not(.active) {
+  color: var(--muted);
+  text-decoration: line-through;
+}
 table { border-collapse: collapse; width: 100%; }
 th, td { border-bottom: 1px solid var(--line); padding: 12px 10px; text-align: left; vertical-align: top; }
 th { font-weight: 700; color: #2b333a; background: #fafbfc; }
@@ -2447,7 +2532,73 @@ function sortPatchCards(button) {
   if (marker) marker.textContent = target === "asc" ? "↓" : "↑";
 }
 
+function updateResultMatrixBest(matrix) {
+  const links = Array.from(matrix.querySelectorAll(".result-link[data-score][data-dataset]"));
+  links.forEach((link) => link.classList.remove("best"));
+  const bestByDataset = new Map();
+  links.forEach((link) => {
+    const row = link.closest("tr");
+    if (row && row.hidden) return;
+    const score = Number(link.dataset.score);
+    if (!Number.isFinite(score)) return;
+    const dataset = link.dataset.dataset;
+    const current = bestByDataset.get(dataset);
+    if (!current || score > current.score) {
+      bestByDataset.set(dataset, { score, link });
+    }
+  });
+  bestByDataset.forEach((item) => item.link.classList.add("best"));
+}
+
+function toggleMethodFilter(button) {
+  const group = button.dataset.methodGroup;
+  const panel = button.closest(".panel");
+  if (!group || !panel) return;
+  const matrix = panel.querySelector("[data-result-matrix]");
+  if (!matrix) return;
+  const nextActive = button.getAttribute("aria-pressed") !== "true";
+  button.setAttribute("aria-pressed", nextActive ? "true" : "false");
+  button.classList.toggle("active", nextActive);
+  matrix.querySelectorAll(`tr[data-method-group="${CSS.escape(group)}"]`).forEach((row) => {
+    row.hidden = !nextActive;
+  });
+  updateResultMatrixBest(matrix);
+}
+
+function initializeResultMatrices() {
+  document.querySelectorAll("[data-result-matrix]").forEach((matrix) => updateResultMatrixBest(matrix));
+}
+
+function dragInsertBefore(container, dragging, target, clientX) {
+  if (!container || !dragging || !target || dragging === target) return;
+  const box = target.getBoundingClientRect();
+  const after = clientX > box.left + box.width / 2;
+  container.insertBefore(dragging, after ? target.nextSibling : target);
+}
+
+function syncMatrixOrderFromFilters(filters) {
+  const panel = filters.closest(".panel");
+  const matrix = panel ? panel.querySelector("[data-result-matrix]") : null;
+  const tbody = matrix ? matrix.querySelector("tbody") : null;
+  if (!tbody) return;
+  filters.querySelectorAll(".method-filter[data-method-group]").forEach((button) => {
+    const group = button.dataset.methodGroup;
+    const row = tbody.querySelector(`tr[data-method-group="${CSS.escape(group)}"]`);
+    if (row) tbody.appendChild(row);
+  });
+  updateResultMatrixBest(matrix);
+}
+
 document.addEventListener("click", (event) => {
+  const methodFilter = event.target.closest(".method-filter[data-method-group]");
+  if (methodFilter) {
+    if (methodFilter.dataset.dragJustEnded === "true") {
+      delete methodFilter.dataset.dragJustEnded;
+      return;
+    }
+    toggleMethodFilter(methodFilter);
+    return;
+  }
   const patchSort = event.target.closest(".patch-sort");
   if (patchSort) {
     sortPatchCards(patchSort);
@@ -2468,11 +2619,46 @@ document.addEventListener("click", (event) => {
   if (target) target.classList.add("active");
 });
 
+document.addEventListener("dragstart", (event) => {
+  const button = event.target.closest ? event.target.closest('.method-filter[draggable="true"][data-method-group]') : null;
+  if (!button) return;
+  button.classList.add("dragging");
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", button.dataset.methodGroup || "");
+  }
+});
+
+document.addEventListener("dragover", (event) => {
+  const target = event.target.closest ? event.target.closest('.method-filter[draggable="true"][data-method-group]') : null;
+  if (!target) return;
+  const filters = target.parentElement;
+  const dragging = filters ? filters.querySelector(".method-filter.dragging") : null;
+  if (!dragging) return;
+  event.preventDefault();
+  dragInsertBefore(filters, dragging, target, event.clientX);
+  syncMatrixOrderFromFilters(filters);
+});
+
+document.addEventListener("dragend", (event) => {
+  const button = event.target.closest ? event.target.closest(".method-filter.dragging") : null;
+  if (!button) return;
+  const filters = button.closest("[data-method-filters]");
+  button.classList.remove("dragging");
+  button.dataset.dragJustEnded = "true";
+  window.setTimeout(() => {
+    delete button.dataset.dragJustEnded;
+  }, 0);
+  if (filters) syncMatrixOrderFromFilters(filters);
+});
+
 document.addEventListener("toggle", (event) => {
   const detail = event.target.closest ? event.target.closest(".mask-detail") : null;
   if (!detail) return;
   highlightMaskLines(detail);
 }, true);
+
+document.addEventListener("DOMContentLoaded", initializeResultMatrices);
 """
 
 

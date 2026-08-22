@@ -8,13 +8,21 @@ from pathlib import Path
 if not os.environ.get("LOKY_MAX_CPU_COUNT"):
     os.environ["LOKY_MAX_CPU_COUNT"] = str(max((os.cpu_count() or 2) - 1, 1))
 
-from src.experiments.paths import output_dir
 from src.experiments.registry import COGNASCORE_DEFAULT_MODEL, DATASETS
 
 from ..embedding_cache import EmbeddingCache, embedding_cache_path
 from ..embedding_features import extract_embedding_feature_row, write_embedding_feature_database
 from ..results import model_slug
-from .common import dataset_output_name, load_items
+from ..semantic_context import (
+    BUSINESS_ANCHOR_TASK,
+    MATH_ANCHOR_TASK,
+    NON_MATH_ANCHOR_TASK,
+    WHOLE_CODE_CONTEXT_TYPE,
+    context_anchor_groups,
+    centroid,
+)
+from ..dataset_io import dataset_output_name, load_items
+from ..paths import EMBEDDING_CACHE_ROOT, EMBEDDING_FEATURE_ROOT
 
 
 DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger")
@@ -29,12 +37,16 @@ def parse_args() -> argparse.Namespace:
         help="Dataset paths. Defaults to all current code datasets.",
     )
     parser.add_argument("--embedding-model", default=COGNASCORE_DEFAULT_MODEL)
-    parser.add_argument("--embedding-cache-root", type=Path, default=Path("output/cognascore_embeddings"))
+    parser.add_argument("--embedding-cache-root", type=Path, default=EMBEDDING_CACHE_ROOT)
     parser.add_argument(
         "-o",
         "--output",
         type=Path,
-        help="Output root. Defaults to output/cognascore_embedding_features/.",
+        default=EMBEDDING_FEATURE_ROOT,
+        help=(
+            "Embedding-feature root. Defaults to "
+            "artifacts/cognascore/features/embedding/."
+        ),
     )
     parser.add_argument("--limit", type=int)
     parser.add_argument("--min-coverage", type=float, default=0.0)
@@ -60,6 +72,11 @@ def parse_args() -> argparse.Namespace:
         help="With --resume, recompute every selected task while preserving checkpoint/resume behavior.",
     )
     parser.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help="Delete an existing feature table before rebuilding. Useful after schema changes.",
+    )
+    parser.add_argument(
         "--checkpoint-every",
         type=int,
         default=1,
@@ -76,18 +93,14 @@ def main() -> None:
         raise SystemExit(f"Missing embedding cache: {cache_path}")
 
     with EmbeddingCache(cache_path, model_name=args.embedding_model) as cache:
+        context_centroids = _load_context_centroids(cache)
         for path in dataset_paths:
             dataset_name = dataset_output_name(path)
             all_items = load_items(path)
             items = all_items
             if args.limit is not None:
                 items = all_items[: args.limit]
-            feature_dir = output_dir(
-                args.output,
-                "cognascore_embedding_features",
-                dataset_name,
-                model_slug(args.embedding_model),
-            )
+            feature_dir = args.output / dataset_name / model_slug(args.embedding_model)
             base_metadata = {
                 "dataset": dataset_name,
                 "dataset_path": str(path),
@@ -98,8 +111,11 @@ def main() -> None:
                 "resume": bool(args.resume),
                 "update_incomplete": bool(args.update_incomplete),
                 "update_all": bool(args.update_all),
+                "replace_existing": bool(args.replace_existing),
             }
             rows_by_task: dict[str, dict] = {}
+            if args.replace_existing:
+                _delete_existing_table(feature_dir)
             if args.resume:
                 rows_by_task = _load_existing_rows(feature_dir)
                 if rows_by_task:
@@ -116,12 +132,22 @@ def main() -> None:
                     print(f"[{index}/{len(items)}] Reusing embedding features for {dataset_name} {item.task_id}", flush=True)
                     continue
                 print(f"[{index}/{len(items)}] Embedding features for {dataset_name} {item.task_id}", flush=True)
-                total_count, available_count = cache.task_source_counts(dataset_name, item.task_id)
+                total_count, available_count = cache.task_source_counts(
+                    dataset_name,
+                    item.task_id,
+                    exclude_chunk_types=(WHOLE_CODE_CONTEXT_TYPE,),
+                )
                 coverage = available_count / max(total_count, 1)
                 if coverage < args.min_coverage:
                     skipped.append({"task_id": item.task_id, "coverage": coverage})
                     continue
-                vector_rows = cache.task_vectors(dataset_name, item.task_id)
+                vector_rows = cache.task_vectors(
+                    dataset_name,
+                    item.task_id,
+                    exclude_chunk_types=(WHOLE_CODE_CONTEXT_TYPE,),
+                )
+                code_segment_vectors = cache.task_vectors_for_chunk_type(dataset_name, item.task_id, WHOLE_CODE_CONTEXT_TYPE)
+                code_vector = code_segment_vectors[0][1] if code_segment_vectors else None
                 rows.append(
                     extract_embedding_feature_row(
                         dataset=dataset_name,
@@ -129,6 +155,11 @@ def main() -> None:
                         readability_score=item.readability_score,
                         total_source_count=total_count,
                         vector_rows=vector_rows,
+                        code_vector=code_vector,
+                        code_segment_vectors=code_segment_vectors,
+                        math_centroid=context_centroids[MATH_ANCHOR_TASK],
+                        business_centroid=context_centroids[BUSINESS_ANCHOR_TASK],
+                        non_math_centroid=context_centroids[NON_MATH_ANCHOR_TASK],
                         max_vectors=args.max_vectors_per_task,
                     )
                 )
@@ -175,10 +206,38 @@ def _load_existing_rows(feature_dir: Path) -> dict[str, dict]:
         return {str(row["task_id"]): dict(row) for row in reader}
 
 
+def _delete_existing_table(feature_dir: Path) -> None:
+    for filename in ("features.csv", "metadata.json"):
+        path = feature_dir / filename
+        if path.exists():
+            path.unlink()
+
+
 def extract_embedding_feature_columns() -> list[str]:
     from ..embedding_features import embedding_feature_names
 
     return embedding_feature_names()
+
+
+def _load_context_centroids(cache: EmbeddingCache) -> dict[str, object]:
+    centroids = {}
+    missing = []
+    for task_id, anchors in context_anchor_groups().items():
+        by_text = cache.vectors_for_texts([anchor.code for anchor in anchors])
+        vectors = []
+        for anchor in anchors:
+            vector = by_text.get(anchor.code)
+            if vector is None:
+                missing.append(f"{task_id}:{anchor.name}")
+            else:
+                vectors.append(vector)
+        centroids[task_id] = centroid(vectors)
+    if missing:
+        raise SystemExit(
+            "Missing semantic-context anchor embeddings. Run the embeddings runner first. "
+            f"Missing anchors: {', '.join(missing[:10])}"
+        )
+    return centroids
 
 
 def _should_update_existing(row: dict, *, update_incomplete: bool, update_all: bool) -> bool:
@@ -186,7 +245,7 @@ def _should_update_existing(row: dict, *, update_incomplete: bool, update_all: b
         return True
     if not update_incomplete:
         return False
-    return _as_float(row.get("embedding_coverage_ratio")) < 1.0 or _as_float(row.get("embedding_source_count")) <= 0.0
+    return _as_float(row.get("embedding_coverage_ratio")) < 1.0
 
 
 def _as_float(value) -> float:

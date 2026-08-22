@@ -85,7 +85,73 @@ function sortPatchCards(button) {
   if (marker) marker.textContent = target === "asc" ? "↓" : "↑";
 }
 
+function updateResultMatrixBest(matrix) {
+  const links = Array.from(matrix.querySelectorAll(".result-link[data-score][data-dataset]"));
+  links.forEach((link) => link.classList.remove("best"));
+  const bestByDataset = new Map();
+  links.forEach((link) => {
+    const row = link.closest("tr");
+    if (row && row.hidden) return;
+    const score = Number(link.dataset.score);
+    if (!Number.isFinite(score)) return;
+    const dataset = link.dataset.dataset;
+    const current = bestByDataset.get(dataset);
+    if (!current || score > current.score) {
+      bestByDataset.set(dataset, { score, link });
+    }
+  });
+  bestByDataset.forEach((item) => item.link.classList.add("best"));
+}
+
+function toggleMethodFilter(button) {
+  const group = button.dataset.methodGroup;
+  const panel = button.closest(".panel");
+  if (!group || !panel) return;
+  const matrix = panel.querySelector("[data-result-matrix]");
+  if (!matrix) return;
+  const nextActive = button.getAttribute("aria-pressed") !== "true";
+  button.setAttribute("aria-pressed", nextActive ? "true" : "false");
+  button.classList.toggle("active", nextActive);
+  matrix.querySelectorAll(`tr[data-method-group="${CSS.escape(group)}"]`).forEach((row) => {
+    row.hidden = !nextActive;
+  });
+  updateResultMatrixBest(matrix);
+}
+
+function initializeResultMatrices() {
+  document.querySelectorAll("[data-result-matrix]").forEach((matrix) => updateResultMatrixBest(matrix));
+}
+
+function dragInsertBefore(container, dragging, target, clientX) {
+  if (!container || !dragging || !target || dragging === target) return;
+  const box = target.getBoundingClientRect();
+  const after = clientX > box.left + box.width / 2;
+  container.insertBefore(dragging, after ? target.nextSibling : target);
+}
+
+function syncMatrixOrderFromFilters(filters) {
+  const panel = filters.closest(".panel");
+  const matrix = panel ? panel.querySelector("[data-result-matrix]") : null;
+  const tbody = matrix ? matrix.querySelector("tbody") : null;
+  if (!tbody) return;
+  filters.querySelectorAll(".method-filter[data-method-group]").forEach((button) => {
+    const group = button.dataset.methodGroup;
+    const row = tbody.querySelector(`tr[data-method-group="${CSS.escape(group)}"]`);
+    if (row) tbody.appendChild(row);
+  });
+  updateResultMatrixBest(matrix);
+}
+
 document.addEventListener("click", (event) => {
+  const methodFilter = event.target.closest(".method-filter[data-method-group]");
+  if (methodFilter) {
+    if (methodFilter.dataset.dragJustEnded === "true") {
+      delete methodFilter.dataset.dragJustEnded;
+      return;
+    }
+    toggleMethodFilter(methodFilter);
+    return;
+  }
   const patchSort = event.target.closest(".patch-sort");
   if (patchSort) {
     sortPatchCards(patchSort);
@@ -106,8 +172,43 @@ document.addEventListener("click", (event) => {
   if (target) target.classList.add("active");
 });
 
+document.addEventListener("dragstart", (event) => {
+  const button = event.target.closest ? event.target.closest('.method-filter[draggable="true"][data-method-group]') : null;
+  if (!button) return;
+  button.classList.add("dragging");
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", button.dataset.methodGroup || "");
+  }
+});
+
+document.addEventListener("dragover", (event) => {
+  const target = event.target.closest ? event.target.closest('.method-filter[draggable="true"][data-method-group]') : null;
+  if (!target) return;
+  const filters = target.parentElement;
+  const dragging = filters ? filters.querySelector(".method-filter.dragging") : null;
+  if (!dragging) return;
+  event.preventDefault();
+  dragInsertBefore(filters, dragging, target, event.clientX);
+  syncMatrixOrderFromFilters(filters);
+});
+
+document.addEventListener("dragend", (event) => {
+  const button = event.target.closest ? event.target.closest(".method-filter.dragging") : null;
+  if (!button) return;
+  const filters = button.closest("[data-method-filters]");
+  button.classList.remove("dragging");
+  button.dataset.dragJustEnded = "true";
+  window.setTimeout(() => {
+    delete button.dataset.dragJustEnded;
+  }, 0);
+  if (filters) syncMatrixOrderFromFilters(filters);
+});
+
 document.addEventListener("toggle", (event) => {
   const detail = event.target.closest ? event.target.closest(".mask-detail") : null;
   if (!detail) return;
   highlightMaskLines(detail);
 }, true);
+
+document.addEventListener("DOMContentLoaded", initializeResultMatrices);

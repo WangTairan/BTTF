@@ -1,15 +1,16 @@
 # Methods
 
-Each readability metric lives in its own package:
+Stable readability methods and their materialization runners live here:
 
-- `rmc/`: Recursive Masking Complexity. It contains the current mask-match
-  method, masking code, prompts, similarity functions, and dataset runners.
-- `posnett/`: Posnett readability model; see its `README.md`
-  for the published formula and validation scope.
-- `scalabrino/`: Scalabrino readability model and released assets.
-- `llm_prompt/`: direct LLM readability scoring baseline.
-- `cognascore/`: lexeme embedding and DBSCAN cluster-diameter readability method.
+- `cognascore/`: typed cognitive chunks, conventional code features,
+  embedding geometry, adaptive clustering, CognaScore ML, and CognaScore
+  Compact;
+- `rmc/`: Recursive Masking Complexity and its dataset runners;
+- `posnett/`: the deterministic Posnett readability formula;
+- `scalabrino/`: wrapper around the released Scalabrino implementation;
+- `llm_prompt/`: direct LLM readability scoring baseline;
+- `loc_baseline/`: lines-of-code baseline.
 
-New metric implementations should be added as `src/methods/<method>/` packages
-with an exported scoring entry point in `__init__.py`. Method-specific runners
-and analysis commands belong inside the same method package.
+All comparison methods are kept separate from CognaScore. Exploratory feature
+selection, sweeps, probes, and ablations belong under `experiments/`, not in a
+method package's stable runner directory.

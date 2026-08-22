@@ -13,8 +13,6 @@ from .lexeme import LexemeChunk
 def visual_layout_features(
     code: str,
     chunks: Sequence[LexemeChunk],
-    semantic_chunks: Sequence[LexemeChunk],
-    junk_chunks: Sequence[LexemeChunk],
 ) -> dict[str, float]:
     lines = code.splitlines()
     loc = len([line for line in lines if line.strip()])
@@ -60,7 +58,6 @@ def visual_layout_features(
     line_lengths = [float(len(line)) for line in lines] or [0.0]
     space_counts = [float(sum(1 for char in line if char.isspace())) for line in lines] or [0.0]
     chunk_span = _chunk_line_span(chunks)
-    semantic_chunk_span = _chunk_line_span(semantic_chunks)
 
     return {
         "visual_token_density": len(tokens_by_line) / max(loc, 1),
@@ -89,14 +86,8 @@ def visual_layout_features(
         "visual_period_dft_energy": _low_frequency_dft_energy(per_line_period_counts),
         "chunk_y_mean": _chunk_y_mean(chunks, physical_line_count),
         "chunk_y_std": _chunk_y_std(chunks, physical_line_count),
-        "semantic_chunk_y_mean": _chunk_y_mean(semantic_chunks, physical_line_count),
-        "semantic_chunk_y_std": _chunk_y_std(semantic_chunks, physical_line_count),
-        "junk_chunk_y_mean": _chunk_y_mean(junk_chunks, physical_line_count),
-        "junk_chunk_y_std": _chunk_y_std(junk_chunks, physical_line_count),
         "chunk_line_span": chunk_span,
         "chunk_line_span_ratio": chunk_span / max(loc, 1),
-        "semantic_chunk_line_span": semantic_chunk_span,
-        "semantic_chunk_line_span_ratio": semantic_chunk_span / max(loc, 1),
     }
 
 

@@ -3,6 +3,7 @@ import tempfile
 from dataclasses import dataclass
 from math import isfinite, nan
 from pathlib import Path
+import re
 
 
 # Released Scalabrino assets are stored beside this implementation.
@@ -47,6 +48,10 @@ def scalabrino_metrics(code: str) -> ScalabrinoMetricsResult:
     return scalabrino_java_source_metrics(prepare_java_source(code))
 
 
+def scalabrino_metrics_wrapped(code: str) -> ScalabrinoMetricsResult:
+    return scalabrino_java_source_metrics(wrap_java_snippet(code))
+
+
 def scalabrino_java_source_metrics(code: str) -> ScalabrinoMetricsResult:
     if not SCALABRINO_JAR.is_file():
         raise FileNotFoundError(f"Scalabrino jar not found: {SCALABRINO_JAR}")
@@ -60,6 +65,10 @@ def scalabrino_java_source_metrics(code: str) -> ScalabrinoMetricsResult:
 def prepare_java_source(code: str) -> str:
     if likely_complete_java_type(code):
         return code
+    return wrap_java_snippet(code)
+
+
+def wrap_java_snippet(code: str) -> str:
     return (
         "import java.io.*;\n"
         "import java.lang.*;\n"
@@ -72,19 +81,21 @@ def prepare_java_source(code: str) -> str:
 
 
 def likely_complete_java_type(code: str) -> bool:
-    return any(
-        marker in code
-        for marker in (
-            " class ",
-            "class ",
-            " interface ",
-            "interface ",
-            " enum ",
-            "enum ",
-            " record ",
-            "record ",
-        )
+    stripped = strip_java_comments_and_strings(code)
+    return re.search(r"(?<!\.)\b(class|interface|enum|record)\s+[A-Za-z_$][\w$]*", stripped) is not None
+
+
+def strip_java_comments_and_strings(code: str) -> str:
+    token_pattern = re.compile(
+        r"""
+        // [^\n\r]*
+        | /\* .*? \*/
+        | "(?:\\.|[^"\\])*"
+        | '(?:\\.|[^'\\])*'
+        """,
+        re.DOTALL | re.VERBOSE,
     )
+    return token_pattern.sub(" ", code)
 
 
 def scalabrino_file(source_path: Path) -> ScalabrinoReadabilityResult:

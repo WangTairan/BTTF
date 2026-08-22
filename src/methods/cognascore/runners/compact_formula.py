@@ -12,6 +12,7 @@ import pandas as pd
 
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.methods.cognascore.results import model_slug
+from src.methods.cognascore.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
 
 
 EMBEDDING_MODELS = {
@@ -22,7 +23,17 @@ EMBEDDING_MODELS = {
 EMBEDDING_MODEL = EMBEDDING_MODELS["qwen"]
 EMBEDDING_SLUG = model_slug(EMBEDDING_MODEL)
 METHOD = "cognascore_compact"
-DATASETS = ("scalabrino", "schnappinger", "dorn", "buse", "mbjp", "jetbrains")
+DATASETS = (
+    "scalabrino",
+    "schnappinger",
+    "dorn",
+    "buse",
+    "mbjp",
+    "jetbrains",
+    "generated_readability_90",
+    "generated_binary_readability",
+)
+DEFAULT_DATASETS = DATASETS[:6]
 
 # Fitted on Scalabrino + Schnappinger + Dorn + Buse rank-percentile labels.
 # Constraint: compact interpretable formula using layout, chunk geometry, and embedding-clustering signals.
@@ -51,11 +62,17 @@ SEARCH_RESULT = {
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Materialize the compact CognaScore formula.")
-    parser.add_argument("--feature-root", type=Path, default=Path("output/cognascore_features"))
-    parser.add_argument("--embedding-feature-root", type=Path, default=Path("output/cognascore_embedding_features"))
-    parser.add_argument("--output-root", type=Path, default=Path("output"))
+    parser.add_argument("--feature-root", type=Path, default=BASE_FEATURE_ROOT)
+    parser.add_argument("--embedding-feature-root", type=Path, default=EMBEDDING_FEATURE_ROOT)
+    parser.add_argument("--output-root", type=Path, default=Path("results/methods"))
+    parser.add_argument(
+        "--dataset",
+        action="append",
+        choices=DATASETS,
+        help="Dataset to materialize. Can be repeated. Defaults to all compact datasets.",
+    )
     args = parser.parse_args()
-    for dataset in DATASETS:
+    for dataset in args.dataset or DEFAULT_DATASETS:
         frame = load_combined_features(dataset, args.feature_root, args.embedding_feature_root)
         predictions = predict(frame)
         write_summary(dataset=dataset, frame=frame, predictions=predictions, output_root=args.output_root)
@@ -72,7 +89,14 @@ def load_combined_features(dataset: str, feature_root: Path, embedding_feature_r
     merge_columns = ["dataset", "task_id", "_feature_row_occurrence"]
     base_features["_feature_row_occurrence"] = base_features.groupby(["dataset", "task_id"]).cumcount()
     merged = base_features
+    required_embedding_prefixes = {
+        feature.split("__", 1)[0]
+        for feature in (raw_feature_name(feature) for feature in FEATURES)
+        if "__" in feature and feature.split("__", 1)[0] in EMBEDDING_MODELS
+    }
     for prefix, model in EMBEDDING_MODELS.items():
+        if prefix not in required_embedding_prefixes:
+            continue
         slug = model_slug(model)
         embedding_path = embedding_feature_root / dataset / slug / "features.csv"
         embedding = pd.read_csv(embedding_path)
@@ -102,6 +126,14 @@ def predict(frame: pd.DataFrame) -> np.ndarray:
         values = transform_feature(frame, feature)
         score += coefficient * values
     return score
+
+
+def raw_feature_name(feature: str) -> str:
+    if feature.startswith("log1p(") and feature.endswith(")"):
+        return feature[6:-1]
+    if feature.startswith("sqrt(") and feature.endswith(")"):
+        return feature[5:-1]
+    return feature
 
 
 def transform_feature(frame: pd.DataFrame, feature: str) -> np.ndarray:
@@ -153,7 +185,7 @@ def write_summary(*, dataset: str, frame: pd.DataFrame, predictions: np.ndarray,
         and row["score"] is not None
         and math.isfinite(float(row["score"]))
     ]
-    binary = dataset == "jetbrains"
+    binary = dataset in {"jetbrains", "generated_binary_readability"}
     rho = None
     mcc = None
     threshold = None
@@ -185,8 +217,14 @@ def write_summary(*, dataset: str, frame: pd.DataFrame, predictions: np.ndarray,
         "results": rows,
         "score_model": {
             "name": "compact_4_feature_qwen_formula",
-            "training_policy": "Ridge formula fit on Scalabrino + Schnappinger + Dorn + Buse rank-percentile labels.",
-            "feature_selection": "Multi-start compact search over interpretable features. Noise-ratio features are excluded; layout, chunk geometry, embedding geometry, and automatic/adaptive clustering features are allowed.",
+            "training_policy": (
+                "Ridge formula fit on Scalabrino + Schnappinger + Dorn + Buse "
+                "rank-percentile labels."
+            ),
+            "feature_selection": (
+                "Multi-start compact search over interpretable features. Layout, chunk "
+                "geometry, embedding geometry, and adaptive clustering features are allowed."
+            ),
             "training_datasets": ["scalabrino", "schnappinger", "dorn", "buse"],
             "target": "per-dataset rank percentile readability",
             "selected_feature_count": len(FEATURES),
@@ -195,7 +233,10 @@ def write_summary(*, dataset: str, frame: pd.DataFrame, predictions: np.ndarray,
             "coefficients": COEFFICIENTS,
             "intercept": INTERCEPT,
             "search_result": SEARCH_RESULT,
-            "limitations": "This compact formula is for interpretability. It reaches strong Buse, Schnappinger, Dorn, and JetBrains results, but its Scalabrino score is lower than the high-feature CognaScore route.",
+            "limitations": (
+                "This compact formula prioritizes interpretability; its Scalabrino "
+                "score is lower than the high-feature CognaScore route."
+            ),
         },
     }
     output_dir = output_root / METHOD / dataset / EMBEDDING_SLUG
@@ -255,6 +296,8 @@ def dataset_path(dataset: str) -> str:
         "buse": "datasets/buse",
         "mbjp": "datasets/mbjp_dev_dataset/readability_dataset.json",
         "jetbrains": "datasets/jetbrains",
+        "generated_readability_90": "datasets/readability_dataset_90.jsonl",
+        "generated_binary_readability": "datasets/readability_binary.jsonl",
     }[dataset]
 
 

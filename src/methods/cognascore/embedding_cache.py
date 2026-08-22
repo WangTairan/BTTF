@@ -13,7 +13,7 @@ import numpy as np
 from .results import model_slug
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -128,6 +128,23 @@ class EmbeddingCache:
             )
         self.connection.commit()
 
+    def delete_sources_for_datasets_and_chunk_types(
+        self,
+        datasets: Sequence[str],
+        chunk_types: Sequence[str],
+    ) -> None:
+        if not datasets or not chunk_types:
+            return
+        for dataset in datasets:
+            for start in range(0, len(chunk_types), 900):
+                batch = list(chunk_types[start:start + 900])
+                placeholders = ",".join("?" for _ in batch)
+                self.connection.execute(
+                    f"DELETE FROM sources WHERE dataset = ? AND chunk_type IN ({placeholders})",
+                    [dataset, *batch],
+                )
+        self.connection.commit()
+
     def counts(self) -> dict[str, int]:
         embedding_count = self.connection.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0]
         source_count = self.connection.execute("SELECT COUNT(*) FROM sources").fetchone()[0]
@@ -138,16 +155,30 @@ class EmbeddingCache:
             "datasets": int(dataset_count),
         }
 
-    def task_vectors(self, dataset: str, task_id: str) -> list[tuple[str, str, int, np.ndarray]]:
+    def task_vectors(
+        self,
+        dataset: str,
+        task_id: str,
+        *,
+        exclude_chunk_types: Sequence[str] = (),
+    ) -> list[tuple[str, str, int, np.ndarray]]:
+        excluded = tuple(exclude_chunk_types)
+        excluded_clause = ""
+        params: list[str] = [dataset, task_id]
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            excluded_clause = f"AND s.chunk_type NOT IN ({placeholders})"
+            params.extend(excluded)
         rows = self.connection.execute(
-            """
+            f"""
             SELECT s.chunk_type, e.text, s.count, e.dim, e.dtype, e.vector
             FROM sources AS s
             JOIN embeddings AS e ON e.text_hash = s.text_hash
             WHERE s.dataset = ? AND s.task_id = ?
+            {excluded_clause}
             ORDER BY s.chunk_type, e.text
             """,
-            (dataset, task_id),
+            params,
         )
         vectors: list[tuple[str, str, int, np.ndarray]] = []
         for chunk_type, text, count, dim, dtype, blob in rows:
@@ -155,25 +186,92 @@ class EmbeddingCache:
             vectors.append((str(chunk_type), str(text), int(count), array.reshape(int(dim))))
         return vectors
 
-    def task_source_counts(self, dataset: str, task_id: str) -> tuple[int, int]:
+    def task_source_counts(
+        self,
+        dataset: str,
+        task_id: str,
+        *,
+        exclude_chunk_types: Sequence[str] = (),
+    ) -> tuple[int, int]:
+        excluded = tuple(exclude_chunk_types)
+        excluded_clause = ""
+        params: list[str] = [dataset, task_id]
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            excluded_clause = f"AND chunk_type NOT IN ({placeholders})"
+            params.extend(excluded)
         total = self.connection.execute(
-            """
+            f"""
             SELECT COALESCE(SUM(count), 0)
             FROM sources
             WHERE dataset = ? AND task_id = ?
+            {excluded_clause}
             """,
-            (dataset, task_id),
+            params,
         ).fetchone()[0]
+        available_params: list[str] = [dataset, task_id]
+        available_excluded_clause = ""
+        if excluded:
+            placeholders = ",".join("?" for _ in excluded)
+            available_excluded_clause = f"AND s.chunk_type NOT IN ({placeholders})"
+            available_params.extend(excluded)
         available = self.connection.execute(
-            """
+            f"""
             SELECT COALESCE(SUM(s.count), 0)
             FROM sources AS s
             JOIN embeddings AS e ON e.text_hash = s.text_hash
             WHERE s.dataset = ? AND s.task_id = ?
+            {available_excluded_clause}
             """,
-            (dataset, task_id),
+            available_params,
         ).fetchone()[0]
         return int(total), int(available)
+
+    def task_single_vector(self, dataset: str, task_id: str, chunk_type: str) -> np.ndarray | None:
+        vectors = self.task_vectors(dataset, task_id)
+        for row_chunk_type, _, _, vector in vectors:
+            if row_chunk_type == chunk_type:
+                return vector
+        return None
+
+    def task_vectors_for_chunk_type(self, dataset: str, task_id: str, chunk_type: str) -> list[tuple[str, np.ndarray]]:
+        rows = self.connection.execute(
+            """
+            SELECT e.text, e.dim, e.dtype, e.vector
+            FROM sources AS s
+            JOIN embeddings AS e ON e.text_hash = s.text_hash
+            WHERE s.dataset = ? AND s.task_id = ? AND s.chunk_type = ?
+            ORDER BY e.text
+            """,
+            (dataset, task_id, chunk_type),
+        )
+        vectors: list[tuple[str, np.ndarray]] = []
+        for text, dim, dtype, blob in rows:
+            array = np.frombuffer(blob, dtype=np.dtype(dtype)).copy()
+            vectors.append((str(text), array.reshape(int(dim))))
+        return vectors
+
+    def vectors_for_texts(self, texts: Sequence[str]) -> dict[str, np.ndarray]:
+        if not texts:
+            return {}
+        hashes = [text_hash(text) for text in texts]
+        by_hash = dict(zip(hashes, texts))
+        vectors: dict[str, np.ndarray] = {}
+        for start in range(0, len(hashes), 900):
+            batch = hashes[start:start + 900]
+            placeholders = ",".join("?" for _ in batch)
+            rows = self.connection.execute(
+                f"""
+                SELECT text_hash, dim, dtype, vector
+                FROM embeddings
+                WHERE text_hash IN ({placeholders})
+                """,
+                batch,
+            )
+            for row_hash, dim, dtype, blob in rows:
+                array = np.frombuffer(blob, dtype=np.dtype(dtype)).copy()
+                vectors[by_hash[str(row_hash)]] = array.reshape(int(dim))
+        return vectors
 
     def _init_schema(self) -> None:
         self.connection.executescript(

@@ -12,6 +12,8 @@ COGNASCORE_EMBEDDING_MODELS = (
     COGNASCORE_DEFAULT_MODEL,
     "jinaai/jina-embeddings-v2-base-code",
     "Qwen/Qwen3-Embedding-0.6B",
+    "voyageai/voyage-4-nano",
+    "Snowflake/snowflake-arctic-embed-m-v2.0",
 )
 COGNASCORE_DEFAULT_CACHE_DIR = Path("models")
 
@@ -32,7 +34,6 @@ class MethodSpec:
     output_policy: str
     deterministic: bool
     supports_code: bool = True
-    supports_natural_language: bool = False
 
 
 DATASETS: dict[str, DatasetSpec] = {
@@ -78,19 +79,19 @@ DATASETS: dict[str, DatasetSpec] = {
         label_type="continuous",
         primary_metric="spearman",
     ),
-    "clear": DatasetSpec(
-        key="clear",
-        path=Path("datasets/CLEAR-Corpus-main/CLEAR_corpus_final.xlsx"),
-        modality="natural_language",
-        label_type="continuous",
+    "generated_readability_90": DatasetSpec(
+        key="generated_readability_90",
+        path=Path("datasets/readability_dataset_90.jsonl"),
+        modality="code",
+        label_type="ordinal",
         primary_metric="spearman",
     ),
-    "clear_dev": DatasetSpec(
-        key="clear_dev",
-        path=Path("datasets/clear_dev_dataset/readability_dataset.xlsx"),
-        modality="natural_language",
-        label_type="continuous",
-        primary_metric="spearman",
+    "generated_binary_readability": DatasetSpec(
+        key="generated_binary_readability",
+        path=Path("datasets/readability_binary.jsonl"),
+        modality="code",
+        label_type="binary",
+        primary_metric="mcc_best_threshold",
     ),
 }
 
@@ -107,12 +108,6 @@ METHODS: dict[str, MethodSpec] = {
         output_policy=OUTPUT_POLICY_OVERWRITE,
         deterministic=True,
     ),
-    "cognascore": MethodSpec(
-        key="cognascore",
-        output_key="cognascore",
-        output_policy=OUTPUT_POLICY_CONFIGURED_HISTORY,
-        deterministic=True,
-    ),
     "llm": MethodSpec(
         key="llm",
         output_key="llm_prompt",
@@ -124,7 +119,6 @@ METHODS: dict[str, MethodSpec] = {
         output_key="rmc",
         output_policy=OUTPUT_POLICY_CONFIGURED_HISTORY,
         deterministic=False,
-        supports_natural_language=True,
     ),
 }
 

@@ -7,14 +7,12 @@ from typing import Any, Callable, Iterable
 
 from src.datasets import DatasetItem, load_code_dataset
 from src.experiments.registry import (
-    COGNASCORE_DEFAULT_CACHE_DIR,
-    COGNASCORE_DEFAULT_MODEL,
-    method_choices,
     is_method_dataset_supported,
+    method_choices,
     method_history_policy,
     method_output_key,
 )
-from src.experiments.paths import dataset_name_for_path, output_dir, safe_path_part
+from src.experiments.paths import dataset_name_for_path, result_dir, safe_path_part
 from src.experiments.progress import DatasetProgress, batch_progress
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 
@@ -38,19 +36,13 @@ def parse_args() -> argparse.Namespace:
         help="Readability method to run.",
     )
     parser.add_argument("--model", default="gpt41-nano", help="LLM model key for --method llm.")
-    parser.add_argument("--embedding-model", default=COGNASCORE_DEFAULT_MODEL)
-    parser.add_argument("--models", type=Path, default=COGNASCORE_DEFAULT_CACHE_DIR)
-    parser.add_argument("--eps", type=float, default=0.18, help="CognaScore DBSCAN eps.")
-    parser.add_argument("--min-pts", type=int, default=2, help="CognaScore DBSCAN min_pts.")
-    parser.add_argument("--batch-size", type=int, default=32, help="CognaScore embedding batch size.")
-    parser.add_argument("--device", help="CognaScore embedding device: cpu, cuda, mps, or auto.")
     parser.add_argument(
         "-o",
         "--output",
         type=Path,
         help=(
-            "Output root. Defaults to automatic paths under "
-            "output/<method>/<dataset>/."
+            "Results root. Defaults to automatic paths under "
+            "results/methods/<method>/<dataset>/."
         ),
     )
     parser.add_argument("--limit", type=int, help="Run at most this many items.")
@@ -68,17 +60,17 @@ def main() -> None:
     method = build_method(args)
     dataset_name = dataset_name_for_path(args.dataset)
     method_name = method_output_key(args.method)
-    result_dir = output_dir(args.output, method_name, dataset_name, *method_output_parts(args))
-    result_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = result_dir(args.output, method_name, dataset_name, *method_output_parts(args))
+    run_dir.mkdir(parents=True, exist_ok=True)
     if args.method == "llm":
-        summary_path = run_llm_batch(args, items, result_dir)
+        summary_path = run_llm_batch(args, items, run_dir)
         print(f"Wrote {summary_path}", flush=True)
         return
 
     rows = []
     progress = DatasetProgress(len(items))
     for index, item in enumerate(items, start=1):
-        output_path = result_dir / f"{safe_path_part(item.task_id)}.json"
+        output_path = run_dir / f"{safe_path_part(item.task_id)}.json"
         if args.skip_existing and output_path.exists():
             row = json.loads(output_path.read_text(encoding="utf-8"))
             rows.append(row)
@@ -109,7 +101,7 @@ def main() -> None:
         output_path.write_text(json.dumps(row, indent=2, ensure_ascii=False), encoding="utf-8")
         rows.append(row)
 
-    summary_path = write_summary(result_dir, args, rows)
+    summary_path = write_summary(run_dir, args, rows)
     print(f"Wrote {summary_path}", flush=True)
 
 
@@ -184,18 +176,6 @@ def build_method(args: argparse.Namespace) -> MethodFn:
         from src.methods.scalabrino import scalabrino_model
 
         return lambda code: scalabrino_model(code).__dict__
-    if args.method == "cognascore":
-        from src.methods.cognascore import CognaScoreScorer
-
-        scorer = CognaScoreScorer(
-            model_name=args.embedding_model,
-            eps=args.eps,
-            min_pts=args.min_pts,
-            batch_size=args.batch_size,
-            device=args.device,
-            cache_dir=args.models,
-        )
-        return lambda code: scorer.score(code).__dict__
     if args.method == "llm":
         from src.methods.llm_prompt import llm_prompt_engineering_score
 
@@ -206,26 +186,16 @@ def build_method(args: argparse.Namespace) -> MethodFn:
 def method_config_name(args: argparse.Namespace) -> str | None:
     if args.method == "llm":
         return args.model
-    if args.method == "cognascore":
-        return args.embedding_model
     return None
 
 
 def method_full_config_name(args: argparse.Namespace) -> str | None:
-    if args.method == "cognascore":
-        from src.methods.cognascore.results import parameter_slug
-
-        return parameter_slug(args.embedding_model, args.eps, args.min_pts)
     return method_config_name(args)
 
 
 def method_output_parts(args: argparse.Namespace) -> tuple[str, ...]:
     if args.method == "llm":
         return (args.model,)
-    if args.method == "cognascore":
-        from src.methods.cognascore.results import model_slug
-
-        return (model_slug(args.embedding_model),)
     return ()
 
 
@@ -285,19 +255,7 @@ def write_summary(output_dir: Path, args: argparse.Namespace, rows: list[dict]) 
     mcc = None
     confusion_matrix = None
     predicted_positive_count = None
-    if binary and args.method == "cognascore":
-        threshold = 0.5
-        actual = [int(float(row["readability_score"])) for row in valid]
-        predicted = [int(float(row["score"]) >= threshold) for row in valid]
-        mcc = matthews_correlation_coefficient(predicted, actual)
-        confusion_matrix = {
-            "true_positive": sum(1 for p, a in zip(predicted, actual) if p == 1 and a == 1),
-            "true_negative": sum(1 for p, a in zip(predicted, actual) if p == 0 and a == 0),
-            "false_positive": sum(1 for p, a in zip(predicted, actual) if p == 1 and a == 0),
-            "false_negative": sum(1 for p, a in zip(predicted, actual) if p == 0 and a == 1),
-        }
-        predicted_positive_count = sum(predicted)
-    elif binary:
+    if binary:
         threshold, mcc, confusion_matrix, predicted_positive_count = best_binary_threshold(valid)
     elif not binary and len(valid) >= 2:
         rho = spearman(
@@ -310,15 +268,6 @@ def write_summary(output_dir: Path, args: argparse.Namespace, rows: list[dict]) 
         "method": args.method,
         "model": method_config_name(args),
         "configuration": method_full_config_name(args),
-        "embedding_model": args.embedding_model if args.method == "cognascore" else None,
-        "dbscan": (
-            {
-                "eps": args.eps,
-                "min_pts": args.min_pts,
-            }
-            if args.method == "cognascore"
-            else None
-        ),
         "output_policy": method_history_policy(args.method),
         "count": len(rows),
         "valid_count": len(valid),
@@ -326,8 +275,7 @@ def write_summary(output_dir: Path, args: argparse.Namespace, rows: list[dict]) 
         "evaluation_metric": evaluation_metric,
         "classification_threshold": threshold,
         "classification_threshold_policy": (
-            "frozen_generalization_formula" if binary and args.method == "cognascore"
-            else "best_on_dataset" if binary else None
+            "best_on_dataset" if binary else None
         ),
         "classification_direction": "score>=threshold" if binary else None,
         "predicted_positive_count": predicted_positive_count,

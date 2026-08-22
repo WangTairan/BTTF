@@ -1,8 +1,8 @@
 METHOD_LABELS = {
-    "loc_baseline": "LOC baseline",
+    "loc_baseline": "LOC",
     "posnett": "Posnett",
     "scalabrino": "Scalabrino",
-    "cognascore": "CognaScore ML",
+    "cognascore_ml_consensus24": "CognaScore ML (Consensus-24)",
     "cognascore_compact": "CognaScore Compact",
     "llm": "LLM prompt",
     "llm_prompt": "LLM",
@@ -15,20 +15,30 @@ DATASET_LABELS = {
     "jetbrains": "JetBrains",
     "dorn": "Dorn",
     "schnappinger": "Schnappinger",
-    "clear": "CLEAR",
+    "generated_readability_90": "Generated 90",
+    "generated_binary_readability": "Generated Binary",
 }
 
 METHOD_ORDER = (
-    "loc_baseline",
     "posnett",
     "scalabrino",
-    "cognascore",
+    "cognascore_ml_consensus24",
     "cognascore_compact",
     "llm_prompt",
     "llm",
+    "loc_baseline",
 )
 
-DATASET_ORDER = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger", "clear")
+DATASET_ORDER = (
+    "mbjp",
+    "buse",
+    "scalabrino",
+    "jetbrains",
+    "dorn",
+    "schnappinger",
+    "generated_readability_90",
+    "generated_binary_readability",
+)
 
 MODEL_LABELS = {
     "gpt41-nano": "4.1",

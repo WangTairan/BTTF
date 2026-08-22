@@ -84,5 +84,5 @@ python -m src.methods.rmc.runners.jetbrains --mock-recover --limit 1
 Results use:
 
 ```text
-output/rmc/<dataset>/<model>/
+results/methods/rmc/<dataset>/<model>/
 ```

@@ -43,7 +43,7 @@ from src.methods.rmc.scoring import (
 )
 from src.methods.rmc.similarity import mean
 from src.methods.rmc.text_units import clean_blank_units
-from src.experiments.paths import dataset_name_for_path, output_dir, safe_path_part
+from src.experiments.paths import dataset_name_for_path, result_dir, safe_path_part
 from src.experiments.progress import DatasetProgress
 
 
@@ -86,8 +86,8 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         "--output",
         type=Path,
         help=(
-            "Output root directory. Defaults to automatic paths under "
-            "output/<rmc-experiment>/<dataset>/<model>/<granularity>/."
+            "Results root directory. Defaults to automatic paths under "
+            "results/methods/<rmc-experiment>/<dataset>/<model>/<granularity>/."
         ),
     )
     parser.add_argument(
@@ -579,7 +579,7 @@ def is_fragment_control_strategy(mask_strategy: str) -> bool:
 
 
 def rmc_output_dir(config: RunnerConfig, dataset_name: str, model_name: str) -> Path:
-    return output_dir(config.output_root, "rmc", dataset_name, model_name)
+    return result_dir(config.output_root, "rmc", dataset_name, model_name)
 
 
 def sample_budget_label(max_samples_per_stratum: int | None) -> str:
