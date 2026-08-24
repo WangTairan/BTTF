@@ -1,25 +1,35 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
+from datetime import datetime, timezone
 from pathlib import Path
 from statistics import mean
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.datasets import load_code_dataset
 from src.experiments.registry import DATASETS
 from src.methods.cognascore.feature_schema import namespaced_feature
-from src.methods.cognascore.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
+from src.methods.cognascore.paths import (
+    BASE_FEATURE_ROOT,
+    EMBEDDING_FEATURE_ROOT,
+    TRAINED_MODEL_ROOT,
+)
 from src.methods.cognascore.results import model_slug
+from src.methods.cognascore.modeling import BoundedRidge, TrainingRangeClipper
 
 
 EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
@@ -32,43 +42,44 @@ ALL_DATASETS = (
     "mbjp",
     "jetbrains",
     "generated_readability_90",
-    "generated_binary_readability",
 )
-TRAIN_DATASETS = ("buse", "dorn", "scalabrino")
-EXTERNAL_DATASETS = ("schnappinger", "jetbrains", "mbjp")
-SCORE_MODEL_NAME = "consensus24_6dataset_nomic"
+TRAIN_DATASETS = ("mbjp", "buse", "dorn", "scalabrino", "schnappinger")
+EXTERNAL_DATASETS = ("generated_readability_90",)
+SCORE_MODEL_NAME = "consensus26_progressive_optics_identifier_cv_development_nomic"
 TRAINING_DROP_MIDDLE = 0.0
 
 SELECTED_FEATURES = [
-    "base__visual_operator_density",
     "base__byte_entropy",
-    "base__blank_line_ratio",
-    "base__chunk_y_std",
-    "base__visual_identifier_area_ratio",
-    "base__type_literal_ratio",
+    "base__operator_density",
     "base__visual_period_y_mean",
-    "embedding__structural_core__auto_kmeans_selected_k",
     "base__max_line_length",
     "embedding__only_identifier__embedding_first_pc_explained_variance",
-    "base__chunk_chars_cv",
     "base__type_unused_import_count",
+    "base__chunk_chars_cv",
     "base__type_regex_ratio",
-    "base__visual_keyword_area_ratio",
-    "base__std_indent",
-    "base__type_bitwise_ratio",
-    "embedding__structural_core__optics_cluster_type_entropy_mean",
     "base__indent_transition_mean",
-    "base__identifier_single_letter_ratio",
-    "base__log_max_chunk_chars",
+    "embedding__structural_core__optics_cluster_type_entropy_mean",
+    "base__type_bitwise_ratio",
     "embedding__structural_core__optics_noise_ratio",
-    "base__identifier_length_cv",
+    "base__log_max_chunk_chars",
+    "base__identifier_single_letter_ratio",
+    "base__scalabrino_visual_comparison_density",
     "compression__zlib_line_ratio_std",
+    "base__std_indent",
+    "base__scalabrino_visual_parenthesis_density",
     "base__long_line_ratio_100",
+    "embedding__structural_core__auto_agglo_cluster_type_entropy_mean",
+    "embedding__structural_core__optics_cluster_size_cv",
+    "base__scalabrino_comment_identifier_word_coverage",
+    "base__type_literal_ratio",
+    "embedding__only_identifier__optics_cluster_size_cv",
+    "embedding__all__optics_cluster_size_cv",
+    "base__identifier_length_cv",
 ]
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Materialize the frozen CognaScore ML Consensus-24 Ridge model."
+        description="Materialize the current 26-feature CognaScore ML Ridge model."
     )
     parser.add_argument("--feature-root", type=Path, default=BASE_FEATURE_ROOT)
     parser.add_argument(
@@ -77,26 +88,27 @@ def main() -> None:
         default=EMBEDDING_FEATURE_ROOT,
     )
     parser.add_argument("--output-root", type=Path, default=Path("results/methods"))
+    parser.add_argument("--artifact-root", type=Path, default=TRAINED_MODEL_ROOT)
     parser.add_argument("--ridge-alpha", type=float, default=200.0)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--method", default="cognascore_ml_consensus24")
+    parser.add_argument("--method", default="cognascore_ml_consensus26_progressive_optics_identifier_cv_development")
     parser.add_argument("--score-model-name", default=SCORE_MODEL_NAME)
     parser.add_argument(
         "--selected-features-metadata",
         type=Path,
-        help="Experiment metadata containing selected_features. Defaults to the frozen Consensus-24 list.",
+        help="Experiment metadata containing selected_features. Defaults to the current 26-feature list.",
     )
     parser.add_argument(
         "--train-dataset",
         action="append",
         default=[],
-        help="Dataset used to fit the final ML Ridge model. Can be repeated. Defaults to buse, dorn, scalabrino.",
+        help="Dataset used to fit the final ML Ridge model. Can be repeated. Defaults to the five continuous-score datasets.",
     )
     parser.add_argument(
         "--report-dataset",
         action="append",
         default=[],
-        help="Dataset to materialize predictions for. Can be repeated. Defaults to the six standard datasets.",
+        help="Dataset to materialize predictions for. Can be repeated. Defaults to the six development datasets and Generated 90.",
     )
     args = parser.parse_args()
     selected_features = (
@@ -119,6 +131,29 @@ def main() -> None:
     fit_mask = training_middle_keep_mask(train, TRAINING_DROP_MIDDLE)
     ridge = fit_ridge(train, fit_mask, args.ridge_alpha, selected_features)
     coefficients = ridge_coefficients(ridge, selected_features)
+    fixed_threshold, threshold_metrics = calibrate_classification_threshold(
+        ridge,
+        train,
+        fit_mask,
+        selected_features,
+    )
+    artifact_dir = write_model_artifact(
+        model=ridge,
+        artifact_root=args.artifact_root,
+        score_model_name=args.score_model_name,
+        selected_features=selected_features,
+        feature_category_counts=feature_category_counts,
+        ridge_alpha=args.ridge_alpha,
+        seed=args.seed,
+        train=train,
+        fit_mask=fit_mask,
+        training_datasets=train_datasets,
+        classification_threshold=fixed_threshold,
+        threshold_metrics=threshold_metrics,
+        feature_root=args.feature_root,
+        embedding_feature_root=args.embedding_feature_root,
+    )
+    print(f"Wrote frozen model artifact: {artifact_dir}", flush=True)
     for dataset in report_datasets:
         frame = frames[dataset]
         x = frame[selected_features].to_numpy(dtype=float)
@@ -140,6 +175,13 @@ def main() -> None:
             training_sample_count=int(fit_mask.sum()),
             training_pool_sample_count=len(train),
             training_datasets=train_datasets,
+            classification_threshold=fixed_threshold,
+            classification_threshold_source=(
+                "dataset_balanced_continuous_training_pool"
+                if fixed_threshold is not None
+                else None
+            ),
+            model_artifact=artifact_dir,
         )
 
 
@@ -163,10 +205,13 @@ def feature_category_counts_for(selected_features: list[str]) -> dict[str, int]:
 def fit_ridge(frame: pd.DataFrame, fit_mask: np.ndarray, ridge_alpha: float, selected_features: list[str]):
     target = regression_target(frame)
     sample_weight = dataset_balanced_sample_weight(frame, fit_mask)
-    model = make_pipeline(
-        SimpleImputer(strategy="median"),
-        StandardScaler(),
-        Ridge(alpha=ridge_alpha),
+    model = Pipeline(
+        [
+            ("simpleimputer", SimpleImputer(strategy="median")),
+            ("trainingrangeclipper", TrainingRangeClipper()),
+            ("standardscaler", StandardScaler()),
+            ("ridge", BoundedRidge(alpha=ridge_alpha)),
+        ]
     )
     x_train = frame.loc[fit_mask, selected_features].to_numpy(dtype=float)
     model.fit(x_train, target[fit_mask], ridge__sample_weight=sample_weight[fit_mask])
@@ -284,6 +329,9 @@ def write_summary(
     training_sample_count: int,
     training_pool_sample_count: int,
     training_datasets: tuple[str, ...],
+    classification_threshold: float | None,
+    classification_threshold_source: str | None,
+    model_artifact: Path,
 ) -> None:
     rows = []
     for record, score in zip(frame.to_dict("records"), predictions):
@@ -321,7 +369,13 @@ def write_summary(
     confusion_matrix = None
     predicted_positive_count = None
     if binary:
-        threshold, mcc, confusion_matrix, predicted_positive_count = best_binary_threshold(valid)
+        if classification_threshold is None:
+            threshold, mcc, confusion_matrix, predicted_positive_count = best_binary_threshold(valid)
+            threshold_policy = "best_on_dataset"
+        else:
+            threshold = classification_threshold
+            mcc, confusion_matrix, predicted_positive_count = binary_metrics_at_threshold(valid, threshold)
+            threshold_policy = "fixed_from_continuous_training_pool"
     elif len(valid) >= 2:
         rho = spearman(
             [float(row["score"]) for row in valid],
@@ -340,7 +394,8 @@ def write_summary(
         "error_count": len(rows) - len(valid),
         "evaluation_metric": "mcc" if binary else "spearman",
         "classification_threshold": threshold,
-        "classification_threshold_policy": "best_on_dataset" if binary else None,
+        "classification_threshold_policy": threshold_policy if binary else None,
+        "classification_threshold_source": classification_threshold_source if binary else None,
         "classification_direction": "higher_score_more_readable",
         "predicted_positive_count": predicted_positive_count,
         "spearman": rho,
@@ -360,9 +415,9 @@ def write_summary(
                 "for datasets outside the final fit pool"
             ),
             "feature_selection": (
-                "Frozen 24-feature list produced by five-embedding-model consensus "
-                "stability screening across the six development datasets, followed "
-                "by correlation filtering"
+                "Current 30-feature development list derived from five-embedding-model "
+                "consensus stability screening across the six development datasets, "
+                "followed by correlation filtering and feature removal"
             ),
             "feature_selection_datasets": [
                 "mbjp",
@@ -396,10 +451,11 @@ def write_summary(
             "selected_feature_category_counts": feature_category_counts,
             "selected_features": selected_features,
             "standardized_coefficients": coefficients,
+            "frozen_model_artifact": str(model_artifact),
             "limitations": (
-                "The final Ridge fit uses three datasets, but the frozen feature list "
-                "was selected using all six development datasets. Results on those six "
-                "datasets are development-benchmark results, not untouched external tests."
+                "The feature list uses the six-dataset development consensus. The continuous "
+                "Ridge fit excludes binary-only JetBrains; JetBrains and Generated 90 are "
+                "transfer evaluations."
             ),
         },
     }
@@ -441,6 +497,247 @@ def ridge_coefficients(model: Any, selected_features: list[str]) -> dict[str, fl
     }
 
 
+def calibrate_classification_threshold(
+    model: Any,
+    train: pd.DataFrame,
+    fit_mask: np.ndarray,
+    selected_features: list[str],
+) -> tuple[float | None, dict[str, Any] | None]:
+    calibration = train.loc[fit_mask].reset_index(drop=True)
+    if calibration.empty:
+        return None, None
+    predictions = model.predict(calibration[selected_features].to_numpy(dtype=float))
+    binary_labels = (regression_target(calibration) >= 0.5).astype(int)
+    eligible = np.ones(len(calibration), dtype=bool)
+    weights = dataset_balanced_sample_weight(calibration, eligible)
+    threshold, weighted_mcc, weighted_confusion = best_dataset_balanced_threshold(
+        predictions,
+        binary_labels,
+        weights,
+    )
+    predicted = (predictions >= threshold).astype(int)
+    per_dataset = {}
+    for dataset, indices in calibration.groupby("dataset").groups.items():
+        positions = np.asarray(list(indices), dtype=int)
+        rows = [
+            {
+                "score": float(predictions[position]),
+                "readability_score": int(binary_labels[position]),
+            }
+            for position in positions
+        ]
+        dataset_mcc, confusion_matrix, predicted_positive_count = binary_metrics_at_threshold(
+            rows,
+            threshold,
+        )
+        per_dataset[str(dataset)] = {
+            "sample_count": len(rows),
+            "mcc": dataset_mcc,
+            "confusion_matrix": confusion_matrix,
+            "predicted_positive_count": predicted_positive_count,
+        }
+    return threshold, {
+        "datasets": sorted(str(value) for value in calibration["dataset"].unique()),
+        "sample_count": len(calibration),
+        "label_policy": (
+            "rank-percentile >= 0.5 for continuous datasets; original 0/1 label "
+            "for binary datasets"
+        ),
+        "weight_policy": "each dataset has equal total weight",
+        "objective": "maximize dataset-balanced pooled MCC",
+        "tie_breaker": "threshold closest to 0.5, then lower threshold",
+        "weighted_mcc": weighted_mcc,
+        "weighted_confusion_matrix": weighted_confusion,
+        "unweighted_mcc": matthews_correlation_coefficient(
+            predicted.astype(int).tolist(),
+            binary_labels.astype(int).tolist(),
+        ),
+        "predicted_positive_count": int(predicted.sum()),
+        "per_dataset": per_dataset,
+    }
+
+
+def best_dataset_balanced_threshold(
+    scores: np.ndarray,
+    actual: np.ndarray,
+    weights: np.ndarray,
+) -> tuple[float, float, dict[str, float]]:
+    unique_scores = sorted(set(float(score) for score in scores))
+    if not unique_scores:
+        raise ValueError("Cannot calibrate a threshold without scores.")
+    candidates = [unique_scores[0] - 1e-12]
+    candidates.extend(
+        (left + right) / 2.0
+        for left, right in zip(unique_scores, unique_scores[1:])
+    )
+    candidates.append(unique_scores[-1] + 1e-12)
+    best: tuple[tuple[float, float, float], float, dict[str, float]] | None = None
+    for threshold in candidates:
+        predicted = scores >= threshold
+        confusion = weighted_confusion_matrix(predicted, actual, weights)
+        mcc = mcc_from_confusion(confusion)
+        key = (mcc, -abs(threshold - 0.5), -threshold)
+        if best is None or key > best[0]:
+            best = (key, threshold, confusion)
+    assert best is not None
+    return float(best[1]), float(best[0][0]), best[2]
+
+
+def weighted_confusion_matrix(
+    predicted: np.ndarray,
+    actual: np.ndarray,
+    weights: np.ndarray,
+) -> dict[str, float]:
+    return {
+        "true_positive": float(weights[(predicted == 1) & (actual == 1)].sum()),
+        "true_negative": float(weights[(predicted == 0) & (actual == 0)].sum()),
+        "false_positive": float(weights[(predicted == 1) & (actual == 0)].sum()),
+        "false_negative": float(weights[(predicted == 0) & (actual == 1)].sum()),
+    }
+
+
+def mcc_from_confusion(confusion: dict[str, float]) -> float:
+    tp = confusion["true_positive"]
+    tn = confusion["true_negative"]
+    fp = confusion["false_positive"]
+    fn = confusion["false_negative"]
+    denominator = math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    if denominator == 0.0:
+        return 0.0
+    return (tp * tn - fp * fn) / denominator
+
+
+def binary_metrics_at_threshold(
+    rows: list[dict],
+    threshold: float,
+) -> tuple[float, dict[str, int], int]:
+    actual = [int(float(row["readability_score"])) for row in rows]
+    predicted = [int(float(row["score"]) >= threshold) for row in rows]
+    confusion_matrix = {
+        "true_positive": sum(1 for p, a in zip(predicted, actual) if p == 1 and a == 1),
+        "true_negative": sum(1 for p, a in zip(predicted, actual) if p == 0 and a == 0),
+        "false_positive": sum(1 for p, a in zip(predicted, actual) if p == 1 and a == 0),
+        "false_negative": sum(1 for p, a in zip(predicted, actual) if p == 0 and a == 1),
+    }
+    return (
+        matthews_correlation_coefficient(predicted, actual),
+        confusion_matrix,
+        sum(predicted),
+    )
+
+
+def write_model_artifact(
+    *,
+    model: Any,
+    artifact_root: Path,
+    score_model_name: str,
+    selected_features: list[str],
+    feature_category_counts: dict[str, int],
+    ridge_alpha: float,
+    seed: int,
+    train: pd.DataFrame,
+    fit_mask: np.ndarray,
+    training_datasets: tuple[str, ...],
+    classification_threshold: float | None,
+    threshold_metrics: dict[str, Any] | None,
+    feature_root: Path,
+    embedding_feature_root: Path,
+) -> Path:
+    artifact_dir = artifact_root / score_model_name / EMBEDDING_SLUG
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    model_path = artifact_dir / "model.joblib"
+    joblib.dump(model, model_path)
+
+    imputer = model.named_steps["simpleimputer"]
+    range_clipper = model.named_steps["trainingrangeclipper"]
+    scaler = model.named_steps["standardscaler"]
+    ridge = model.named_steps["ridge"]
+    training_rows = train.loc[fit_mask, ["dataset", "task_id", "readability_score"]]
+    feature_sources = []
+    for dataset in training_datasets:
+        for family, root in (
+            ("base", feature_root),
+            ("embedding", embedding_feature_root),
+        ):
+            path = root / dataset / EMBEDDING_SLUG / "features.csv"
+            feature_sources.append(
+                {
+                    "dataset": dataset,
+                    "family": family,
+                    "path": str(path),
+                    "sha256": sha256_file(path),
+                }
+            )
+    manifest = {
+        "artifact_format_version": 1,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "name": score_model_name,
+        "embedding_model": EMBEDDING_MODEL,
+        "serialized_model": "model.joblib",
+        "serialized_model_sha256": sha256_file(model_path),
+        "libraries": {
+            "python_model_format": "joblib",
+            "scikit_learn": sklearn.__version__,
+            "numpy": np.__version__,
+            "pandas": pd.__version__,
+        },
+        "training": {
+            "datasets": list(training_datasets),
+            "sample_count": int(fit_mask.sum()),
+            "sample_count_by_dataset": {
+                str(dataset): int(count)
+                for dataset, count in training_rows.groupby("dataset").size().items()
+            },
+            "row_identity_sha256": sha256_records(training_rows),
+            "target": (
+                "per-dataset rank-percentile readability for continuous datasets; "
+                "original 0/1 labels for binary datasets"
+            ),
+            "sample_weight": "inverse dataset size, normalized over the pooled training set",
+            "feature_sources": feature_sources,
+        },
+        "features": {
+            "count": len(selected_features),
+            "ordered_names": selected_features,
+            "category_counts": feature_category_counts,
+        },
+        "pipeline": {
+            "steps": ["median_imputation", "training_range_clipping", "standardization", "bounded_ridge"],
+            "ridge_alpha": ridge_alpha,
+            "seed": seed,
+            "imputer_statistics": imputer.statistics_.astype(float).tolist(),
+            "training_feature_min": range_clipper.feature_min_.astype(float).tolist(),
+            "training_feature_max": range_clipper.feature_max_.astype(float).tolist(),
+            "scaler_mean": scaler.mean_.astype(float).tolist(),
+            "scaler_scale": scaler.scale_.astype(float).tolist(),
+            "ridge_coefficients": ridge.coef_.astype(float).tolist(),
+            "ridge_intercept": float(ridge.intercept_),
+            "prediction_bounds": [0.0, 1.0],
+        },
+        "classification": {
+            "direction": "score >= threshold means readable/high",
+            "threshold": classification_threshold,
+            "calibration": threshold_metrics,
+        },
+    }
+    manifest_path = artifact_dir / "model.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return artifact_dir
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def sha256_records(frame: pd.DataFrame) -> str:
+    payload = frame.to_csv(index=False, lineterminator="\n").encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def best_binary_threshold(
     rows: list[dict],
 ) -> tuple[float | None, float | None, dict[str, int] | None, int | None]:
@@ -476,8 +773,10 @@ def dataset_path(dataset: str) -> str:
         "buse": "datasets/buse",
         "mbjp": "datasets/mbjp_dev_dataset/readability_dataset.json",
         "jetbrains": "datasets/jetbrains",
-        "generated_readability_90": "datasets/readability_dataset_90.jsonl",
-        "generated_binary_readability": "datasets/readability_binary.jsonl",
+        "generated_readability_90": "datasets/generated_readability_90/dataset.jsonl",
+        "java_progressive_obfuscation": (
+            "datasets/constructed/java-progressive-obfuscation-class-100"
+        ),
     }.get(dataset, dataset)
 
 

@@ -1,0 +1,45 @@
+{
+  "name": "consensus26_progressive_optics_identifier_cv_development",
+  "status": "diagnostic_refit",
+  "parent_model": "consensus25_progressive_pruned_development_nomic",
+  "selection": {
+    "operation": "remove_one_add_two_development_search",
+    "candidate_scope": "Missing features from the current consensus top 30 plus four restored base features from the frozen legacy top 30",
+    "evaluated_configuration_count": 1442,
+    "primary_objective": "Mean within-group Spearman on java-progressive-obfuscation-class-100",
+    "removed_feature": "base__visual_keyword_area_ratio",
+    "added_features": [
+      "embedding__all__optics_cluster_size_cv",
+      "base__identifier_length_cv"
+    ],
+    "search_result": "Progressive is a development dataset, not external validation"
+  },
+  "selected_features": [
+    "base__byte_entropy",
+    "base__operator_density",
+    "base__visual_period_y_mean",
+    "base__max_line_length",
+    "embedding__only_identifier__embedding_first_pc_explained_variance",
+    "base__type_unused_import_count",
+    "base__chunk_chars_cv",
+    "base__type_regex_ratio",
+    "base__indent_transition_mean",
+    "embedding__structural_core__optics_cluster_type_entropy_mean",
+    "base__type_bitwise_ratio",
+    "embedding__structural_core__optics_noise_ratio",
+    "base__log_max_chunk_chars",
+    "base__identifier_single_letter_ratio",
+    "base__scalabrino_visual_comparison_density",
+    "compression__zlib_line_ratio_std",
+    "base__std_indent",
+    "base__scalabrino_visual_parenthesis_density",
+    "base__long_line_ratio_100",
+    "embedding__structural_core__auto_agglo_cluster_type_entropy_mean",
+    "embedding__structural_core__optics_cluster_size_cv",
+    "base__scalabrino_comment_identifier_word_coverage",
+    "base__type_literal_ratio",
+    "embedding__only_identifier__optics_cluster_size_cv",
+    "embedding__all__optics_cluster_size_cv",
+    "base__identifier_length_cv"
+  ]
+}

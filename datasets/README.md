@@ -11,31 +11,27 @@ evaluation metrics are registered in `src/experiments/registry.py`.
 | `jetbrains` | `jetbrains/` | binary | MCC |
 | `dorn` | `dorn/dataset/` | continuous | Spearman |
 | `schnappinger` | `schnappinger/` | continuous | Spearman |
-| `generated_readability_90` | `readability_dataset_90.jsonl` | ordinal | Spearman |
-| `generated_binary_readability` | `readability_binary.jsonl` | binary | MCC |
+| `generated_readability_90` | `generated_readability_90/dataset.jsonl` | ordinal | Spearman |
+| `java_progressive_obfuscation` | `constructed/java-progressive-obfuscation-class-100/` | grouped ordinal | Spearman + within-chain trend |
 
 ## Generated Readability 90
 
-`readability_dataset_90.jsonl` contains 90 Java examples generated under three
+`generated_readability_90/dataset.jsonl` contains 90 Java examples generated under three
 readability instructions: `low`, `normal`, and `high`. Each row preserves the
 source dataset identifier, source item identifier, generator model, language,
 instruction label, and code. The adapter maps the ordered labels to `0.0`,
 `0.5`, and `1.0` for rank-based evaluation.
 
-## Generated Binary Readability
-
-`high/` and `low/` contain the source Java files for the binary dataset.
-`readability_binary.jsonl` is its canonical combined representation and
-contains 100 high- and 100 low-readability examples. Rebuild it deterministically
-with:
-
-```bash
-python scripts/build_binary_readability_dataset.py
-```
-
-The loader maps `low` to `0.0` and `high` to `1.0`. The registered primary
-metric is Matthews correlation coefficient (MCC).
-
-Both generated datasets are retained as formal additional evaluation datasets.
-They are distinct from the six established datasets used in the current
+This generated dataset is retained as a formal additional evaluation dataset.
+It is distinct from the six established datasets used in the current
 feature-selection study.
+
+## Java Progressive Obfuscation
+
+`constructed/java-progressive-obfuscation-class-100/` contains 100 complete
+Java classes, each represented by an original version (L0) and six cumulative
+obfuscation stages (L1--L6). The adapter maps a stage to the ordinal target
+`1 - level / 6`; this target records construction order rather than an
+independent human readability judgment. Evaluation reports both pooled
+Spearman and within-class chain-direction measurements. Transitions that leave
+a particular class unchanged are identified separately.

@@ -1,0 +1,400 @@
+{
+  "artifact_format_version": 1,
+  "created_at_utc": "2026-08-24T12:34:59.967157+00:00",
+  "name": "consensus26_progressive_optics_identifier_cv_development_nomic",
+  "embedding_model": "nomic-ai/nomic-embed-text-v1.5",
+  "serialized_model": "model.joblib",
+  "serialized_model_sha256": "263d6c2e06d9ba01497a170899d1ff36c76779f925e27616ace0d4566a7a3855",
+  "libraries": {
+    "python_model_format": "joblib",
+    "scikit_learn": "1.8.0",
+    "numpy": "2.4.1",
+    "pandas": "3.0.2"
+  },
+  "training": {
+    "datasets": [
+      "mbjp",
+      "buse",
+      "dorn",
+      "scalabrino",
+      "schnappinger"
+    ],
+    "sample_count": 981,
+    "sample_count_by_dataset": {
+      "buse": 100,
+      "dorn": 360,
+      "mbjp": 17,
+      "scalabrino": 200,
+      "schnappinger": 304
+    },
+    "row_identity_sha256": "f8cec24be019dfdd93e209dc1c8216826907a309df549df40e237655f40b998e",
+    "target": "per-dataset rank-percentile readability for continuous datasets; original 0/1 labels for binary datasets",
+    "sample_weight": "inverse dataset size, normalized over the pooled training set",
+    "feature_sources": [
+      {
+        "dataset": "mbjp",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/mbjp/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "92880a6408589e3b6ef9f661d1f87c6f3088f972cb586f61bccafbca1072ce1d"
+      },
+      {
+        "dataset": "mbjp",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/mbjp/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "fdd085ef0f212233ed65a6af150eafc7cb5bdc75c7ee2eaada9c8dbd075f0310"
+      },
+      {
+        "dataset": "buse",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/buse/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "56818358828754b3bdfd4b4cdd2d3533392231ec3f708844a3a5427346dcfbe0"
+      },
+      {
+        "dataset": "buse",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/buse/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "787f954a6613b7c0ea101606a3fae35259cff3f683908db8c35921115649dbe2"
+      },
+      {
+        "dataset": "dorn",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/dorn/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "7e01d8fbdc9de6ccce6cccd46c17f91045636e1320f1fb6522eb6eca6d0b0182"
+      },
+      {
+        "dataset": "dorn",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/dorn/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "0dd977d50424d9c31d06e7b8639bf17f74017684ac3d7bc67e596e6bfd4174a9"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/scalabrino/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "a7933a8fd9d0ff3f5dd7753bed292e8bcdd77c78490409fdf84900f3412051b5"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/scalabrino/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "f43e16d9687d55fabb955d2e44a42b83fa62209e4d97b6105aae7219074ea287"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/schnappinger/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "1bcae83cb786c70a7982bf57b050e9ec56f0c5f4595a0b44a08d82787b488241"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/schnappinger/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "726752bd03e0faf092b21f1c974dc8b00997b814de2645fb2f0accb291204e50"
+      }
+    ]
+  },
+  "features": {
+    "count": 26,
+    "ordered_names": [
+      "base__byte_entropy",
+      "base__operator_density",
+      "base__visual_period_y_mean",
+      "base__max_line_length",
+      "embedding__only_identifier__embedding_first_pc_explained_variance",
+      "base__type_unused_import_count",
+      "base__chunk_chars_cv",
+      "base__type_regex_ratio",
+      "base__indent_transition_mean",
+      "embedding__structural_core__optics_cluster_type_entropy_mean",
+      "base__type_bitwise_ratio",
+      "embedding__structural_core__optics_noise_ratio",
+      "base__log_max_chunk_chars",
+      "base__identifier_single_letter_ratio",
+      "base__scalabrino_visual_comparison_density",
+      "compression__zlib_line_ratio_std",
+      "base__std_indent",
+      "base__scalabrino_visual_parenthesis_density",
+      "base__long_line_ratio_100",
+      "embedding__structural_core__auto_agglo_cluster_type_entropy_mean",
+      "embedding__structural_core__optics_cluster_size_cv",
+      "base__scalabrino_comment_identifier_word_coverage",
+      "base__type_literal_ratio",
+      "embedding__only_identifier__optics_cluster_size_cv",
+      "embedding__all__optics_cluster_size_cv",
+      "base__identifier_length_cv"
+    ],
+    "category_counts": {
+      "base": 18,
+      "compression": 1,
+      "embedding_derived": 7,
+      "semantic_context": 0
+    }
+  },
+  "pipeline": {
+    "steps": [
+      "median_imputation",
+      "training_range_clipping",
+      "standardization",
+      "bounded_ridge"
+    ],
+    "ridge_alpha": 200.0,
+    "seed": 42,
+    "imputer_statistics": [
+      4.70928873115514,
+      3.0,
+      0.4704545454545454,
+      85.0,
+      0.2676556015737078,
+      0.0,
+      0.8956240322017609,
+      0.0,
+      0.979591836734694,
+      0.7293577639413138,
+      0.0,
+      0.0,
+      4.30406509320417,
+      0.0,
+      0.0305023923444976,
+      0.1698727702397211,
+      1.9595917942265424,
+      1.0833333333333333,
+      0.0,
+      0.5509775004326937,
+      0.0,
+      0.0,
+      0.05,
+      0.0,
+      0.1428571428571428,
+      0.5540376391069268
+    ],
+    "training_feature_min": [
+      3.1560871860486928,
+      0.0,
+      0.0,
+      23.0,
+      0.0,
+      0.0,
+      0.0160870185574821,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.302585092994046,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "training_feature_max": [
+      5.498905116535616,
+      13.461538461538462,
+      1.0,
+      778.0,
+      1.0,
+      21.0,
+      2.171721929587916,
+      0.1666666666666666,
+      22.666666666666668,
+      1.0,
+      0.2238805970149253,
+      0.88,
+      5.54907608489522,
+      1.0,
+      1.5714285714285714,
+      0.3806842099357884,
+      19.861595937821285,
+      6.0,
+      0.9230769230769232,
+      1.0,
+      1.2294024358476712,
+      1.0,
+      1.0,
+      0.8095238095238095,
+      1.881651263255526,
+      2.1671634348837574
+    ],
+    "scaler_mean": [
+      4.678625163113548,
+      3.351630619421452,
+      0.4260974932859709,
+      98.07441386340469,
+      0.3217986191280922,
+      0.48623853211009177,
+      0.9193138161985039,
+      0.0002823622500217492,
+      1.4065183677829662,
+      0.5256073909813023,
+      0.0025216892112805036,
+      0.08115516038887353,
+      4.22781400378196,
+      0.08761515209680089,
+      0.0991272039465908,
+      0.16869647716263153,
+      2.5893531483051535,
+      1.2478662714281785,
+      0.03735884558990078,
+      0.4297052988938207,
+      0.06047688867068558,
+      0.19405532935633338,
+      0.07772786446335295,
+      0.0368441179118738,
+      0.22054977557568828,
+      0.57763381656205
+    ],
+    "scaler_scale": [
+      0.3622552163294409,
+      1.8808557311972112,
+      0.24600692404987015,
+      49.58598795646535,
+      0.21659409355467132,
+      1.8685290567900712,
+      0.28540538062241727,
+      0.005689028447566451,
+      1.6296026673627455,
+      0.4197017965170042,
+      0.014039477374529584,
+      0.19059248312168184,
+      0.7157293849181334,
+      0.15269269650977546,
+      0.18611387791247538,
+      0.05808807990237162,
+      2.410343584723108,
+      0.9008506407508903,
+      0.08999580646647323,
+      0.36666383147066056,
+      0.16124592817204614,
+      0.2747165995365642,
+      0.10023945166211005,
+      0.12528327891409805,
+      0.2628546793277565,
+      0.28636251302246557
+    ],
+    "ridge_coefficients": [
+      -0.040210280531706895,
+      -0.06101660413524142,
+      0.023476900329681315,
+      -0.0234178872077036,
+      0.02426167165419981,
+      -0.013518921232310748,
+      -0.011514732466130176,
+      -0.003906955956370517,
+      -0.018009583298961074,
+      -0.013056741430027174,
+      -0.022934674910607515,
+      -0.051236583153241304,
+      -0.010844650859052389,
+      -0.020641332135566362,
+      -0.009724962654964314,
+      0.0020195536938247224,
+      -0.01043842164502549,
+      -0.040093503846480805,
+      -0.014139856760631337,
+      -0.018391633576752338,
+      -0.013936321116685916,
+      0.015521521287000418,
+      0.020503413006499792,
+      0.014999050951063395,
+      -0.004297934493703518,
+      -0.012689009161232254
+    ],
+    "ridge_intercept": 0.4954228563989076,
+    "prediction_bounds": [
+      0.0,
+      1.0
+    ]
+  },
+  "classification": {
+    "direction": "score >= threshold means readable/high",
+    "threshold": 0.5418950390900276,
+    "calibration": {
+      "datasets": [
+        "buse",
+        "dorn",
+        "mbjp",
+        "scalabrino",
+        "schnappinger"
+      ],
+      "sample_count": 981,
+      "label_policy": "rank-percentile >= 0.5 for continuous datasets; original 0/1 label for binary datasets",
+      "weight_policy": "each dataset has equal total weight",
+      "objective": "maximize dataset-balanced pooled MCC",
+      "tie_breaker": "threshold closest to 0.5, then lower threshold",
+      "weighted_mcc": 0.5280872603740299,
+      "weighted_confusion_matrix": {
+        "true_positive": 337.1604535603716,
+        "true_negative": 407.6979643962849,
+        "false_positive": 74.75965789473685,
+        "false_negative": 161.38192414860683
+      },
+      "unweighted_mcc": 0.48826875118123847,
+      "predicted_positive_count": 420,
+      "per_dataset": {
+        "buse": {
+          "sample_count": 100,
+          "mcc": 0.5801160348116041,
+          "confusion_matrix": {
+            "true_positive": 40,
+            "true_negative": 39,
+            "false_positive": 11,
+            "false_negative": 10
+          },
+          "predicted_positive_count": 51
+        },
+        "dorn": {
+          "sample_count": 360,
+          "mcc": 0.45595649044202635,
+          "confusion_matrix": {
+            "true_positive": 116,
+            "true_negative": 145,
+            "false_positive": 35,
+            "false_negative": 64
+          },
+          "predicted_positive_count": 151
+        },
+        "mbjp": {
+          "sample_count": 17,
+          "mcc": 0.6963106238227914,
+          "confusion_matrix": {
+            "true_positive": 6,
+            "true_negative": 8,
+            "false_positive": 0,
+            "false_negative": 3
+          },
+          "predicted_positive_count": 6
+        },
+        "scalabrino": {
+          "sample_count": 200,
+          "mcc": 0.370063050977988,
+          "confusion_matrix": {
+            "true_positive": 53,
+            "true_negative": 82,
+            "false_positive": 17,
+            "false_negative": 48
+          },
+          "predicted_positive_count": 70
+        },
+        "schnappinger": {
+          "sample_count": 304,
+          "mcc": 0.5679345992529266,
+          "confusion_matrix": {
+            "true_positive": 115,
+            "true_negative": 123,
+            "false_positive": 27,
+            "false_negative": 39
+          },
+          "predicted_positive_count": 142
+        }
+      }
+    }
+  }
+}

@@ -16,7 +16,6 @@ DATASET_LABELS = {
     "dorn": "Dorn",
     "schnappinger": "Schnappinger",
     "generated_readability_90": "Generated 90",
-    "generated_binary_readability": "Generated Binary",
 }
 
 METHOD_ORDER = (
@@ -37,7 +36,6 @@ DATASET_ORDER = (
     "dorn",
     "schnappinger",
     "generated_readability_90",
-    "generated_binary_readability",
 )
 
 MODEL_LABELS = {

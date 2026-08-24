@@ -440,7 +440,7 @@ def method_description(method: str) -> str:
                   <h3>Visual layout and surface density</h3>
                   <p>What the reader sees on screen.</p>
                   <div class="feature-tags">
-                    <code>max_line_length</code><code>max_indent</code><code>blank_line_ratio</code><code>visual_operator_density</code><code>visual_identifier_area_ratio</code>
+                    <code>max_line_length</code><code>max_indent</code><code>blank_line_ratio</code><code>operator_density</code>
                   </div>
                 </div>
               </section>
@@ -507,11 +507,9 @@ if score &gt; limit:
             <table class="records compact-feature-table">
               <thead><tr><th>Feature</th><th>One-sentence interpretation</th></tr></thead>
               <tbody>
-                <tr><td><code>base__visual_operator_density</code></td><td>Measures how densely operator symbols occupy the visible code area, capturing local symbolic load.</td></tr>
+                <tr><td><code>base__operator_density</code></td><td>Measures how densely operator symbols occupy the visible code area, capturing local symbolic load.</td></tr>
                 <tr><td><code>base__byte_entropy</code></td><td>Measures character-level textual entropy, used as a broad proxy for lexical irregularity.</td></tr>
                 <tr><td><code>base__blank_line_ratio</code></td><td>Measures the fraction of empty lines, capturing visual separation and spacing in the snippet.</td></tr>
-                <tr><td><code>base__chunk_y_std</code></td><td>Measures vertical dispersion of extracted cognitive chunks across the code layout.</td></tr>
-                <tr><td><code>base__visual_identifier_area_ratio</code></td><td>Measures how much visible code area is occupied by identifiers rather than other token classes.</td></tr>
                 <tr><td><code>base__type_literal_ratio</code></td><td>Measures the fraction of chunks classified as literal constants.</td></tr>
                 <tr><td><code>base__visual_period_y_mean</code></td><td>Measures the average vertical position of period/dot tokens, which often mark member access or qualified names.</td></tr>
                 <tr><td><code>embedding__structural_core__auto_kmeans_selected_k</code></td><td>Measures the automatically selected number of semantic clusters among structural-core chunks.</td></tr>
@@ -520,7 +518,6 @@ if score &gt; limit:
                 <tr><td><code>base__chunk_chars_cv</code></td><td>Measures coefficient of variation in chunk character lengths, capturing uneven chunk size.</td></tr>
                 <tr><td><code>base__type_unused_import_count</code></td><td>Counts imports detected as unused, acting as a sparse signal of dead or distracting dependencies.</td></tr>
                 <tr><td><code>base__type_regex_ratio</code></td><td>Measures the fraction of chunks associated with regular-expression content.</td></tr>
-                <tr><td><code>base__visual_keyword_area_ratio</code></td><td>Measures how much visible area is occupied by language keywords.</td></tr>
                 <tr><td><code>base__std_indent</code></td><td>Measures dispersion of indentation depth across lines.</td></tr>
                 <tr><td><code>base__type_bitwise_ratio</code></td><td>Measures the fraction of chunks involving bitwise operations or masks.</td></tr>
                 <tr><td><code>embedding__structural_core__optics_cluster_type_entropy_mean</code></td><td>Measures average chunk-type entropy inside OPTICS clusters over structural-core embeddings.</td></tr>
@@ -528,7 +525,6 @@ if score &gt; limit:
                 <tr><td><code>base__identifier_single_letter_ratio</code></td><td>Measures the fraction of identifiers that are single-letter names.</td></tr>
                 <tr><td><code>base__log_max_chunk_chars</code></td><td>Log-transforms the largest chunk length, capturing the largest local cognitive unit while reducing scale dominance.</td></tr>
                 <tr><td><code>embedding__structural_core__optics_noise_ratio</code></td><td>Measures the fraction of structural-core chunks treated as noise by adaptive OPTICS clustering.</td></tr>
-                <tr><td><code>base__identifier_length_cv</code></td><td>Measures variability in identifier length, capturing inconsistency in naming scale.</td></tr>
                 <tr><td><code>compression__zlib_line_ratio_std</code></td><td>Measures the line-to-line variability of zlib compression ratio, capturing uneven repetition or regularity across source lines.</td></tr>
                 <tr><td><code>base__long_line_ratio_100</code></td><td>Measures the fraction of source lines longer than 100 characters, capturing extreme horizontal reading burden.</td></tr>
               </tbody>
@@ -540,12 +536,12 @@ if score &gt; limit:
     if method == "cognascore_compact":
         return """
           <p class="muted">CognaScore Compact is the interpretable route. It keeps the model linear after simple monotonic transformations and uses four features that represent visible density, code scale, local chunk irregularity, and semantic dispersion among identifier chunks.</p>
-          <p class="formula">score = 1.43341466 - 0.30461071 * log1p(visual_operator_density) - 0.227365225 * sqrt(log_LOC) - 0.0463927146 * log1p(std_chunks_per_source_line) - 0.196472171 * log1p(qwen_only_identifier_auto_kmeans_cluster_diameter_max)</p>
+          <p class="formula">score = 1.43341466 - 0.30461071 * log1p(operator_density) - 0.227365225 * sqrt(log_LOC) - 0.0463927146 * log1p(std_chunks_per_source_line) - 0.196472171 * log1p(qwen_only_identifier_auto_kmeans_cluster_diameter_max)</p>
           <p class="formula">training: Ridge(alpha = 30), target = per-dataset rank-percentile readability, training datasets = Scalabrino + Schnappinger + Dorn + Buse.</p>
           <table class="records compact-feature-table">
             <thead><tr><th>Feature</th><th>Interpretation</th></tr></thead>
             <tbody>
-              <tr><td><code>visual_operator_density</code></td><td>Operator characters per visible code area. Higher density means the reader sees more symbolic operations in a small visual region.</td></tr>
+              <tr><td><code>operator_density</code></td><td>Operator characters per visible code area. Higher density means the reader sees more symbolic operations in a small visual region.</td></tr>
               <tr><td><code>log_LOC</code></td><td>Log-transformed non-empty lines of code. It controls for code scale while reducing the dominance of very long snippets.</td></tr>
               <tr><td><code>std_chunks_per_source_line</code></td><td>Line-level unevenness of CognaScore chunks. Larger values indicate that cognitive chunks are concentrated irregularly across lines.</td></tr>
               <tr><td><code>qwen_only_identifier_auto_kmeans_cluster_diameter_max</code></td><td>Maximum semantic diameter among automatically selected K-means clusters over identifier chunks. Larger values indicate more dispersed naming concepts within the same identifier view.</td></tr>

@@ -1,0 +1,42 @@
+{
+  "name": "consensus25_progressive_pruned_development",
+  "status": "diagnostic_refit",
+  "parent_model": "consensus28_progressive_protected_development_nomic",
+  "selection": {
+    "operation": "fixed_leave_three_out_refit",
+    "removed_features": [
+      "base__type_comment_ratio",
+      "embedding__scalabrino_comment_identifier_centroid_cosine",
+      "semantic__short_identifier_math_gate_delta"
+    ],
+    "reason": "Remove the three lowest-consensus-ranked features from the frozen 28-feature development model without replacement or reselection",
+    "search_result": "The parent 28-feature model and its outputs remain frozen for reproducibility"
+  },
+  "selected_features": [
+    "base__byte_entropy",
+    "base__operator_density",
+    "base__visual_period_y_mean",
+    "base__max_line_length",
+    "embedding__only_identifier__embedding_first_pc_explained_variance",
+    "base__type_unused_import_count",
+    "base__chunk_chars_cv",
+    "base__type_regex_ratio",
+    "base__indent_transition_mean",
+    "embedding__structural_core__optics_cluster_type_entropy_mean",
+    "base__type_bitwise_ratio",
+    "embedding__structural_core__optics_noise_ratio",
+    "base__visual_keyword_area_ratio",
+    "base__log_max_chunk_chars",
+    "base__identifier_single_letter_ratio",
+    "base__scalabrino_visual_comparison_density",
+    "compression__zlib_line_ratio_std",
+    "base__std_indent",
+    "base__scalabrino_visual_parenthesis_density",
+    "base__long_line_ratio_100",
+    "embedding__structural_core__auto_agglo_cluster_type_entropy_mean",
+    "embedding__structural_core__optics_cluster_size_cv",
+    "base__scalabrino_comment_identifier_word_coverage",
+    "base__type_literal_ratio",
+    "embedding__only_identifier__optics_cluster_size_cv"
+  ]
+}

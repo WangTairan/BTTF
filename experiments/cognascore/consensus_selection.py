@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import html
 import json
 import math
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+import joblib
 from scipy.stats import rankdata
 
 from src.experiments.paths import result_dir
@@ -65,6 +67,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stability-rounds", type=int, default=200)
     parser.add_argument("--stability-sample-fraction", type=float, default=0.7)
     parser.add_argument("--selection-dataset", action="append", default=[])
+    parser.add_argument(
+        "--fit-dataset",
+        action="append",
+        default=[],
+        help=(
+            "Dataset used to fit the final continuous Ridge model. Repeat as needed. "
+            "Defaults to the selection datasets."
+        ),
+    )
     parser.add_argument("--external-dataset", action="append", default=[])
     parser.add_argument("--select-top", type=int, default=30)
     parser.add_argument("--candidate-limit", type=int, default=220)
@@ -80,6 +91,24 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.9,
         help="Reject later-ranked candidates whose absolute Pearson or Spearman correlation with a selected feature exceeds this value.",
+    )
+    parser.add_argument(
+        "--exclude-feature",
+        action="append",
+        default=[],
+        help="Remove one exact namespaced feature before every model screen. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--exclude-feature-prefix",
+        action="append",
+        default=[],
+        help="Remove features whose names start with this prefix. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--exclude-group",
+        action="append",
+        default=[],
+        help="Remove an entire feature-schema group before screening. Repeat as needed.",
     )
     parser.add_argument(
         "--top",
@@ -106,6 +135,7 @@ def main() -> None:
         raise SystemExit("--final-embedding-model must be one of the consensus --embedding-model values.")
 
     selection_datasets = tuple(args.selection_dataset or fs.DEFAULT_DATASET_KEYS)
+    fit_datasets = tuple(args.fit_dataset or selection_datasets)
     external_datasets = tuple(args.external_dataset or fs.DEFAULT_DATASET_KEYS)
 
     per_model_rankings: dict[str, list[dict[str, Any]]] = {}
@@ -126,6 +156,7 @@ def main() -> None:
         dataset_names,
         args.final_embedding_model,
         selection_datasets=selection_datasets,
+        fit_datasets=fit_datasets,
         external_datasets=external_datasets,
     )
     selected_features, rejected_features = select_with_correlation_replacement(
@@ -163,11 +194,12 @@ def main() -> None:
         fs._subset_rows(final_bundle["row_metadata"], final_bundle["external_mask"]),
         prediction[final_bundle["external_mask"]],
     )
+    fit_scope = final_bundle["fit_dataset_mask"]
     lodo_metrics = fs._leave_one_dataset_out_metrics(
-        final_bundle["x"][:, selected_indices],
-        final_bundle["regression_target"],
-        final_bundle["sample_weight"],
-        final_bundle["row_metadata"],
+        final_bundle["x"][fit_scope][:, selected_indices],
+        final_bundle["regression_target"][fit_scope],
+        final_bundle["sample_weight"][fit_scope],
+        fs._subset_rows(final_bundle["row_metadata"], fit_scope),
         final_model_name="ridge",
         c=args.c,
         ridge_alpha=args.ridge_alpha,
@@ -198,6 +230,8 @@ def main() -> None:
     ablation_path = out_dir / "feature_ablation.csv"
     ablation_svg_path = out_dir / "feature_ablation.svg"
     metadata_path = out_dir / "metadata.json"
+    model_manifest_path = out_dir / "model.json"
+    model_path = out_dir / "model.joblib"
     write_consensus_ranking(consensus_path, consensus_ranking)
     write_selected(selected_path, selected_features, consensus_ranking)
     fs._write_final_metrics(metrics_path, all_metrics, selection_metrics, external_metrics, lodo_metrics)
@@ -205,6 +239,7 @@ def main() -> None:
     write_topk_curve_svg(curve_svg_path, curve_rows)
     write_feature_ablation(ablation_path, ablation_rows)
     write_feature_ablation_svg(ablation_svg_path, ablation_rows)
+    joblib.dump(model, model_path)
 
     metadata = {
         "method": "five_model_consensus_l1_stability_ridge",
@@ -220,6 +255,7 @@ def main() -> None:
         "final_embedding_model": args.final_embedding_model,
         "datasets": dataset_names,
         "selection_datasets": list(selection_datasets),
+        "fit_datasets": list(fit_datasets),
         "external_datasets": list(external_datasets),
         "row_count": len(final_bundle["row_metadata"]),
         "feature_count_per_model": len(final_bundle["feature_names"]),
@@ -233,6 +269,10 @@ def main() -> None:
         "stability_sample_fraction": args.stability_sample_fraction,
         "selected_feature_count": len(selected_features),
         "selected_features": selected_features,
+        "features": {"ordered_names": selected_features},
+        "embedding_model": args.final_embedding_model,
+        "serialized_model": model_path.name,
+        "serialized_model_sha256": _sha256_file(model_path),
         "selected_feature_category_counts": feature_category_counts(selected_features),
         "rejected_by_correlation": rejected_features,
         "final_all_report_metrics": all_metrics,
@@ -253,6 +293,7 @@ def main() -> None:
         "top_consensus_features": consensus_ranking[: args.top],
     }
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    model_manifest_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(metadata, ensure_ascii=False, indent=2), flush=True)
 
 
@@ -300,6 +341,7 @@ def load_model_bundle(
     model_name: str,
     *,
     selection_datasets: Sequence[str],
+    fit_datasets: Sequence[str] | None = None,
     external_datasets: Sequence[str],
 ) -> dict[str, Any]:
     slug = model_slug(model_name)
@@ -312,7 +354,16 @@ def load_model_bundle(
         continuous_threshold=args.continuous_threshold,
         drop_middle=args.drop_middle if args.drop_middle_scope == "all" else 0.0,
     )
+    x, feature_names, groups, excluded_features = apply_feature_exclusions(
+        x,
+        feature_names,
+        groups,
+        exact=args.exclude_feature,
+        prefixes=args.exclude_feature_prefix,
+        excluded_groups=args.exclude_group,
+    )
     selection_mask = fs._dataset_mask(row_metadata, selection_datasets)
+    fit_dataset_mask = fs._dataset_mask(row_metadata, fit_datasets or selection_datasets)
     external_mask = (
         fs._dataset_mask(row_metadata, external_datasets)
         if external_datasets
@@ -323,7 +374,7 @@ def load_model_bundle(
         if args.drop_middle_scope == "training"
         else np.ones(len(row_metadata), dtype=bool)
     )
-    fit_selection_mask = selection_mask & training_middle_keep_mask
+    fit_selection_mask = fit_dataset_mask & training_middle_keep_mask
     if int(np.sum(fit_selection_mask)) == 0:
         raise SystemExit(f"No fitting rows selected for {model_name}.")
     return {
@@ -334,12 +385,51 @@ def load_model_bundle(
         "row_metadata": row_metadata,
         "groups": groups,
         "selection_mask": selection_mask,
+        "fit_dataset_mask": fit_dataset_mask,
         "external_mask": external_mask,
         "training_middle_keep_mask": training_middle_keep_mask,
         "fit_selection_mask": fit_selection_mask,
         "fit_sample_weight": fs._sample_weight_for_rows(row_metadata, fit_selection_mask),
         "regression_target": fs._regression_target(row_metadata),
+        "excluded_features": excluded_features,
     }
+
+
+def apply_feature_exclusions(
+    x: np.ndarray,
+    feature_names: Sequence[str],
+    groups: Mapping[str, str],
+    *,
+    exact: Sequence[str],
+    prefixes: Sequence[str],
+    excluded_groups: Sequence[str],
+) -> tuple[np.ndarray, list[str], dict[str, str], list[str]]:
+    """Apply the same theory-driven candidate exclusions to every model table."""
+    exact_set = set(exact)
+    group_set = set(excluded_groups)
+    excluded = [
+        feature
+        for feature in feature_names
+        if feature in exact_set
+        or any(feature.startswith(prefix) for prefix in prefixes)
+        or groups.get(feature) in group_set
+    ]
+    keep_indices = [
+        index for index, feature in enumerate(feature_names) if feature not in set(excluded)
+    ]
+    if not keep_indices:
+        raise SystemExit("Feature exclusions removed the complete candidate inventory.")
+    kept_names = [feature_names[index] for index in keep_indices]
+    kept_groups = {feature: groups[feature] for feature in kept_names}
+    return x[:, np.asarray(keep_indices, dtype=int)], kept_names, kept_groups, excluded
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def consensus_rank(

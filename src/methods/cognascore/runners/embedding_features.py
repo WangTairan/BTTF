@@ -12,6 +12,7 @@ from src.experiments.registry import COGNASCORE_DEFAULT_MODEL, DATASETS
 
 from ..embedding_cache import EmbeddingCache, embedding_cache_path
 from ..embedding_features import extract_embedding_feature_row, write_embedding_feature_database
+from ..extractors.python import LexemeExtractor
 from ..results import model_slug
 from ..semantic_context import (
     BUSINESS_ANCHOR_TASK,
@@ -49,7 +50,12 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--limit", type=int)
-    parser.add_argument("--min-coverage", type=float, default=0.0)
+    parser.add_argument(
+        "--min-coverage",
+        type=float,
+        default=1.0,
+        help="Required embedded-source coverage per task. Defaults to 1.0; incomplete caches fail loudly.",
+    )
     parser.add_argument(
         "--max-vectors-per-task",
         type=int,
@@ -138,15 +144,34 @@ def main() -> None:
                     exclude_chunk_types=(WHOLE_CODE_CONTEXT_TYPE,),
                 )
                 coverage = available_count / max(total_count, 1)
+                if total_count == 0:
+                    extracted_chunks, _ = LexemeExtractor().extract_with_member_fallback(
+                        item.content
+                    )
+                    if extracted_chunks:
+                        raise SystemExit(
+                            f"No embedding source references for {dataset_name} {item.task_id}, "
+                            f"but the extractor produced {len(extracted_chunks)} chunks. "
+                            "Run the embeddings runner successfully before deriving features."
+                        )
+                    coverage = 1.0
                 if coverage < args.min_coverage:
-                    skipped.append({"task_id": item.task_id, "coverage": coverage})
-                    continue
+                    raise SystemExit(
+                        f"Incomplete embedding cache for {dataset_name} {item.task_id}: "
+                        f"coverage={coverage:.6f} ({available_count}/{total_count}), "
+                        f"required={args.min_coverage:.6f}."
+                    )
                 vector_rows = cache.task_vectors(
                     dataset_name,
                     item.task_id,
                     exclude_chunk_types=(WHOLE_CODE_CONTEXT_TYPE,),
                 )
                 code_segment_vectors = cache.task_vectors_for_chunk_type(dataset_name, item.task_id, WHOLE_CODE_CONTEXT_TYPE)
+                if not code_segment_vectors:
+                    raise SystemExit(
+                        f"Missing whole-code context embedding for {dataset_name} {item.task_id}. "
+                        "Run the embeddings runner successfully before deriving features."
+                    )
                 code_vector = code_segment_vectors[0][1] if code_segment_vectors else None
                 rows.append(
                     extract_embedding_feature_row(

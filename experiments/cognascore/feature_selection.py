@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, matthews_co
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from src.experiments.paths import result_dir
@@ -28,6 +29,7 @@ from src.methods.cognascore.paths import (
     EXPERIMENT_RESULTS_ROOT,
 )
 from src.methods.cognascore.results import model_slug
+from src.methods.cognascore.modeling import BoundedRidge, TrainingRangeClipper
 from src.methods.cognascore.dataset_io import dataset_output_name
 
 
@@ -407,10 +409,13 @@ def _build_final_model(
                 random_state=seed,
             ),
         )
-    return make_pipeline(
-        _median_imputer(),
-        StandardScaler(),
-        Ridge(alpha=ridge_alpha),
+    return Pipeline(
+        [
+            ("simpleimputer", _median_imputer()),
+            ("trainingrangeclipper", TrainingRangeClipper()),
+            ("standardscaler", StandardScaler()),
+            ("ridge", BoundedRidge(alpha=ridge_alpha)),
+        ]
     )
 
 
@@ -652,7 +657,7 @@ def _sample_weight_for_rows(
     )
     total = float(np.sum(weights))
     if total > 0.0:
-        weights *= len(weights) / total
+        weights *= int(np.sum(eligible_mask)) / total
     return weights
 
 

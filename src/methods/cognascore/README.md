@@ -7,7 +7,7 @@ adaptive cluster structure.
 
 Two reported routes consume the same stable feature tables:
 
-- **CognaScore ML**: a performance-oriented Ridge model using 24 frozen
+- **CognaScore ML**: a performance-oriented Ridge model using 30 frozen
   features;
 - **CognaScore Compact**: an interpretable linear formula restricted to at
   most five features.
@@ -47,10 +47,10 @@ and comments.
 
 Every dataset receives the same schema:
 
-- **111 base features**: code size and layout, token and Halstead statistics,
+- **126 base features**: code size and layout, token and Halstead statistics,
   visual density and position, DFT summaries, chunk inventory and geometry,
   type-aware counts and ratios, identifier quality, and compression signals;
-- **108 embedding-derived features per model**: coverage, semantic-context
+- **112 embedding-derived features per model**: coverage, semantic-context
   indicators, embedding geometry, and adaptive clustering summaries.
 
 The embedding families are evaluated over four chunk views: `all`,
@@ -67,9 +67,9 @@ ML-facing columns use explicit namespaces:
 - `embedding__` for embedding geometry and clustering features;
 - `semantic__` for short-identifier semantic-context features.
 
-For one embedding model, the candidate table therefore contains 219 features
-(111 base plus 108 model-specific features). Five-model consensus selection
-runs five separate 219-feature screens; it does not concatenate all model
+For one embedding model, the candidate table therefore contains 238 features
+(126 base plus 112 model-specific features). Five-model consensus selection
+runs five separate 238-feature screens; it does not concatenate all model
 vectors into one enlarged training matrix.
 
 ## Supported embedding models
@@ -157,13 +157,13 @@ The stable materializer is:
 python -m src.methods.cognascore.runners.supervised_ridge
 ```
 
-The current frozen configuration uses 24 selected features, Nomic feature
-instantiations, `Ridge(alpha=200)`, and Buse + Dorn + Scalabrino as the final
-fit pool. It writes predictions for the six established datasets and the two
-additional generated-code datasets under:
+The current frozen configuration uses 30 selected features, Nomic feature
+instantiations, `Ridge(alpha=200)`, and the five continuous-score datasets as
+the final fit pool. JetBrains remains an external binary evaluation. It writes
+predictions under:
 
 ```text
-results/methods/cognascore_ml_consensus24/<dataset>/<embedding-model>/summary.json
+results/methods/cognascore_ml_consensus30/<dataset>/<embedding-model>/summary.json
 ```
 
 The ranking and selection experiment that produced the frozen list lives in

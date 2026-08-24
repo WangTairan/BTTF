@@ -31,21 +31,20 @@ DATASETS = (
     "mbjp",
     "jetbrains",
     "generated_readability_90",
-    "generated_binary_readability",
 )
 DEFAULT_DATASETS = DATASETS[:6]
 
 # Fitted on Scalabrino + Schnappinger + Dorn + Buse rank-percentile labels.
 # Constraint: compact interpretable formula using layout, chunk geometry, and embedding-clustering signals.
 FEATURES = (
-    "log1p(base__visual_operator_density)",
+    "log1p(base__operator_density)",
     "sqrt(base__log_loc)",
     "log1p(base__std_chunks_per_source_line)",
     "log1p(qwen__only_identifier__auto_kmeans_cluster_diameter_max)",
 )
 INTERCEPT = 1.43341466
 COEFFICIENTS = {
-    "log1p(base__visual_operator_density)": -0.30461071,
+    "log1p(base__operator_density)": -0.30461071,
     "sqrt(base__log_loc)": -0.227365225,
     "log1p(base__std_chunks_per_source_line)": -0.0463927146,
     "log1p(qwen__only_identifier__auto_kmeans_cluster_diameter_max)": -0.196472171,
@@ -168,7 +167,7 @@ def write_summary(*, dataset: str, frame: pd.DataFrame, predictions: np.ndarray,
                     "score": float(score),
                     "formula": formula_text(),
                     "score_model": "compact_4_feature_formula",
-                    "visual_operator_density": none_if_nan(record.get("base__visual_operator_density")),
+                    "operator_density": none_if_nan(record.get("base__operator_density")),
                     "log_loc": none_if_nan(record.get("base__log_loc")),
                     "std_chunks_per_source_line": none_if_nan(record.get("base__std_chunks_per_source_line")),
                     "qwen_only_identifier_auto_kmeans_cluster_diameter_max": none_if_nan(
@@ -185,7 +184,7 @@ def write_summary(*, dataset: str, frame: pd.DataFrame, predictions: np.ndarray,
         and row["score"] is not None
         and math.isfinite(float(row["score"]))
     ]
-    binary = dataset in {"jetbrains", "generated_binary_readability"}
+    binary = dataset == "jetbrains"
     rho = None
     mcc = None
     threshold = None
@@ -249,7 +248,7 @@ def write_summary(*, dataset: str, frame: pd.DataFrame, predictions: np.ndarray,
 def formula_text() -> str:
     return (
         "score = 1.43341466"
-        " - 0.30461071 * log1p(visual_operator_density)"
+        " - 0.30461071 * log1p(operator_density)"
         " - 0.227365225 * sqrt(log_LOC)"
         " - 0.0463927146 * log1p(std_chunks_per_source_line)"
         " - 0.196472171 * log1p(qwen_only_identifier_auto_kmeans_cluster_diameter_max)"
@@ -296,8 +295,7 @@ def dataset_path(dataset: str) -> str:
         "buse": "datasets/buse",
         "mbjp": "datasets/mbjp_dev_dataset/readability_dataset.json",
         "jetbrains": "datasets/jetbrains",
-        "generated_readability_90": "datasets/readability_dataset_90.jsonl",
-        "generated_binary_readability": "datasets/readability_binary.jsonl",
+        "generated_readability_90": "datasets/generated_readability_90/dataset.jsonl",
     }[dataset]
 
 

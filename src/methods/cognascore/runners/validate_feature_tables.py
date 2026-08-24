@@ -14,7 +14,7 @@ from .supervised_ridge import EMBEDDING_MODEL as ML_EMBEDDING_MODEL
 from .supervised_ridge import SELECTED_FEATURES
 
 
-DATASETS = (
+DEFAULT_DATASETS = (
     "mbjp",
     "buse",
     "scalabrino",
@@ -22,7 +22,6 @@ DATASETS = (
     "dorn",
     "schnappinger",
     "generated_readability_90",
-    "generated_binary_readability",
 )
 IDENTITY_COLUMNS = {"dataset", "task_id", "readability_score"}
 
@@ -42,22 +41,29 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--base-root", type=Path, default=BASE_FEATURE_ROOT)
     parser.add_argument("--embedding-root", type=Path, default=EMBEDDING_FEATURE_ROOT)
+    parser.add_argument(
+        "--dataset",
+        action="append",
+        default=[],
+        help="Dataset table to validate. Repeat as needed; defaults to the established datasets plus Generated 90.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    datasets = tuple(args.dataset) or DEFAULT_DATASETS
     embedding_models = args.embedding_model or [COGNASCORE_DEFAULT_MODEL]
     expected_embedding_columns = ["dataset", "task_id", "readability_score", *embedding_feature_names()]
     if any("graph" in column for column in expected_embedding_columns):
         raise SystemExit("Internal schema still contains graph columns.")
-    if len(embedding_feature_names()) != 108:
-        raise SystemExit(f"Expected 108 embedding features, found {len(embedding_feature_names())}.")
+    if len(embedding_feature_names()) != 112:
+        raise SystemExit(f"Expected 112 embedding features, found {len(embedding_feature_names())}.")
 
     base_slug = model_slug(args.base_model)
     base_feature_columns: list[str] | None = None
     base_row_counts: dict[str, int] = {}
-    for dataset in DATASETS:
+    for dataset in datasets:
         path = args.base_root / dataset / base_slug / "features.csv"
         columns, row_count = read_header_and_count(path)
         feature_columns = [column for column in columns if column not in IDENTITY_COLUMNS]
@@ -75,13 +81,13 @@ def main() -> None:
 
     if base_feature_columns is None:
         raise SystemExit("No base feature tables found.")
-    if len(base_feature_columns) != 111:
-        raise SystemExit(f"Expected 111 base features, found {len(base_feature_columns)}.")
+    if len(base_feature_columns) != 126:
+        raise SystemExit(f"Expected 126 base features, found {len(base_feature_columns)}.")
 
     for embedding_model in embedding_models:
         slug = model_slug(embedding_model)
         embedding_row_counts: dict[str, int] = {}
-        for dataset in DATASETS:
+        for dataset in datasets:
             path = args.embedding_root / dataset / slug / "features.csv"
             columns, row_count = read_header_and_count(path)
             if columns != expected_embedding_columns:

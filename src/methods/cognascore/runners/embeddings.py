@@ -104,16 +104,20 @@ def main() -> None:
     with EmbeddingCache(cache_path, model_name=args.embedding_model) as cache:
         if args.replace_sources:
             dataset_names = [dataset_output_name(path) for path in dataset_paths]
-            print(f"Deleting existing source references for datasets: {', '.join(dataset_names)}", flush=True)
-            cache.delete_sources_for_datasets(dataset_names)
+            print(
+                f"Atomically replacing source references for datasets: {', '.join(dataset_names)}",
+                flush=True,
+            )
+            print(f"Writing source references: {len(references)} rows", flush=True)
+            cache.replace_sources_for_datasets(dataset_names, references)
         else:
             dataset_names = [dataset_output_name(path) for path in dataset_paths]
             cache.delete_sources_for_datasets_and_chunk_types(
                 [*dataset_names, ANCHOR_DATASET],
                 [WHOLE_CODE_CONTEXT_TYPE, *context_anchor_groups().keys()],
             )
-        print(f"Writing source references: {len(references)} rows", flush=True)
-        cache.upsert_sources(references)
+            print(f"Writing source references: {len(references)} rows", flush=True)
+            cache.upsert_sources(references)
         missing = cache.missing_texts(unique_texts)
         if args.missing_order == "shortest-first":
             missing.sort(key=lambda text: (len(text), text))

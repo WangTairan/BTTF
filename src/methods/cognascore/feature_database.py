@@ -17,6 +17,7 @@ from src.datasets import DatasetItem
 from src.methods.posnett.method import posnett_model
 
 from .extractors.python import LexemeExtractor
+from .member_access_features import member_access_features
 from .visual_features import visual_layout_features
 
 
@@ -54,19 +55,26 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("indent_transition_mean", "code_visual_layout", "Mean absolute indentation change between adjacent non-empty lines."),
         FeatureDefinition("indent_transition_std", "code_visual_layout", "Standard deviation of absolute indentation changes between adjacent non-empty lines."),
         FeatureDefinition("indent_transition_max", "code_visual_layout", "Maximum absolute indentation change between adjacent non-empty lines."),
-        FeatureDefinition("blank_line_ratio", "code_visual_layout", "Blank source lines divided by all physical source lines."),
+        FeatureDefinition("blank_separator_ratio", "code_visual_layout", "Contiguous blank-line separators divided by non-empty lines plus separators; repeated blank lines count once."),
         FeatureDefinition("long_line_ratio_80", "code_visual_layout", "Non-empty source lines longer than 80 characters divided by non-empty LOC."),
         FeatureDefinition("long_line_ratio_100", "code_visual_layout", "Non-empty source lines longer than 100 characters divided by non-empty LOC."),
         FeatureDefinition("visual_token_density", "code_visual_token", "Java-style lexical tokens per non-empty source line."),
         FeatureDefinition("visual_identifier_density", "code_visual_token", "Identifier tokens per non-empty source line."),
         FeatureDefinition("visual_keyword_density", "code_visual_token", "Keyword tokens per non-empty source line."),
-        FeatureDefinition("visual_operator_density", "code_visual_token", "Operator tokens per non-empty source line."),
+        FeatureDefinition("operator_density", "code_visual_token", "Operator tokens per non-empty source line."),
+        FeatureDefinition("member_access_density", "cognascore_member_access", "Validated member-access edges per non-empty source line, excluding declarations, comments, strings, and numeric literals."),
+        FeatureDefinition("member_access_chain_depth_mean", "cognascore_member_access", "Mean number of semantic hops across maximal member-access chains."),
         FeatureDefinition("visual_number_density", "code_visual_token", "Numeric literal tokens per non-empty source line."),
         FeatureDefinition("visual_period_density", "code_visual_token", "Period/member-access tokens per non-empty source line."),
         FeatureDefinition("visual_comma_density", "code_visual_token", "Comma tokens per non-empty source line."),
+        FeatureDefinition("scalabrino_visual_comparison_density", "scalabrino_buse_weimer", "Comparison operators per non-empty source line."),
+        FeatureDefinition("scalabrino_visual_parenthesis_density", "scalabrino_buse_weimer", "Opening and closing parentheses per non-empty source line."),
+        FeatureDefinition("scalabrino_visual_max_identifiers_per_line", "scalabrino_buse_weimer", "Maximum identifier-token count on any source line."),
+        FeatureDefinition("scalabrino_visual_max_numbers_per_line", "scalabrino_buse_weimer", "Maximum numeric-literal count on any source line."),
         FeatureDefinition("visual_identifier_area_ratio", "code_visual_area", "Approximate visual area occupied by identifier tokens divided by non-whitespace code area."),
         FeatureDefinition("visual_keyword_area_ratio", "code_visual_area", "Approximate visual area occupied by keyword tokens divided by non-whitespace code area."),
         FeatureDefinition("visual_operator_area_ratio", "code_visual_area", "Approximate visual area occupied by operator tokens divided by non-whitespace code area."),
+        FeatureDefinition("scalabrino_visual_comment_area_ratio", "scalabrino_dorn", "Approximate visual area occupied by comment text divided by non-whitespace source area."),
         FeatureDefinition("visual_keyword_identifier_area_ratio", "code_visual_area", "Approximate keyword visual area divided by identifier visual area."),
         FeatureDefinition("visual_identifier_y_mean", "code_visual_position", "Normalized mean vertical position of identifier tokens."),
         FeatureDefinition("visual_identifier_y_std", "code_visual_position", "Normalized standard deviation of identifier token vertical positions."),
@@ -76,11 +84,16 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("visual_operator_y_std", "code_visual_position", "Normalized standard deviation of operator token vertical positions."),
         FeatureDefinition("visual_period_y_mean", "code_visual_position", "Normalized mean vertical position of period/member-access tokens."),
         FeatureDefinition("visual_period_y_std", "code_visual_position", "Normalized standard deviation of period/member-access token vertical positions."),
+        FeatureDefinition("scalabrino_visual_comment_y_mean", "scalabrino_dorn", "Normalized mean vertical position of comment chunks."),
+        FeatureDefinition("scalabrino_visual_number_y_mean", "scalabrino_dorn", "Normalized mean vertical position of numeric-literal tokens."),
         FeatureDefinition("visual_line_length_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line length series."),
         FeatureDefinition("visual_space_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line whitespace count series."),
         FeatureDefinition("visual_identifier_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line identifier count series."),
         FeatureDefinition("visual_keyword_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line keyword count series."),
         FeatureDefinition("visual_period_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line period/member-access count series."),
+        FeatureDefinition("scalabrino_visual_comma_dft_energy", "scalabrino_dorn", "Normalized low-frequency DFT energy of the per-line comma-count series."),
+        FeatureDefinition("scalabrino_visual_comparison_dft_energy", "scalabrino_dorn", "Normalized low-frequency DFT energy of the per-line comparison-count series."),
+        FeatureDefinition("scalabrino_align_blocks_count", "scalabrino_dorn", "Number of vertically aligned runs of the same visible character across consecutive source lines."),
         FeatureDefinition("chunk_y_mean", "cognascore_visual_chunk", "Normalized mean vertical position of CognaScore chunks."),
         FeatureDefinition("chunk_y_std", "cognascore_visual_chunk", "Normalized standard deviation of CognaScore chunk vertical positions."),
         FeatureDefinition("chunk_line_span", "cognascore_visual_chunk", "Number of source lines spanned by all CognaScore chunks."),
@@ -105,6 +118,9 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("identifier_repeated_char_ratio", "cognascore_identifier_quality", "Identifiers dominated by repeated characters divided by identifier chunks."),
         FeatureDefinition("identifier_digit_char_ratio", "cognascore_identifier_quality", "Digit characters divided by all identifier characters."),
         FeatureDefinition("identifier_subtoken_count_mean", "cognascore_identifier_quality", "Mean number of camel/snake-case subtokens per identifier."),
+        FeatureDefinition("scalabrino_comment_identifier_word_overlap_max", "scalabrino_commented_words", "Maximum number of exact comment-word occurrences matching one identifier subtoken."),
+        FeatureDefinition("scalabrino_comment_identifier_word_coverage", "scalabrino_commented_words", "Fraction of distinct identifier subtokens that also occur in comments."),
+        FeatureDefinition("scalabrino_text_coherence_max", "scalabrino_text_coherence", "Maximum inverse-frequency-weighted cosine similarity between identifier vocabularies on distinct source lines."),
         FeatureDefinition("halstead_volume", "code_halstead", "Primitive Halstead volume from Java-style tokenization."),
         FeatureDefinition("log_halstead_volume", "code_halstead", "log(1 + Halstead volume)."),
         FeatureDefinition("byte_entropy", "code_text", "Byte-level Shannon entropy of the source text."),
@@ -168,8 +184,10 @@ def extract_feature_row(
     lexemes = [chunk.lexeme for chunk in chunks]
     lexeme_counts = Counter(lexemes)
     chunks_by_line = Counter(chunk.line for chunk in chunks)
-    nonblank_lines = [line for line in item.content.splitlines() if line.strip()]
-    blank_line_count = len(item.content.splitlines()) - len(nonblank_lines)
+    physical_lines = item.content.splitlines()
+    nonblank_lines = [line for line in physical_lines if line.strip()]
+    blank_line_count = len(physical_lines) - len(nonblank_lines)
+    blank_line_runs = _blank_line_runs(physical_lines)
     loc = len(nonblank_lines)
     line_lengths = [len(line) for line in nonblank_lines] or [0]
     indents = [len(line) - len(line.lstrip()) for line in nonblank_lines] or [0]
@@ -182,12 +200,16 @@ def extract_feature_row(
     identifier_char_count = sum(identifier_lengths)
     identifier_digit_count = sum(sum(1 for char in lexeme if char.isdigit()) for lexeme in identifier_lexemes)
     identifier_subtoken_counts = [_identifier_subtoken_count(lexeme) for lexeme in identifier_lexemes] or [0]
+    comment_lexemes = [chunk.lexeme for chunk in chunks if chunk.type.upper() == "COMMENT"]
+    comment_alignment = _comment_identifier_word_features(identifier_lexemes, comment_lexemes)
+    text_coherence = _text_coherence_features(chunks)
 
     posnett = posnett_model(item.content)
     lexeme_count = len(chunks)
     vocabulary_size = int(posnett.vocabulary_size)
     type_counts = Counter(chunk.type.upper() for chunk in chunks)
     visual_features = visual_layout_features(item.content, chunks)
+    access_features = member_access_features(item.content)
 
     row: dict[str, Any] = {
         "dataset": dataset,
@@ -211,10 +233,11 @@ def extract_feature_row(
         "indent_transition_mean": mean(indent_transitions) if indent_transitions else 0.0,
         "indent_transition_std": pstdev(indent_transitions) if len(indent_transitions) > 1 else 0.0,
         "indent_transition_max": max(indent_transitions, default=0),
-        "blank_line_ratio": blank_line_count / max(len(item.content.splitlines()), 1),
+        "blank_separator_ratio": len(blank_line_runs) / max(loc + len(blank_line_runs), 1),
         "long_line_ratio_80": sum(1 for length in line_lengths if length > 80) / max(loc, 1),
         "long_line_ratio_100": sum(1 for length in line_lengths if length > 100) / max(loc, 1),
         **visual_features,
+        **access_features,
         "chunks_per_loc": len(chunks) / max(loc, 1),
         "mean_chunks_per_source_line": mean(per_line),
         "std_chunks_per_source_line": pstdev(per_line) if len(per_line) > 1 else 0.0,
@@ -235,6 +258,8 @@ def extract_feature_row(
         "identifier_repeated_char_ratio": sum(1 for lexeme in identifier_lexemes if _is_repeated_char_identifier(lexeme)) / max(len(identifier_lexemes), 1),
         "identifier_digit_char_ratio": identifier_digit_count / max(identifier_char_count, 1),
         "identifier_subtoken_count_mean": mean(identifier_subtoken_counts),
+        **comment_alignment,
+        **text_coherence,
         "halstead_volume": posnett.halstead_volume,
         "log_halstead_volume": math.log1p(posnett.halstead_volume),
         "byte_entropy": posnett.byte_entropy,
@@ -354,6 +379,84 @@ def _is_repeated_char_identifier(identifier: str) -> bool:
     return max(counts.values()) / len(letters) >= 0.8
 
 
+def _comment_identifier_word_features(
+    identifiers: Sequence[str],
+    comments: Sequence[str],
+) -> dict[str, float]:
+    """Measure exact lexical correspondence between comments and identifiers.
+
+    This is the dependency-free part of Scalabrino's commented-words family:
+    identifiers are split at naming boundaries and compared with normalized
+    natural-language words from comments.  No labels or dataset-specific word
+    lists are involved.
+    """
+    identifier_words = {
+        word
+        for identifier in identifiers
+        for word in _identifier_subtokens(identifier)
+        if not word.isdigit()
+    }
+    comment_words = Counter(
+        word
+        for comment in comments
+        for word in _identifier_subtokens(comment.removeprefix("comment_"))
+        if not word.isdigit()
+    )
+    if not identifier_words or not comment_words:
+        return {
+            "scalabrino_comment_identifier_word_overlap_max": 0.0,
+            "scalabrino_comment_identifier_word_coverage": 0.0,
+        }
+    matched = identifier_words.intersection(comment_words)
+    return {
+        "scalabrino_comment_identifier_word_overlap_max": float(
+            max((comment_words[word] for word in identifier_words), default=0)
+        ),
+        "scalabrino_comment_identifier_word_coverage": len(matched) / len(identifier_words),
+    }
+
+
+def _text_coherence_features(chunks: Sequence[Any]) -> dict[str, float]:
+    """Compute a cross-language analogue of Scalabrino Text-Coherence-MAX.
+
+    Source lines containing identifiers act as the smallest parser-independent
+    documents.  Identifier subtokens are inverse-frequency weighted over the
+    snippet, and the maximum pairwise cosine is reported.  This preserves the
+    published mechanism while avoiding a Java-only parser dependency.
+    """
+    line_counters: dict[int, Counter[str]] = {}
+    for chunk in chunks:
+        if chunk.type.upper() != "IDENTIFIER" or chunk.line <= 0:
+            continue
+        words = [word for word in _identifier_subtokens(chunk.lexeme) if not word.isdigit()]
+        if words:
+            line_counters.setdefault(chunk.line, Counter()).update(words)
+    documents = [counter for _, counter in sorted(line_counters.items()) if counter]
+    if len(documents) < 2:
+        return {"scalabrino_text_coherence_max": 0.0}
+
+    global_counts = Counter[str]()
+    for document in documents:
+        global_counts.update(document)
+    maximum = 0.0
+    for left_index, left in enumerate(documents[:-1]):
+        for right in documents[left_index + 1 :]:
+            shared = left.keys() & right.keys()
+            numerator = sum(
+                left[word] * right[word] / (global_counts[word] ** 2)
+                for word in shared
+            )
+            left_norm = math.sqrt(
+                sum((count / global_counts[word]) ** 2 for word, count in left.items())
+            )
+            right_norm = math.sqrt(
+                sum((count / global_counts[word]) ** 2 for word, count in right.items())
+            )
+            if left_norm and right_norm:
+                maximum = max(maximum, numerator / (left_norm * right_norm))
+    return {"scalabrino_text_coherence_max": maximum}
+
+
 def compression_features(source: str) -> dict[str, float]:
     raw = source.encode("utf-8")
     zlib_ratio = _compression_ratio(raw, zlib.compress)
@@ -389,6 +492,22 @@ def _compression_ratio(raw: bytes, compressor) -> float:
     if not raw:
         return 0.0
     return len(compressor(raw)) / len(raw)
+
+
+def _blank_line_runs(lines: Sequence[str]) -> list[int]:
+    """Return lengths of contiguous blank-line runs in source order."""
+    runs: list[int] = []
+    current = 0
+    for line in lines:
+        if line.strip():
+            if current:
+                runs.append(current)
+                current = 0
+        else:
+            current += 1
+    if current:
+        runs.append(current)
+    return runs
 
 
 def _coefficient_of_variation(values: Sequence[float]) -> float:

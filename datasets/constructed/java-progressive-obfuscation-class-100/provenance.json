@@ -1,0 +1,80 @@
+{
+  "base_class_count": 100,
+  "base_counts_by_source": {
+    "apache-kafka": 25,
+    "google-guava": 25,
+    "netty": 25,
+    "spring-framework": 25
+  },
+  "counts_by_level": {
+    "0": 100,
+    "1": 100,
+    "2": 100,
+    "3": 100,
+    "4": 100,
+    "5": 100,
+    "6": 100
+  },
+  "created_at": "2026-08-23T19:36:46.350699+00:00",
+  "granularity": "class",
+  "input": {
+    "manifest": "<USER_HOME>/Desktop/readability/data/processed/java-readability-class-400/manifest.jsonl",
+    "manifest_sha256": "1ac319212fc6a303ff407d1e561442f33224425e5d1bb3aced14b7b04fde8f24",
+    "root": "<USER_HOME>/Desktop/readability/data/processed/java-readability-class-400",
+    "selection": "high-readability complete classes only"
+  },
+  "module": "progressive-obfuscation",
+  "requested_levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "seed": 20260823,
+  "stages": [
+    {
+      "cumulative": true,
+      "description": "Remove comments and documentation",
+      "level": 1,
+      "slug": "comments-removed"
+    },
+    {
+      "cumulative": true,
+      "description": "Shorten method, parameter, and local names without collisions",
+      "level": 2,
+      "slug": "names-shortened"
+    },
+    {
+      "cumulative": true,
+      "description": "Encode integer and boolean literals",
+      "level": 3,
+      "slug": "literals-encoded"
+    },
+    {
+      "cumulative": true,
+      "description": "Invert conditions, insert unreachable branches, and fragment strings",
+      "level": 4,
+      "slug": "combined-obfuscation"
+    },
+    {
+      "cumulative": true,
+      "description": "Remove a deterministic 40% of line-break groups while retaining partial structure",
+      "level": 5,
+      "slug": "layout-partially-compacted"
+    },
+    {
+      "cumulative": true,
+      "description": "Replace method, parameter, and local names with deterministic gibberish",
+      "level": 6,
+      "slug": "names-garbled"
+    }
+  ],
+  "validation": {
+    "parser": "tree-sitter-java",
+    "policy": "every original and cumulative stage must parse without syntax errors",
+    "semantic_scope": "local bindings and direct class-local method calls are renamed consistently; constructors are unchanged; external call sites and override contracts are not resolved, so project-level compilation and behavior preservation are not claimed"
+  },
+  "variant_count_including_originals": 700
+}

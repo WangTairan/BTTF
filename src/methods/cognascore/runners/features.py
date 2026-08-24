@@ -15,7 +15,15 @@ from ..results import model_slug
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a stable CognaScore feature database.")
     parser.add_argument("dataset", type=Path, help="Supported code dataset path or directory.")
-    parser.add_argument("--embedding-model", default=COGNASCORE_DEFAULT_MODEL)
+    parser.add_argument(
+        "--embedding-model",
+        action="append",
+        dest="embedding_models",
+        help=(
+            "Embedding-model namespace receiving this model-independent base table. "
+            "Repeat the option to write several namespaces without re-extracting features."
+        ),
+    )
     parser.add_argument("--limit", type=int)
     parser.add_argument(
         "-o",
@@ -44,19 +52,22 @@ def main() -> None:
             )
         )
 
-    feature_dir = args.output / dataset_name / model_slug(args.embedding_model)
-    csv_path, metadata_path = write_feature_database(
-        rows=rows,
-        output_dir=feature_dir,
-        metadata={
-            "dataset": dataset_name,
-            "dataset_path": str(args.dataset),
-            "embedding_model": args.embedding_model,
-            "source": "direct_chunk_and_code_extraction",
-        },
-    )
-    print(f"Wrote {csv_path}", flush=True)
-    print(f"Wrote {metadata_path}", flush=True)
+    embedding_models = args.embedding_models or [COGNASCORE_DEFAULT_MODEL]
+    for embedding_model in embedding_models:
+        feature_dir = args.output / dataset_name / model_slug(embedding_model)
+        csv_path, metadata_path = write_feature_database(
+            rows=rows,
+            output_dir=feature_dir,
+            metadata={
+                "dataset": dataset_name,
+                "dataset_path": str(args.dataset),
+                "embedding_model_namespace": embedding_model,
+                "source": "direct_chunk_and_code_extraction",
+                "model_independent": True,
+            },
+        )
+        print(f"Wrote {csv_path}", flush=True)
+        print(f"Wrote {metadata_path}", flush=True)
 
 
 if __name__ == "__main__":

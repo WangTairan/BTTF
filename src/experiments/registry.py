@@ -81,17 +81,17 @@ DATASETS: dict[str, DatasetSpec] = {
     ),
     "generated_readability_90": DatasetSpec(
         key="generated_readability_90",
-        path=Path("datasets/readability_dataset_90.jsonl"),
+        path=Path("datasets/generated_readability_90/dataset.jsonl"),
         modality="code",
         label_type="ordinal",
         primary_metric="spearman",
     ),
-    "generated_binary_readability": DatasetSpec(
-        key="generated_binary_readability",
-        path=Path("datasets/readability_binary.jsonl"),
+    "java_progressive_obfuscation": DatasetSpec(
+        key="java_progressive_obfuscation",
+        path=Path("datasets/constructed/java-progressive-obfuscation-class-100"),
         modality="code",
-        label_type="binary",
-        primary_metric="mcc_best_threshold",
+        label_type="grouped_ordinal",
+        primary_metric="spearman",
     ),
 }
 

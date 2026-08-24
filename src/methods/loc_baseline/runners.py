@@ -17,8 +17,10 @@ DATASETS: dict[str, Path] = {
     "jetbrains": Path("datasets/jetbrains"),
     "dorn": Path("datasets/dorn/dataset"),
     "schnappinger": Path("datasets/schnappinger"),
-    "generated_readability_90": Path("datasets/readability_dataset_90.jsonl"),
-    "generated_binary_readability": Path("datasets/readability_binary.jsonl"),
+    "generated_readability_90": Path("datasets/generated_readability_90/dataset.jsonl"),
+    "java_progressive_obfuscation": Path(
+        "datasets/constructed/java-progressive-obfuscation-class-100"
+    ),
 }
 
 

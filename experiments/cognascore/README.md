@@ -15,7 +15,7 @@ feature pipeline small and difficult to misuse.
 - `cross_validate_pooled.py`: one pooled Ridge per fold over all six datasets.
 - `leave_one_dataset_out.py`: train on five datasets and test on the sixth.
 
-All three protocols use the same frozen 24-feature list. They deliberately do
+All three protocols use the same frozen 30-feature list. They deliberately do
 not repeat feature selection inside the evaluation loop, and their metadata
 records that limitation.
 
@@ -23,13 +23,15 @@ The current consensus experiment can be run with:
 
 ```bash
 python -m experiments.cognascore.consensus_selection \
-  --select-top 24 \
+  --select-top 30 \
   --candidate-limit 220 \
   --c 0.08 \
   --ridge-alpha 200 \
   --stability-rounds 200 \
+  --fit-dataset mbjp --fit-dataset buse --fit-dataset dorn \
+  --fit-dataset scalabrino --fit-dataset schnappinger \
   --final-embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  -o results/experiments/cognascore/ml_6dataset_5model_consensus24
+  -o results/experiments/cognascore/consensus_k30_fit_5continuous
 ```
 
 ## Semantic-context probes

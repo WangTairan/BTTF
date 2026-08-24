@@ -14,8 +14,7 @@ DATASET_PATHS=(
   "datasets/jetbrains"
   "datasets/dorn/dataset"
   "datasets/schnappinger"
-  "datasets/readability_dataset_90.jsonl"
-  "datasets/readability_binary.jsonl"
+  "datasets/generated_readability_90/dataset.jsonl"
 )
 
 EMBEDDING_MODELS=(

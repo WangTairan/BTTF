@@ -24,13 +24,31 @@ class SourceReference:
     text: str
     count: int = 1
 
+    def __post_init__(self) -> None:
+        # Java permits isolated UTF-16 surrogate code units in character
+        # literals.  Python strings can represent them, but UTF-8, SQLite,
+        # and model tokenizers cannot.  Preserve the code unit explicitly as
+        # its Java-style escape instead of dropping or replacing it.
+        object.__setattr__(self, "text", canonical_embedding_text(self.text))
+
 
 def embedding_cache_path(root: Path, model_name: str) -> Path:
     return root / model_slug(model_name) / "embeddings.sqlite"
 
 
+def canonical_embedding_text(text: str) -> str:
+    if not any(0xD800 <= ord(character) <= 0xDFFF for character in text):
+        return text
+    return "".join(
+        f"\\u{ord(character):04X}"
+        if 0xD800 <= ord(character) <= 0xDFFF
+        else character
+        for character in text
+    )
+
+
 def text_hash(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return hashlib.sha256(canonical_embedding_text(text).encode("utf-8")).hexdigest()
 
 
 class EmbeddingCache:
@@ -98,13 +116,53 @@ class EmbeddingCache:
         self.connection.commit()
 
     def upsert_sources(self, references: Sequence[SourceReference]) -> None:
+        rows = self._source_rows(references)
+        with self.connection:
+            self._upsert_source_rows(rows)
+
+    def replace_sources_for_datasets(
+        self,
+        datasets: Sequence[str],
+        references: Sequence[SourceReference],
+    ) -> None:
+        """Atomically replace source references for selected datasets.
+
+        Source rows are fully validated before the transaction starts.  A
+        malformed reference therefore cannot leave a dataset with its old
+        references deleted and no replacements inserted.
+        """
+        rows = self._source_rows(references)
+        with self.connection:
+            self._delete_sources_for_datasets(datasets)
+            self._upsert_source_rows(rows)
+
+    def delete_sources_for_datasets(self, datasets: Sequence[str]) -> None:
+        if not datasets:
+            return
+        with self.connection:
+            self._delete_sources_for_datasets(datasets)
+
+    def _delete_sources_for_datasets(self, datasets: Sequence[str]) -> None:
+        for start in range(0, len(datasets), 900):
+            batch = list(datasets[start:start + 900])
+            placeholders = ",".join("?" for _ in batch)
+            self.connection.execute(
+                f"DELETE FROM sources WHERE dataset IN ({placeholders})",
+                batch,
+            )
+
+    @staticmethod
+    def _source_rows(references: Sequence[SourceReference]) -> list[tuple[str, str, str, str, int]]:
         grouped: Counter[tuple[str, str, str, str]] = Counter()
         for ref in references:
-            grouped[(ref.dataset, ref.task_id, ref.chunk_type, ref.text)] += ref.count
-        rows = [
+            text = canonical_embedding_text(ref.text)
+            grouped[(ref.dataset, ref.task_id, ref.chunk_type, text)] += ref.count
+        return [
             (dataset, task_id, chunk_type, text_hash(text), int(count))
             for (dataset, task_id, chunk_type, text), count in grouped.items()
         ]
+
+    def _upsert_source_rows(self, rows: Sequence[tuple[str, str, str, str, int]]) -> None:
         self.connection.executemany(
             """
             INSERT INTO sources (dataset, task_id, chunk_type, text_hash, count)
@@ -114,19 +172,6 @@ class EmbeddingCache:
             """,
             rows,
         )
-        self.connection.commit()
-
-    def delete_sources_for_datasets(self, datasets: Sequence[str]) -> None:
-        if not datasets:
-            return
-        for start in range(0, len(datasets), 900):
-            batch = list(datasets[start:start + 900])
-            placeholders = ",".join("?" for _ in batch)
-            self.connection.execute(
-                f"DELETE FROM sources WHERE dataset IN ({placeholders})",
-                batch,
-            )
-        self.connection.commit()
 
     def delete_sources_for_datasets_and_chunk_types(
         self,

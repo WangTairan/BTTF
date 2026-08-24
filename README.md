@@ -8,7 +8,7 @@ and adaptive clustering summaries.
 Two CognaScore routes are retained:
 
 - **CognaScore ML** uses data-driven stability screening and a Ridge model. The
-  frozen development model uses 24 features.
+  frozen development model uses 30 features.
 - **CognaScore Compact** is restricted to at most five features and exposes a
   short linear formula.
 
@@ -59,9 +59,9 @@ Scalabrino, JetBrains, Dorn, and Schnappinger. Two additional registered
 datasets are retained as first-class evaluation datasets:
 
 - `generated_readability_90`: 90 generated Java examples with low, normal, or
-  high readability instructions;
-- `generated_binary_readability`: 200 Java examples split into high- and
-  low-readability classes.
+  high readability instructions.
+- `java_progressive_obfuscation`: 100 Java classes with complete L0--L6
+  cumulative obfuscation chains for grouped trend evaluation.
 
 Their canonical paths, labels, metrics, and reconstruction command are
 documented in [`datasets/README.md`](datasets/README.md). Dataset adapters
@@ -105,18 +105,32 @@ the feature schema and stable runners.
 
 ## Model development and frozen scores
 
+Materialize the final CognaScore ML model and all report datasets:
+
+```bash
+python -m src.methods.cognascore.runners.supervised_ridge
+```
+
+The complete frozen model is written under
+`frozen_models/cognascore/consensus30_5continuous_nomic/`. It includes the exact
+serialized pipeline and a readable manifest containing the ordered features,
+imputation and scaling values, Ridge parameters, training-data hashes, and the
+fixed classification threshold learned from the five continuous-score datasets.
+
 Research-only selection code is isolated under `experiments/cognascore/`.
 The current five-model consensus experiment is invoked as:
 
 ```bash
 python -m experiments.cognascore.consensus_selection \
-  --select-top 24 \
+  --select-top 30 \
   --candidate-limit 220 \
   --c 0.08 \
   --ridge-alpha 200 \
   --stability-rounds 200 \
+  --fit-dataset mbjp --fit-dataset buse --fit-dataset dorn \
+  --fit-dataset scalabrino --fit-dataset schnappinger \
   --final-embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  -o results/experiments/cognascore/ml_6dataset_5model_consensus24
+  -o results/experiments/cognascore/consensus_k30_fit_5continuous
 ```
 
 This is a development experiment, not the production feature extractor. It
