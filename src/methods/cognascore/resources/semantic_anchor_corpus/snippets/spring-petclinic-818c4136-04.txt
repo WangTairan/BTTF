@@ -1,0 +1,5 @@
+@InitBinder("pet")
+	public void initPetBinder(WebDataBinder dataBinder) {
+		dataBinder.setValidator(new PetValidator());
+		dataBinder.setDisallowedFields("id", "*.id");
+	}

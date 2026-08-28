@@ -26,6 +26,7 @@ from src.methods.cognascore.paths import (
 )
 
 from . import feature_selection as fs
+from .selection_policy import with_default_exclusions
 
 
 DEFAULT_EMBEDDING_MODELS = (
@@ -128,6 +129,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    args.exclude_feature = with_default_exclusions(args.exclude_feature)
     dataset_paths = args.datasets or [DATASETS[key].path for key in fs.DEFAULT_DATASET_KEYS]
     dataset_names = [dataset_output_name(path) for path in dataset_paths]
     embedding_models = tuple(args.embedding_model or DEFAULT_EMBEDDING_MODELS)
@@ -267,6 +269,12 @@ def main() -> None:
         "ridge_alpha": args.ridge_alpha,
         "stability_rounds": args.stability_rounds,
         "stability_sample_fraction": args.stability_sample_fraction,
+        "feature_exclusions": {
+            "exact": list(args.exclude_feature),
+            "prefixes": list(args.exclude_feature_prefix),
+            "groups": list(args.exclude_group),
+            "resolved_features": list(final_bundle["excluded_features"]),
+        },
         "selected_feature_count": len(selected_features),
         "selected_features": selected_features,
         "features": {"ordered_names": selected_features},
@@ -902,7 +910,7 @@ def write_topk_curve_svg(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
         '<rect width="100%" height="100%" fill="white"/>',
         '<style>text{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;fill:#111827} .muted{fill:#6b7280;font-size:12px} .axis{stroke:#9ca3af;stroke-width:1} .grid{stroke:#e5e7eb;stroke-width:1} .line{fill:none;stroke-width:2.4} .sota{stroke:#9ca3af;stroke-dasharray:4 4;stroke-width:1.2}</style>',
         '<text x="74" y="24" font-size="18" font-weight="700">CognaScore consensus Top-K curve</text>',
-        '<text x="74" y="44" class="muted">Final Ridge uses the selected final embedding model; JetBrains is MCC, others are Spearman.</text>',
+        '<text x="74" y="44" class="muted">Final Ridge uses the selected final embedding model; all datasets are evaluated with Spearman.</text>',
     ]
     for tick in np.linspace(y_min, y_max, 6):
         y = y_for(float(tick))

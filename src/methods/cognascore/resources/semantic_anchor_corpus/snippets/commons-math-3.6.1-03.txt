@@ -1,0 +1,24 @@
+public MultivariateFunction partialDerivative(final int k) {
+                return new MultivariateFunction() {
+                    /** {@inheritDoc} */
+                    public double value(final double[] x) {
+
+                        final int n = x.length;
+
+                        // delegate computation to underlying function
+                        final DerivativeStructure[] dsX = new DerivativeStructure[n];
+                        for (int i = 0; i < n; ++i) {
+                            if (i == k) {
+                                dsX[i] = new DerivativeStructure(1, 1, 0, x[i]);
+                            } else {
+                                dsX[i] = new DerivativeStructure(1, 1, x[i]);
+                            }
+                        }
+                        final DerivativeStructure y = f.value(dsX);
+
+                        // extract partial derivative
+                        return y.getPartialDerivative(1);
+
+                    }
+                };
+            }

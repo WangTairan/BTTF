@@ -1,0 +1,43 @@
+def add_arguments(self, parser):
+        parser.add_argument(
+            "app_label",
+            nargs="*",
+            help="App labels of applications to limit the output to.",
+        )
+        parser.add_argument(
+            "--database",
+            default=DEFAULT_DB_ALIAS,
+            choices=tuple(connections),
+            help=(
+                "Nominates a database to show migrations for. Defaults to the "
+                '"default" database.'
+            ),
+        )
+
+        formats = parser.add_mutually_exclusive_group()
+        formats.add_argument(
+            "--list",
+            "-l",
+            action="store_const",
+            dest="format",
+            const="list",
+            help=(
+                "Shows a list of all migrations and which are applied. "
+                "With a verbosity level of 2 or above, the applied datetimes "
+                "will be included."
+            ),
+        )
+        formats.add_argument(
+            "--plan",
+            "-p",
+            action="store_const",
+            dest="format",
+            const="plan",
+            help=(
+                "Shows all migrations in the order they will be applied. With a "
+                "verbosity level of 2 or above all direct migration dependencies and "
+                "reverse dependencies (run_before) will be included."
+            ),
+        )
+
+        parser.set_defaults(format="list")

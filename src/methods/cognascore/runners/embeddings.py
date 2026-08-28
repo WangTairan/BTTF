@@ -12,6 +12,15 @@ from src.experiments.registry import (
 )
 
 from ..embedding_cache import EmbeddingCache, SourceReference, embedding_cache_path
+from ..comment_relevance import (
+    COMMENT_RELEVANCE_ANCHOR_DATASET,
+    COMMENT_RELEVANCE_ANCHORS,
+    COMMENT_RELEVANCE_CODE_PREFIX,
+    COMMENT_RELEVANCE_NEGATIVE_TYPE,
+    COMMENT_RELEVANCE_POSITIVE_TYPE,
+    comment_embedding_text,
+    negative_comment_for,
+)
 from ..embeddings import NomicEmbedder
 from ..extractors.python import LexemeExtractor
 from ..semantic_context import ANCHOR_DATASET, WHOLE_CODE_CONTEXT_TYPE, context_anchor_groups
@@ -44,8 +53,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-length",
         type=int,
-        default=512,
-        help="Maximum tokenizer sequence length for embedding forward passes. Defaults to 512 for bounded whole-code context embeddings.",
+        default=256,
+        help="Maximum tokenizer sequence length for embedding forward passes. Defaults to the pipeline-wide value of 256.",
     )
     parser.add_argument(
         "--whole-code-max-chars",
@@ -75,35 +84,72 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-new-embeddings", type=int, help="Only embed this many missing texts in this run.")
     parser.add_argument("--quiet", action="store_true", help="Suppress per-item collection logs.")
     parser.add_argument(
-        "--replace-sources",
+        "--calibration-only",
         action="store_true",
-        help="Delete existing source references for the selected datasets before inserting refreshed references.",
+        help=(
+            "Only materialize the versioned comment-relevance calibration "
+            "anchors. Existing dataset source references are not touched."
+        ),
+    )
+    source_mode = parser.add_mutually_exclusive_group()
+    source_mode.add_argument(
+        "--replace-sources",
+        dest="replace_sources",
+        action="store_true",
+        help=(
+            "Atomically replace source references for the selected datasets. "
+            "This is the default and safely removes stale task/chunk references."
+        ),
+    )
+    source_mode.add_argument(
+        "--merge-sources",
+        dest="replace_sources",
+        action="store_false",
+        help=(
+            "Upsert references without deleting retired chunk references. "
+            "Use only for deliberate cache inspection; unsafe after dataset or extractor changes."
+        ),
     )
     parser.add_argument(
         "--sources-only",
         action="store_true",
         help="Update source references without computing missing embeddings.",
     )
+    parser.set_defaults(replace_sources=True)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if args.calibration_only and args.datasets:
+        raise SystemExit("--calibration-only does not accept dataset paths")
     dataset_paths = args.datasets or [DATASETS[key].path for key in DEFAULT_DATASET_KEYS]
     extractor = LexemeExtractor()
-    references, unique_texts = _collect_references(
-        dataset_paths,
-        extractor=extractor,
-        limit_per_dataset=args.limit_per_dataset,
-        quiet=args.quiet,
-        whole_code_max_chars=args.whole_code_max_chars if args.whole_code_max_chars > 0 else None,
-        whole_code_segment_chars=args.whole_code_segment_chars,
-        whole_code_segment_overlap=args.whole_code_segment_overlap,
-    )
+    if args.calibration_only:
+        references = _comment_relevance_references(extractor)
+        unique_texts = list(dict.fromkeys(reference.text for reference in references))
+    else:
+        references, unique_texts = _collect_references(
+            dataset_paths,
+            extractor=extractor,
+            limit_per_dataset=args.limit_per_dataset,
+            quiet=args.quiet,
+            whole_code_max_chars=args.whole_code_max_chars if args.whole_code_max_chars > 0 else None,
+            whole_code_segment_chars=args.whole_code_segment_chars,
+            whole_code_segment_overlap=args.whole_code_segment_overlap,
+        )
     cache_path = embedding_cache_path(args.output, args.embedding_model)
     with EmbeddingCache(cache_path, model_name=args.embedding_model) as cache:
         if args.replace_sources:
-            dataset_names = [dataset_output_name(path) for path in dataset_paths]
+            dataset_names = (
+                [COMMENT_RELEVANCE_ANCHOR_DATASET]
+                if args.calibration_only
+                else [
+                    *(dataset_output_name(path) for path in dataset_paths),
+                    ANCHOR_DATASET,
+                    COMMENT_RELEVANCE_ANCHOR_DATASET,
+                ]
+            )
             print(
                 f"Atomically replacing source references for datasets: {', '.join(dataset_names)}",
                 flush=True,
@@ -111,11 +157,17 @@ def main() -> None:
             print(f"Writing source references: {len(references)} rows", flush=True)
             cache.replace_sources_for_datasets(dataset_names, references)
         else:
-            dataset_names = [dataset_output_name(path) for path in dataset_paths]
-            cache.delete_sources_for_datasets_and_chunk_types(
-                [*dataset_names, ANCHOR_DATASET],
-                [WHOLE_CODE_CONTEXT_TYPE, *context_anchor_groups().keys()],
+            dataset_names = (
+                []
+                if args.calibration_only
+                else [dataset_output_name(path) for path in dataset_paths]
             )
+            cache.delete_sources_for_datasets([COMMENT_RELEVANCE_ANCHOR_DATASET])
+            if not args.calibration_only:
+                cache.delete_sources_for_datasets_and_chunk_types(
+                    [*dataset_names, ANCHOR_DATASET],
+                    [WHOLE_CODE_CONTEXT_TYPE, *context_anchor_groups().keys()],
+                )
             print(f"Writing source references: {len(references)} rows", flush=True)
             cache.upsert_sources(references)
         missing = cache.missing_texts(unique_texts)
@@ -167,6 +219,11 @@ def _collect_references(
     references: list[SourceReference] = []
     text_seen: set[str] = set()
     unique_texts: list[str] = []
+    for reference in _comment_relevance_references(extractor):
+        references.append(reference)
+        if reference.text not in text_seen:
+            text_seen.add(reference.text)
+            unique_texts.append(reference.text)
     for task_id, anchors in context_anchor_groups().items():
         for anchor in anchors:
             reference = SourceReference(
@@ -203,6 +260,50 @@ def _collect_references(
                     text_seen.add(reference.text)
                     unique_texts.append(reference.text)
     return references, unique_texts
+
+
+def _comment_relevance_references(
+    extractor: LexemeExtractor,
+) -> list[SourceReference]:
+    references: list[SourceReference] = []
+    for anchor in COMMENT_RELEVANCE_ANCHORS:
+        chunks, _ = extractor.extract_with_member_fallback(anchor.code)
+        counts: Counter[tuple[str, str]] = Counter(
+            (f"{COMMENT_RELEVANCE_CODE_PREFIX}{chunk.type}", chunk.lexeme)
+            for chunk in chunks
+            if chunk.type.upper() != "COMMENT"
+        )
+        if not counts:
+            raise ValueError(
+                f"Comment-relevance anchor {anchor.name!r} produced no code chunks"
+            )
+        references.extend(
+            SourceReference(
+                dataset=COMMENT_RELEVANCE_ANCHOR_DATASET,
+                task_id=anchor.name,
+                chunk_type=chunk_type,
+                text=text,
+                count=count,
+            )
+            for (chunk_type, text), count in sorted(counts.items())
+        )
+        references.append(
+            SourceReference(
+                dataset=COMMENT_RELEVANCE_ANCHOR_DATASET,
+                task_id=anchor.name,
+                chunk_type=COMMENT_RELEVANCE_POSITIVE_TYPE,
+                text=comment_embedding_text(anchor.relevant_comment),
+            )
+        )
+        references.append(
+            SourceReference(
+                dataset=COMMENT_RELEVANCE_ANCHOR_DATASET,
+                task_id=anchor.name,
+                chunk_type=COMMENT_RELEVANCE_NEGATIVE_TYPE,
+                text=comment_embedding_text(negative_comment_for(anchor)),
+            )
+        )
+    return references
 
 
 def _references_for_item(

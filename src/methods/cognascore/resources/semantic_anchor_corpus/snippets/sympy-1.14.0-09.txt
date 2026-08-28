@@ -1,0 +1,4 @@
+def _as_mpf_val(self, prec):
+         # XXX track down why this has to be increased
+        rv = mlib.from_man_exp(phi_fixed(prec + 10), -prec - 10)
+        return mpf_norm(rv, prec)

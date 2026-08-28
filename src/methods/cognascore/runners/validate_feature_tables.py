@@ -7,6 +7,7 @@ from pathlib import Path
 from src.experiments.registry import COGNASCORE_DEFAULT_MODEL
 
 from ..embedding_features import embedding_feature_names
+from ..feature_database import BASE_FEATURE_NAMES, TYPE_STAT_NAMES
 from ..feature_schema import namespaced_feature
 from ..paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
 from ..results import model_slug
@@ -55,10 +56,11 @@ def main() -> None:
     datasets = tuple(args.dataset) or DEFAULT_DATASETS
     embedding_models = args.embedding_model or [COGNASCORE_DEFAULT_MODEL]
     expected_embedding_columns = ["dataset", "task_id", "readability_score", *embedding_feature_names()]
+    expected_base_feature_columns = [*BASE_FEATURE_NAMES, *TYPE_STAT_NAMES]
     if any("graph" in column for column in expected_embedding_columns):
         raise SystemExit("Internal schema still contains graph columns.")
-    if len(embedding_feature_names()) != 112:
-        raise SystemExit(f"Expected 112 embedding features, found {len(embedding_feature_names())}.")
+    if len(embedding_feature_names()) != 102:
+        raise SystemExit(f"Expected 102 embedding features, found {len(embedding_feature_names())}.")
 
     base_slug = model_slug(args.base_model)
     base_feature_columns: list[str] | None = None
@@ -73,6 +75,8 @@ def main() -> None:
             raise SystemExit(f"Legacy NORMAL chunk feature found in base table: {path}")
         if any("junk" in column for column in feature_columns):
             raise SystemExit(f"Junk feature found in base table: {path}")
+        if feature_columns != expected_base_feature_columns:
+            raise SystemExit(f"Base schema does not match production definitions: {path}")
         if base_feature_columns is None:
             base_feature_columns = feature_columns
         elif feature_columns != base_feature_columns:
@@ -81,9 +85,6 @@ def main() -> None:
 
     if base_feature_columns is None:
         raise SystemExit("No base feature tables found.")
-    if len(base_feature_columns) != 126:
-        raise SystemExit(f"Expected 126 base features, found {len(base_feature_columns)}.")
-
     for embedding_model in embedding_models:
         slug = model_slug(embedding_model)
         embedding_row_counts: dict[str, int] = {}
@@ -123,13 +124,21 @@ def read_header_and_count(path: Path) -> tuple[list[str], int]:
     if not path.exists():
         raise SystemExit(f"Missing feature table: {path}")
     with path.open("r", newline="", encoding="utf-8") as handle:
-        reader = csv.reader(handle)
-        try:
-            header = next(reader)
-        except StopIteration as exc:
-            raise SystemExit(f"Empty feature table: {path}") from exc
-        row_count = sum(1 for _ in reader)
-    return header, row_count
+        reader = csv.DictReader(handle)
+        columns = reader.fieldnames
+        if columns is None:
+            raise SystemExit(f"Missing CSV header: {path}")
+        identities: set[tuple[str, str]] = set()
+        row_count = 0
+        for row in reader:
+            row_count += 1
+            identity = (str(row.get("dataset", "")), str(row.get("task_id", "")))
+            if not all(identity):
+                raise SystemExit(f"Missing row identity in {path}: row {row_count + 1}")
+            if identity in identities:
+                raise SystemExit(f"Duplicate row identity in {path}: {identity}")
+            identities.add(identity)
+    return columns, row_count
 
 
 if __name__ == "__main__":

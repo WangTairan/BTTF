@@ -62,8 +62,8 @@ DATASETS: dict[str, DatasetSpec] = {
         key="jetbrains",
         path=Path("datasets/jetbrains"),
         modality="code",
-        label_type="binary",
-        primary_metric="mcc_best_threshold",
+        label_type="continuous",
+        primary_metric="spearman",
     ),
     "schnappinger": DatasetSpec(
         key="schnappinger",
@@ -92,6 +92,13 @@ DATASETS: dict[str, DatasetSpec] = {
         modality="code",
         label_type="grouped_ordinal",
         primary_metric="spearman",
+    ),
+    "java_comparative_obfuscation": DatasetSpec(
+        key="java_comparative_obfuscation",
+        path=Path("datasets/constructed/java-comparative-obfuscation-class-100"),
+        modality="code",
+        label_type="paired_direction",
+        primary_metric="paired_direction_accuracy",
     ),
 }
 

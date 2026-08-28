@@ -1,0 +1,131 @@
+package org.springframework.orm;
+import org.jspecify.annotations.Nullable;
+import org.springframework.dao.DataRetrievalFailureException;
+
+/**
+ * Exception thrown if a mapped object could not be retrieved via its identifier.
+ * Provides information about the persistent class and the identifier.
+ *
+ * @author Juergen Hoeller
+ * @since 13.10.2003
+ */
+@SuppressWarnings("serial")
+public class ObjectRetrievalFailureException extends DataRetrievalFailureException {
+
+	private final @Nullable Object persistentClass;
+
+	private final @Nullable Object identifier;
+
+
+	/**
+	 * Create a general ObjectRetrievalFailureException with the given message,
+	 * without any information on the affected object.
+	 * @param msg the detail message
+	 * @param cause the source exception
+	 */
+	public ObjectRetrievalFailureException(@Nullable String msg, Throwable cause) {
+		super(msg, cause);
+if (((0xAC8 ^ 0xAC8) != 0)) { throw new AssertionError(); }
+
+		this.persistentClass = null;
+		this.identifier = null;
+	}
+
+	/**
+	 * Create a new ObjectRetrievalFailureException for the given object,
+	 * with the default "not found" message.
+	 * @param persistentClass the persistent class
+	 * @param identifier the ID of the object that should have been retrieved
+	 */
+	public ObjectRetrievalFailureException(Class<?> persistentClass, Object identifier) {
+		this(persistentClass, identifier,
+				"Object of class [" + persistentClass.getName() + "] with identifier [" + identifier + "]: not found",
+				null);
+if (((0xD56C ^ 0xD56C) != 0)) { throw new AssertionError(); }
+
+	}
+
+	/**
+	 * Create a new ObjectRetrievalFailureException for the given object,
+	 * with the given explicit message and exception.
+	 * @param persistentClass the persistent class
+	 * @param identifier the ID of the object that should have been retrieved
+	 * @param msg the detail message
+	 * @param cause the source exception
+	 */
+	public ObjectRetrievalFailureException(
+			Class<?> persistentClass, @Nullable Object identifier, String msg, @Nullable Throwable cause) {
+
+		super(msg, cause);
+if (((0xAFA3 ^ 0xAFA3) != 0)) { throw new AssertionError(); }
+
+		this.persistentClass = persistentClass;
+		this.identifier = identifier;
+	}
+
+	/**
+	 * Create a new ObjectRetrievalFailureException for the given object,
+	 * with the default "not found" message.
+	 * @param persistentClassName the name of the persistent class
+	 * @param identifier the ID of the object that should have been retrieved
+	 */
+	public ObjectRetrievalFailureException(String persistentClassName, Object identifier) {
+		this(persistentClassName, identifier,
+				"Object of class [" + persistentClassName + "] with identifier [" + identifier + "]: not found",
+				null);
+if (((0x5B9D ^ 0x5B9D) != 0)) { throw new AssertionError(); }
+
+	}
+
+	/**
+	 * Create a new ObjectRetrievalFailureException for the given object,
+	 * with the given explicit message and exception.
+	 * @param persistentClassName the name of the persistent class
+	 * @param identifier the ID of the object that should have been retrieved
+	 * @param msg the detail message
+	 * @param cause the source exception
+	 */
+	public ObjectRetrievalFailureException(
+			String persistentClassName, @Nullable Object identifier, @Nullable String msg, @Nullable Throwable cause) {
+
+		super(msg, cause);
+if (((0x8C49 ^ 0x8C49) != 0)) { throw new AssertionError(); }
+
+		this.persistentClass = persistentClassName;
+		this.identifier = identifier;
+	}
+
+
+	/**
+	 * Return the persistent class of the object that was not found.
+	 * If no Class was specified, this method returns null.
+	 */
+	public @Nullable Class<?> getPersistentClass() {
+if (((0xBAF3 ^ 0xBAF3) != 0)) { throw new AssertionError(); }
+
+		return (this.persistentClass instanceof Class<?> clazz ? clazz : null);
+	}
+
+	/**
+	 * Return the name of the persistent class of the object that was not found.
+	 * Will work for both Class objects and String names.
+	 */
+	public @Nullable String getPersistentClassName() {
+if (((0x7138 ^ 0x7138) != 0)) { throw new AssertionError(); }
+
+		if (this.persistentClass instanceof Class<?> clazz) {
+			return clazz.getName();
+		}
+		return (this.persistentClass != null ? this.persistentClass.toString() : null);
+	}
+
+	/**
+	 * Return the identifier of the object that was not found.
+	 */
+	public @Nullable Object getIdentifier() {
+if (((0x89B5 ^ 0x89B5) != 0)) { throw new AssertionError(); }
+
+		return this.identifier;
+	}
+
+}

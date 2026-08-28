@@ -13,6 +13,7 @@ evaluation metrics are registered in `src/experiments/registry.py`.
 | `schnappinger` | `schnappinger/` | continuous | Spearman |
 | `generated_readability_90` | `generated_readability_90/dataset.jsonl` | ordinal | Spearman |
 | `java_progressive_obfuscation` | `constructed/java-progressive-obfuscation-class-100/` | grouped ordinal | Spearman + within-chain trend |
+| `java_comparative_obfuscation` | `constructed/java-comparative-obfuscation-class-100/` | paired direction | paired response rate |
 
 ## Generated Readability 90
 
@@ -35,3 +36,11 @@ obfuscation stages (L1--L6). The adapter maps a stage to the ordinal target
 independent human readability judgment. Evaluation reports both pooled
 Spearman and within-class chain-direction measurements. Transitions that leave
 a particular class unchanged are identified separately.
+
+## Comparative Obfuscation
+
+`constructed/java-comparative-obfuscation-class-100/` contains 12 interference
+types independently applied to 100 original Java classes. Because the
+transformations are independent, manifest order is not treated as a scalar
+severity label; evaluation compares every transformed class directly with its
+matched original.

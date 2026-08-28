@@ -14,12 +14,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from experiments.cognascore import consensus_selection as consensus
-from experiments.cognascore import feature_selection as fs
-from src.experiments.registry import DATASETS
-from src.methods.cognascore.dataset_io import dataset_output_name
-from src.methods.cognascore.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
-
 
 DATASET_ORDER = ("buse", "dorn", "jetbrains", "mbjp", "scalabrino", "schnappinger")
 DATASET_LABELS = {
@@ -37,10 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ranking",
         type=Path,
-        default=Path(
-            "results/experiments/cognascore/ml_6dataset_5model_consensus24/"
-            "cognascore_feature_screen_consensus/five_model/consensus_ranking.csv"
-        ),
+        help="Consensus ranking CSV; required only when recomputing the curve.",
     )
     parser.add_argument(
         "--output-dir",
@@ -50,9 +41,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--curve-csv",
         type=Path,
-        help="Reuse a previously computed curve CSV instead of refitting all K values.",
+        default=Path("figures/cognascore_feature_count_sensitivity_data.csv"),
+        help="Existing curve CSV used when --ranking is omitted.",
     )
-    parser.add_argument("--top-k-marker", type=int, default=25)
+    parser.add_argument("--top-k-marker", type=int, default=18)
     parser.add_argument("--max-k", type=int, default=150)
     parser.add_argument("--ridge-alpha", type=float, default=200.0)
     parser.add_argument("--c", type=float, default=0.08)
@@ -60,6 +52,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def make_args(ridge_alpha: float, c: float) -> argparse.Namespace:
+    from experiments.cognascore import feature_selection as fs
+    from src.experiments.registry import DATASETS
+    from src.methods.cognascore.dataset_io import dataset_output_name
+    from src.methods.cognascore.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
+
     dataset_names = [dataset_output_name(DATASETS[key].path) for key in fs.DEFAULT_DATASET_KEYS]
     return argparse.Namespace(
         base_root=BASE_FEATURE_ROOT,
@@ -71,7 +68,7 @@ def make_args(ridge_alpha: float, c: float) -> argparse.Namespace:
         c=c,
         seed=42,
         ridge_alpha=ridge_alpha,
-        select_top=24,
+        select_top=18,
         correlation_threshold=0.9,
         dataset_names=dataset_names,
     )
@@ -86,6 +83,9 @@ def calculate_curve(
     args: argparse.Namespace,
     ranking: list[dict[str, str]],
 ) -> list[dict[str, object]]:
+    from experiments.cognascore import consensus_selection as consensus
+    from experiments.cognascore import feature_selection as fs
+
     runtime_args = make_args(args.ridge_alpha, args.c)
     dataset_names = runtime_args.dataset_names
     bundle = consensus.load_model_bundle(
@@ -216,7 +216,7 @@ def plot_pdf(path: Path, rows: list[dict[str, object]], top_k: int, max_k: int) 
         axis.text(
             0.98,
             0.96,
-            "MCC" if dataset == "jetbrains" else "Spearman",
+            "Spearman",
             transform=axis.transAxes,
             ha="right",
             va="top",
@@ -247,7 +247,7 @@ def plot_pdf(path: Path, rows: list[dict[str, object]], top_k: int, max_k: int) 
     for axis in axes[3:]:
         axis.set_xlabel("Number of consensus-ranked features (K, power scale)")
     for axis in (axes[0], axes[3]):
-        axis.set_ylabel("Spearman / MCC")
+        axis.set_ylabel("Spearman")
     fig.tight_layout(rect=(0.02, 0.03, 0.99, 0.98), h_pad=1.35, w_pad=1.0)
     fig.savefig(path)
     plt.close(fig)
@@ -256,13 +256,13 @@ def plot_pdf(path: Path, rows: list[dict[str, object]], top_k: int, max_k: int) 
 def main() -> None:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    ranking = load_ranking(args.ranking)
     csv_path = args.output_dir / "cognascore_feature_count_sensitivity_data.csv"
     pdf_path = args.output_dir / "cognascore_feature_count_sensitivity_six_datasets.pdf"
-    if args.curve_csv:
-        rows = read_curve(args.curve_csv)
-    else:
+    if args.ranking is not None:
+        ranking = load_ranking(args.ranking)
         rows = calculate_curve(args, ranking)
+    else:
+        rows = read_curve(args.curve_csv)
     rows = ensure_origin(rows)
     write_curve(csv_path, rows)
     plot_pdf(pdf_path, rows, args.top_k_marker, args.max_k)

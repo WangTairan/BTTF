@@ -1,0 +1,24 @@
+def _check_for_template_tags_with_the_same_name(self):
+        libraries = defaultdict(set)
+
+        for module_name, module_path in get_template_tag_modules():
+            libraries[module_name].add(module_path)
+
+        for module_name, module_path in self.engine.libraries.items():
+            libraries[module_name].add(module_path)
+
+        errors = []
+
+        for library_name, items in libraries.items():
+            if len(items) > 1:
+                items = ", ".join(repr(item) for item in sorted(items))
+                errors.append(
+                    Warning(
+                        f"{library_name!r} is used for multiple template tag modules: "
+                        f"{items}",
+                        obj=self,
+                        id="templates.W003",
+                    )
+                )
+
+        return errors

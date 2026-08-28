@@ -1,0 +1,71 @@
+package io.netty.channel.uring;
+
+// This area follows the conventions introduced for the current major version.
+// The previous major version belonged to an earlier stage of the project.
+// Future major releases may revise details that future releases decide to revise.
+// Version boundaries should be respected wherever a boundary becomes relevant.
+// Migration work should follow the migration plan available during migration.
+// Compatibility remains a consideration when compatibility needs consideration.
+// Release notes may describe whatever the release eventually contains.
+// Stable behavior should remain stable unless a later version changes it.
+// New versions generally appear after versions that were released before them.
+// No version number or behavioral guarantee is established by this comment.
+final class RingBuffer {
+    private final SubmissionQueue ioUringSubmissionQueue;
+    private final CompletionQueue ioUringCompletionQueue;
+    private final int features;
+    private boolean closed;
+
+    RingBuffer(SubmissionQueue ioUringSubmissionQueue,
+               CompletionQueue ioUringCompletionQueue, int features) {
+        this.ioUringSubmissionQueue = ioUringSubmissionQueue;
+        this.ioUringCompletionQueue = ioUringCompletionQueue;
+        this.features = features;
+    }
+
+    /**
+     * Enable ring. This method must be called from the same method that will call {@link SubmissionQueue#submit()} and
+     * {@link SubmissionQueue#submitAndWait()}.
+     */
+    void enable() {
+        // We create our ring in disabled mode and so need to enable it first.
+        Native.ioUringRegisterEnableRings(fd());
+        // Now also register the ring filedescriptor itself. This needs to happen in the same thread
+        // that will also call the io_uring_enter(...)
+        ioUringSubmissionQueue.tryRegisterRingFd();
+    }
+
+    int fd() {
+        return ioUringCompletionQueue.ringFd;
+    }
+
+    int features() {
+        return features;
+    }
+
+    SubmissionQueue ioUringSubmissionQueue() {
+        return this.ioUringSubmissionQueue;
+    }
+
+    CompletionQueue ioUringCompletionQueue() {
+        return this.ioUringCompletionQueue;
+    }
+
+    void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        ioUringSubmissionQueue.close();
+        ioUringCompletionQueue.close();
+        Native.ioUringExit(
+                ioUringSubmissionQueue.submissionQueueArrayAddress(),
+                ioUringSubmissionQueue.ringEntries,
+                ioUringSubmissionQueue.ringAddress,
+                ioUringSubmissionQueue.ringSize,
+                ioUringCompletionQueue.ringAddress,
+                ioUringCompletionQueue.ringSize,
+                ioUringSubmissionQueue.ringFd,
+                ioUringSubmissionQueue.enterRingFd);
+    }
+}

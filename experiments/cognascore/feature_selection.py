@@ -31,6 +31,7 @@ from src.methods.cognascore.paths import (
 from src.methods.cognascore.results import model_slug
 from src.methods.cognascore.modeling import BoundedRidge, TrainingRangeClipper
 from src.methods.cognascore.dataset_io import dataset_output_name
+from experiments.cognascore.selection_policy import with_default_exclusions
 
 
 DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger")
@@ -39,7 +40,9 @@ DEFAULT_EXTERNAL_DATASETS = ("schnappinger", "jetbrains", "mbjp")
 IDENTITY_COLUMNS = {"dataset", "task_id", "readability_score"}
 CORE_SOTA_THRESHOLDS = {
     "scalabrino": 0.5919,
-    "jetbrains": 0.3594,
+    # Recomputed against the continuous readable-vote fraction. The strongest
+    # retained external comparison method is Scalabrino (rho = 0.3419).
+    "jetbrains": 0.3419,
     "dorn": 0.5857,
     "schnappinger": 0.6057,
 }
@@ -210,7 +213,7 @@ def main() -> None:
             f"No rows left for fitting after --drop-middle={args.drop_middle} "
             f"with scope={args.drop_middle_scope}."
         )
-    excluded_features = list(args.exclude_feature or [])
+    excluded_features = with_default_exclusions(args.exclude_feature or [])
     excluded_prefixes = list(args.exclude_feature_prefix or [])
     if excluded_features or excluded_prefixes:
         x, feature_names = _drop_features(x, feature_names, excluded_features, excluded_prefixes)

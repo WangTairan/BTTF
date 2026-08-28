@@ -482,8 +482,8 @@ def is_new_cognascore_feature(name: str) -> bool:
     traditional_markers = (
         "base__loc",
         "base__log_loc",
-        "base__vocabulary_size",
-        "base__token_count",
+        "base__log_vocabulary_size",
+        "base__log_token_count",
         "base__halstead_",
         "base__mean_line_length",
         "base__max_line_length",

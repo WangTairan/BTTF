@@ -28,7 +28,7 @@ from src.methods.cognascore.runners.supervised_ridge import load_combined_featur
 
 DATASET_KEY = "java_progressive_obfuscation"
 DATASET_PATH = Path("datasets/constructed/java-progressive-obfuscation-class-100")
-MODEL_NAME = "consensus26_progressive_optics_identifier_cv_development_nomic"
+MODEL_NAME = "consensus18_6dataset_sampled_margin_nomic"
 EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
 EXPECTED_LEVELS = tuple(range(7))
 TOLERANCE = 1e-12

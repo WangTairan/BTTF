@@ -1,4 +1,6 @@
 import csv
+import hashlib
+from collections import Counter
 from pathlib import Path, PureWindowsPath
 
 from src.datasets.types import DatasetItem
@@ -12,8 +14,18 @@ def load_dataset(path: Path = DEFAULT_DATASET) -> list[DatasetItem]:
     root, labels_path = resolve_paths(path)
     items = []
     with labels_path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for line_number, row in enumerate(reader, start=2):
+        rows = list(csv.DictReader(handle))
+        base_task_ids = [
+            f"Schnappinger/{row['projectname']}/{row['packageandclass']}"
+            for row in rows
+        ]
+        duplicate_task_ids = {
+            task_id for task_id, count in Counter(base_task_ids).items() if count > 1
+        }
+        for line_number, (row, base_task_id) in enumerate(
+            zip(rows, base_task_ids),
+            start=2,
+        ):
             source_path = root.joinpath(*PureWindowsPath(row["path"]).parts)
             if not source_path.exists():
                 raise FileNotFoundError(
@@ -25,9 +37,13 @@ def load_dataset(path: Path = DEFAULT_DATASET) -> list[DatasetItem]:
             }
             project = row["projectname"]
             qualified_class = row["packageandclass"]
+            task_id = base_task_id
+            if base_task_id in duplicate_task_ids:
+                path_digest = hashlib.sha256(row["path"].encode("utf-8")).hexdigest()[:12]
+                task_id = f"{base_task_id}#{path_digest}"
             items.append(
                 DatasetItem(
-                    task_id=f"Schnappinger/{project}/{qualified_class}",
+                    task_id=task_id,
                     content=source_path.read_text(encoding="utf-8", errors="replace"),
                     readability_score=expected_readability(probabilities["readability"]),
                     metadata={

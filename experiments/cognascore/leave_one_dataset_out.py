@@ -24,6 +24,7 @@ from src.methods.cognascore.paths import (
 from src.methods.cognascore.runners.supervised_ridge import (
     SELECTED_FEATURES,
     load_combined_features,
+    load_selected_features,
 )
 
 
@@ -31,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Train on all selected datasets except one, then evaluate on the "
-            "entire unseen dataset using the frozen 24-feature list."
+            "entire unseen dataset using the frozen feature list."
         )
     )
     parser.add_argument("--ridge-alpha", type=float, default=200.0)
@@ -43,6 +44,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--base-root", type=Path, default=BASE_FEATURE_ROOT)
     parser.add_argument("--embedding-root", type=Path, default=EMBEDDING_FEATURE_ROOT)
+    parser.add_argument(
+        "--selected-features-metadata",
+        type=Path,
+        help="JSON metadata containing selected_features; defaults to the frozen list.",
+    )
+    parser.add_argument("--remove-feature", action="append", default=[])
+    parser.add_argument("--add-feature", action="append", default=[])
     parser.add_argument("-o", "--output", type=Path)
     return parser.parse_args()
 
@@ -50,6 +58,20 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     datasets = tuple(args.dataset or DEFAULT_DATASETS)
+    selected_features = (
+        load_selected_features(args.selected_features_metadata)
+        if args.selected_features_metadata
+        else list(SELECTED_FEATURES)
+    )
+    missing_removals = sorted(set(args.remove_feature) - set(selected_features))
+    if missing_removals:
+        raise SystemExit(f"Cannot remove unselected features: {missing_removals}")
+    selected_features = [
+        feature for feature in selected_features if feature not in set(args.remove_feature)
+    ]
+    selected_features.extend(
+        feature for feature in args.add_feature if feature not in selected_features
+    )
     if len(datasets) < 2:
         raise SystemExit("Leave-one-dataset-out requires at least two datasets.")
     frames = {
@@ -57,7 +79,7 @@ def main() -> None:
             dataset,
             args.base_root,
             args.embedding_root,
-            list(SELECTED_FEATURES),
+            selected_features,
         ).copy()
         for dataset in datasets
     }
@@ -72,9 +94,9 @@ def main() -> None:
             ignore_index=True,
         )
         test = frames[held_out]
-        model = fit_model(train, args.ridge_alpha)
+        model = fit_model(train, args.ridge_alpha, selected_features=selected_features)
         prediction = model.predict(
-            test.loc[:, SELECTED_FEATURES].to_numpy(dtype=float)
+            test.loc[:, selected_features].to_numpy(dtype=float)
         )
         actual = test["readability_score"].to_numpy(dtype=float)
         is_binary = set(actual.tolist()).issubset({0.0, 1.0})
@@ -115,24 +137,20 @@ def main() -> None:
             )
 
     output = args.output or (
-        EXPERIMENT_RESULTS_ROOT / "fixed24_leave_one_dataset_out"
+        EXPERIMENT_RESULTS_ROOT / "selected_leave_one_dataset_out"
     )
     output.mkdir(parents=True, exist_ok=True)
     write_prediction_rows(output / "predictions.csv", rows)
     payload = {
-        "method": "CognaScore ML fixed-24 leave-one-dataset-out evaluation",
+        "method": f"CognaScore ML fixed-{len(selected_features)} leave-one-dataset-out evaluation",
         "protocol": "one Ridge fit on N-1 datasets for each completely held-out dataset",
         "ridge_alpha": args.ridge_alpha,
         "datasets": list(datasets),
-        "selected_feature_count": len(SELECTED_FEATURES),
-        "selected_features": list(SELECTED_FEATURES),
+        "selected_feature_count": len(selected_features),
+        "selected_features": selected_features,
         "feature_selection_inside_cv": False,
         "metrics": metrics,
         "fit_sizes": fit_sizes,
-        "jetbrains_threshold_policy": (
-            "fixed score midpoint 0.5; the Ridge output is not interpreted as a "
-            "probability; best held-out threshold is reference-only"
-        ),
         "limitation": (
             "The held-out labels are excluded from model fitting, but the frozen "
             "feature list was selected previously using all six development datasets. "

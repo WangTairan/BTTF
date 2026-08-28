@@ -1,0 +1,26 @@
+def _destroy_test_db(self, test_database_name, verbosity=1):
+        """
+        Destroy a test database, prompting the user for confirmation if the
+        database already exists. Return the name of the test database created.
+        """
+        if not self.connection.is_pool:
+            self.connection.settings_dict["USER"] = self.connection.settings_dict[
+                "SAVED_USER"
+            ]
+            self.connection.settings_dict["PASSWORD"] = self.connection.settings_dict[
+                "SAVED_PASSWORD"
+            ]
+        self.connection.close()
+        self.connection.close_pool()
+        parameters = self._get_test_db_params()
+        with self._maindb_connection.cursor() as cursor:
+            if self._test_user_create():
+                if verbosity >= 1:
+                    self.log("Destroying test user...")
+                self._destroy_test_user(cursor, parameters, verbosity)
+            if self._test_database_create():
+                if verbosity >= 1:
+                    self.log("Destroying test database tables...")
+                self._execute_test_db_destruction(cursor, parameters, verbosity)
+        self._maindb_connection.close()
+        self._maindb_connection.close_pool()

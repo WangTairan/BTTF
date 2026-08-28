@@ -1,0 +1,14 @@
+def time_trunc_sql(self, lookup_type, sql, params, tzname=None):
+        # The implementation is similar to `datetime_trunc_sql` as both
+        # `DateTimeField` and `TimeField` are stored as TIMESTAMP where
+        # the date part of the later is ignored.
+        sql, params = self._convert_sql_to_tz(sql, params, tzname)
+        trunc_param = None
+        if lookup_type == "hour":
+            trunc_param = "HH24"
+        elif lookup_type == "minute":
+            trunc_param = "MI"
+        elif lookup_type == "second":
+            # Cast to DATE removes sub-second precision.
+            return f"CAST({sql} AS DATE)", params
+        return f"TRUNC({sql}, %s)", (*params, trunc_param)

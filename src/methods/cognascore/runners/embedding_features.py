@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 from pathlib import Path
 
@@ -10,20 +11,25 @@ if not os.environ.get("LOKY_MAX_CPU_COUNT"):
 
 from src.experiments.registry import COGNASCORE_DEFAULT_MODEL, DATASETS
 
+from ..comment_relevance import calibrate_comment_relevance
 from ..embedding_cache import EmbeddingCache, embedding_cache_path
-from ..embedding_features import extract_embedding_feature_row, write_embedding_feature_database
+from ..embedding_features import (
+    EMBEDDING_FEATURE_BUILD_VERSION,
+    embedding_feature_names,
+    extract_embedding_feature_row,
+    write_embedding_feature_database,
+)
 from ..extractors.python import LexemeExtractor
 from ..results import model_slug
 from ..semantic_context import (
-    BUSINESS_ANCHOR_TASK,
+    APPLICATION_ANCHOR_TASK,
     MATH_ANCHOR_TASK,
-    NON_MATH_ANCHOR_TASK,
     WHOLE_CODE_CONTEXT_TYPE,
     context_anchor_groups,
     centroid,
 )
 from ..dataset_io import dataset_output_name, load_items
-from ..paths import EMBEDDING_CACHE_ROOT, EMBEDDING_FEATURE_ROOT
+from ..paths import CALIBRATION_ROOT, EMBEDDING_CACHE_ROOT, EMBEDDING_FEATURE_ROOT
 
 
 DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger")
@@ -70,7 +76,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--update-incomplete",
         action="store_true",
-        help="With --resume, recompute existing rows whose embedding coverage is below 1.0 or whose source count is 0.",
+        help="With --resume, recompute existing rows containing a missing current-schema feature value.",
     )
     parser.add_argument(
         "--update-all",
@@ -100,6 +106,21 @@ def main() -> None:
 
     with EmbeddingCache(cache_path, model_name=args.embedding_model) as cache:
         context_centroids = _load_context_centroids(cache)
+        try:
+            comment_calibration = calibrate_comment_relevance(cache)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        calibration_path = _write_comment_relevance_calibration(
+            args.embedding_model,
+            comment_calibration.as_metadata(),
+        )
+        print(
+            "Comment-relevance calibration: "
+            f"threshold={comment_calibration.threshold:.6f}, "
+            "leave-one-anchor-out balanced accuracy="
+            f"{comment_calibration.leave_one_anchor_out_balanced_accuracy:.4f}",
+            flush=True,
+        )
         for path in dataset_paths:
             dataset_name = dataset_output_name(path)
             all_items = load_items(path)
@@ -118,6 +139,11 @@ def main() -> None:
                 "update_incomplete": bool(args.update_incomplete),
                 "update_all": bool(args.update_all),
                 "replace_existing": bool(args.replace_existing),
+                "embedding_feature_build_version": EMBEDDING_FEATURE_BUILD_VERSION,
+                "comment_relevance_calibration": {
+                    **comment_calibration.as_metadata(),
+                    "artifact": str(calibration_path),
+                },
             }
             rows_by_task: dict[str, dict] = {}
             if args.replace_existing:
@@ -183,8 +209,8 @@ def main() -> None:
                         code_vector=code_vector,
                         code_segment_vectors=code_segment_vectors,
                         math_centroid=context_centroids[MATH_ANCHOR_TASK],
-                        business_centroid=context_centroids[BUSINESS_ANCHOR_TASK],
-                        non_math_centroid=context_centroids[NON_MATH_ANCHOR_TASK],
+                        application_centroid=context_centroids[APPLICATION_ANCHOR_TASK],
+                        comment_relevance_threshold=comment_calibration.threshold,
                         max_vectors=args.max_vectors_per_task,
                     )
                 )
@@ -219,6 +245,19 @@ def _load_existing_rows(feature_dir: Path) -> dict[str, dict]:
     csv_path = feature_dir / "features.csv"
     if not csv_path.exists():
         return {}
+    metadata_path = feature_dir / "metadata.json"
+    if not metadata_path.exists():
+        print(f"Ignoring {csv_path}: missing metadata.json", flush=True)
+        return {}
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    existing_version = metadata.get("embedding_feature_build_version")
+    if existing_version != EMBEDDING_FEATURE_BUILD_VERSION:
+        print(
+            f"Rebuilding {csv_path}: embedding-feature build version "
+            f"{existing_version!r} -> {EMBEDDING_FEATURE_BUILD_VERSION}",
+            flush=True,
+        )
+        return {}
     expected_columns = ["dataset", "task_id", "readability_score", *extract_embedding_feature_columns()]
     with csv_path.open("r", newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
@@ -229,6 +268,33 @@ def _load_existing_rows(feature_dir: Path) -> dict[str, dict]:
                 "Regenerate without --resume or move the old feature table."
             )
         return {str(row["task_id"]): dict(row) for row in reader}
+
+
+def _write_comment_relevance_calibration(
+    embedding_model: str,
+    calibration: dict,
+) -> Path:
+    output_dir = CALIBRATION_ROOT / model_slug(embedding_model)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "comment_relevance.json"
+    payload = {
+        "embedding_model": embedding_model,
+        "pooling": "attention-mask mean pooling",
+        "score_definition": (
+            "maximum cosine similarity between one comment embedding and any "
+            "normalized non-comment semantic-chunk embedding"
+        ),
+        "threshold_selection": (
+            "maximize balanced accuracy on the independent calibration anchors; "
+            "use the median of tied optimal thresholds"
+        ),
+        **calibration,
+    }
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def _delete_existing_table(feature_dir: Path) -> None:
@@ -270,14 +336,7 @@ def _should_update_existing(row: dict, *, update_incomplete: bool, update_all: b
         return True
     if not update_incomplete:
         return False
-    return _as_float(row.get("embedding_coverage_ratio")) < 1.0
-
-
-def _as_float(value) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+    return any(row.get(name) in (None, "") for name in embedding_feature_names())
 
 
 def _ordered_existing_rows(rows_by_task: dict[str, dict], *, items) -> list[dict]:

@@ -1,0 +1,9 @@
+private static double min(final double[] m) {
+        double min = Double.MAX_VALUE;
+        for (int r = 0; r < m.length; r++) {
+            if (min > m[r]) {
+                min = m[r];
+            }
+        }
+        return min;
+    }

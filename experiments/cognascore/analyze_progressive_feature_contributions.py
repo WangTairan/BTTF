@@ -28,12 +28,12 @@ from .evaluate_progressive_obfuscation import (
 
 
 DEFAULT_MODEL_ARTIFACT = Path(
-    "frozen_models/cognascore/consensus30_5continuous_nomic/"
+    "frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/"
     "nomic-ai-nomic-embed-text-v1.5"
 )
 DEFAULT_OUTPUT = Path(
     "results/experiments/cognascore/"
-    "progressive_obfuscation_consensus30_5continuous/feature_contributions"
+    "consensus18_6dataset_sampled_margin_nomic/progressive_feature_contributions"
 )
 TRANSITIONS = ((0, 1), (1, 2), (2, 3))
 

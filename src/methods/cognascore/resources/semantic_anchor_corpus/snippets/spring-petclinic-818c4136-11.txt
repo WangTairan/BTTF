@@ -1,0 +1,6 @@
+@XmlElement
+	public List<Specialty> getSpecialties() {
+		return getSpecialtiesInternal().stream()
+			.sorted(Comparator.comparing(NamedEntity::getName))
+			.collect(Collectors.toList());
+	}

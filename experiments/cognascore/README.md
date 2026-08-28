@@ -1,47 +1,58 @@
 # CognaScore experiments
 
-These modules reproduce model-development analyses while keeping the stable
-feature pipeline small and difficult to misuse.
+This directory contains the reproducible analyses retained for the final
+CognaScore release. Stable feature production and scoring remain under
+`src/methods/cognascore/`; nothing here can silently replace the frozen model.
 
-## Feature selection
+## Final model development
 
-- `feature_selection.py`: shared L1 stability-selection implementation.
-- `consensus_selection.py`: five-embedding-model consensus selection followed
-  by correlation filtering and Ridge fitting.
-- `selection_sweep.py`: Top-K sensitivity sweeps for a single ranking.
-- `compact_search.py`: constrained search for formulas with at most five
-  features.
-- `cross_validate_per_dataset.py`: independent within-dataset 5/10-fold CV.
-- `cross_validate_pooled.py`: one pooled Ridge per fold over all six datasets.
-- `leave_one_dataset_out.py`: train on five datasets and test on the sixth.
+- `feature_selection.py`: L1 stability screening shared by selection tools.
+- `selection_policy.py`: deterministic exclusions for invalid or discarded
+  candidate features.
+- `consensus_selection.py`: five-embedding-model consensus ranking,
+  correlation filtering, and Ridge fitting.
+- `cross_validate_fixed.py`: pooled grouped 10-fold evaluation of the frozen
+  18-feature list.
+- `leave_one_dataset_out.py`: train on five datasets and evaluate on the sixth.
+- `configs/consensus18_6dataset_sampled_margin.json`: canonical ordered feature
+  list used by the publication model.
 
-All three protocols use the same frozen 30-feature list. They deliberately do
-not repeat feature selection inside the evaluation loop, and their metadata
-records that limitation.
+The feature list is fixed before the CV and LODO scripts run. Their output
+metadata explicitly records that selection is not repeated inside each fold.
+The production tables retain 194 candidates per embedding-model instantiation.
+Before stability screening, `selection_policy.py` excludes 13 theory-rejected
+features: three unstable/redundant cluster-size variability measurements and
+ten absolute vertical-position measurements. The resulting 181 candidates are
+ranked; retaining the excluded columns supports transparent appendix reporting
+and ablation without allowing them into the formal model-selection procedure.
 
-The current consensus experiment can be run with:
+## Controlled experiments
+
+Two constructed Java experiments are retained:
+
+- `evaluate_progressive_obfuscation.py`: grouped L0--L6 cumulative degradation
+  trajectories;
+- `evaluate_constructed_variants.py`: independent, paired interference tests
+  against the same original classes.
+
+`compare_progressive_obfuscation.py` and the two feature-analysis modules
+provide supporting diagnostics. Rebuild features and evaluate both datasets
+sequentially with:
 
 ```bash
-python -m experiments.cognascore.consensus_selection \
-  --select-top 30 \
-  --candidate-limit 220 \
-  --c 0.08 \
-  --ridge-alpha 200 \
-  --stability-rounds 200 \
-  --fit-dataset mbjp --fit-dataset buse --fit-dataset dorn \
-  --fit-dataset scalabrino --fit-dataset schnappinger \
-  --final-embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  -o results/experiments/cognascore/consensus_k30_fit_5continuous
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  bash scripts/run_constructed_variants_nomic.sh
 ```
 
-## Semantic-context probes
+## Compact route and figures
 
-Exploratory tests for mathematical short-identifier context belong under
-`semantic_context/`. The three currently materialized semantic-context
-features remain in the stable feature schema so existing feature tables and
-reported models do not change during this repository reorganization.
+- `compact_search.py`: optional research search for formulas restricted to at
+  most five features. The existing Compact scorer is unchanged.
+- `figures/plot_feature_count_sensitivity.py`: publication feature-count
+  sensitivity figure.
+- `analyze_human_rating_reliability.py`: human-rating agreement diagnostics.
+- `auxiliary/comment_threshold_stability.py`: repeated, six-dataset validation
+  of the model-specific comment-to-code threshold without readability labels.
 
-## Figures
-
-`figures/plot_feature_count_sensitivity.py` generates the six-dataset PDF and
-its CSV source data under the repository-level `figures/` directory.
+Generated outputs belong under `results/experiments/cognascore/`; only final
+method artifacts belong under `frozen_models/`.

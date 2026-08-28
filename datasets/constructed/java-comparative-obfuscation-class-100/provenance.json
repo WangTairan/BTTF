@@ -1,0 +1,140 @@
+{
+  "application_mode": "independent-interference",
+  "base_class_count": 100,
+  "base_counts_by_source": {
+    "apache-kafka": 25,
+    "google-guava": 25,
+    "netty": 25,
+    "spring-framework": 25
+  },
+  "counts_by_interference": {
+    "encode-boolean-literals": 100,
+    "encode-integer-literals": 100,
+    "garble-identifiers": 100,
+    "inject-low-readability-unrelated-code": 100,
+    "inject-natural-language-comment": 100,
+    "inject-readable-unrelated-code": 100,
+    "insert-dead-branches": 100,
+    "invert-conditions": 100,
+    "mislead-identifiers": 100,
+    "partially-compact-layout": 100,
+    "remove-comments": 100,
+    "shorten-identifiers": 100
+  },
+  "created_at": "2026-08-27T22:48:19.444596+00:00",
+  "granularity": "class",
+  "input": {
+    "java_file_count": 100,
+    "manifest": "<USER_HOME>/Desktop/readability/data/constructed/java-progressive-obfuscation-class-100/manifest.jsonl",
+    "manifest_sha256": "32b91bd9e8b11f2c091f9cc1780f08334a3e8b01163e59a6eb2ec812dd2e0c04",
+    "policy": "all recursively discovered Java files; no sampling",
+    "root": "<USER_HOME>/Desktop/readability/data/constructed/java-progressive-obfuscation-class-100/level-00-original"
+  },
+  "interference_count": 12,
+  "interferences": [
+    {
+      "application": "original-source",
+      "category": "comments",
+      "description": "Remove line comments, block comments, and Javadoc",
+      "implementation": "readability_data.obfuscation_module.interferences.comments.remove.RemoveComments",
+      "order": 1,
+      "slug": "remove-comments"
+    },
+    {
+      "application": "original-source",
+      "category": "comments",
+      "description": "Select one of ten non-informative ten-line comments per class",
+      "implementation": "readability_data.obfuscation_module.interferences.comments.inject.InjectNaturalLanguageComment",
+      "order": 2,
+      "slug": "inject-natural-language-comment"
+    },
+    {
+      "application": "original-source",
+      "category": "identifiers",
+      "description": "Shorten method, parameter, and local names without collisions",
+      "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+      "order": 3,
+      "slug": "shorten-identifiers"
+    },
+    {
+      "application": "original-source",
+      "category": "identifiers",
+      "description": "Replace method, parameter, and local names with length-matched, meaningful but unrelated names",
+      "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+      "order": 4,
+      "slug": "mislead-identifiers"
+    },
+    {
+      "application": "original-source",
+      "category": "identifiers",
+      "description": "Replace method, parameter, and local names with deterministic ProGuard-style short identifiers",
+      "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+      "order": 5,
+      "slug": "garble-identifiers"
+    },
+    {
+      "application": "original-source",
+      "category": "expressions",
+      "description": "Replace eligible decimal integer literals with complex expressions",
+      "implementation": "readability_data.obfuscation_module.interferences.expressions.literals.integers.EncodeIntegerLiterals",
+      "order": 6,
+      "slug": "encode-integer-literals"
+    },
+    {
+      "application": "original-source",
+      "category": "expressions",
+      "description": "Replace true and false literals with complex constant predicates",
+      "implementation": "readability_data.obfuscation_module.interferences.expressions.literals.booleans.EncodeBooleanLiterals",
+      "order": 7,
+      "slug": "encode-boolean-literals"
+    },
+    {
+      "application": "original-source",
+      "category": "expressions",
+      "description": "Invert eligible conditions and exchange their branches",
+      "implementation": "readability_data.obfuscation_module.interferences.expressions.conditions.InvertConditions",
+      "order": 8,
+      "slug": "invert-conditions"
+    },
+    {
+      "application": "original-source",
+      "category": "code-injection",
+      "description": "Insert deterministic runtime-dead branches into callable bodies",
+      "implementation": "readability_data.obfuscation_module.interferences.code_injection.dead_branch.InsertDeadBranches",
+      "order": 9,
+      "slug": "insert-dead-branches"
+    },
+    {
+      "application": "original-source",
+      "category": "code-injection",
+      "description": "Select one of ten high-readability unrelated code templates per class",
+      "implementation": "readability_data.obfuscation_module.interferences.code_injection.readable.InjectReadableCode",
+      "order": 10,
+      "slug": "inject-readable-unrelated-code"
+    },
+    {
+      "application": "original-source",
+      "category": "code-injection",
+      "description": "Select one of ten low-readability unrelated code templates per class",
+      "implementation": "readability_data.obfuscation_module.interferences.code_injection.low_readability.InjectLowReadabilityCode",
+      "order": 11,
+      "slug": "inject-low-readability-unrelated-code"
+    },
+    {
+      "application": "original-source",
+      "category": "layout",
+      "description": "Remove about 40% of line-break groups while retaining structure",
+      "implementation": "readability_data.obfuscation_module.interferences.layout.compact.PartiallyCompactLayout",
+      "order": 12,
+      "slug": "partially-compact-layout"
+    }
+  ],
+  "module": "source-interference",
+  "seed": 20260823,
+  "validation": {
+    "parser": "tree-sitter-java",
+    "policy": "source and every independently generated interference must parse without syntax errors",
+    "semantic_scope": "transformations are source-local; project-level compilation and strict semantic equivalence are not claimed"
+  },
+  "variant_count_including_originals": 1300
+}

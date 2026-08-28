@@ -1,4 +1,5 @@
 {
+  "application_mode": "cumulative",
   "base_class_count": 100,
   "base_counts_by_source": {
     "apache-kafka": 25,
@@ -15,15 +16,15 @@
     "5": 100,
     "6": 100
   },
-  "created_at": "2026-08-23T19:36:46.350699+00:00",
+  "created_at": "2026-08-27T22:48:01.480648+00:00",
   "granularity": "class",
   "input": {
-    "manifest": "<USER_HOME>/Desktop/readability/data/processed/java-readability-class-400/manifest.jsonl",
-    "manifest_sha256": "1ac319212fc6a303ff407d1e561442f33224425e5d1bb3aced14b7b04fde8f24",
-    "root": "<USER_HOME>/Desktop/readability/data/processed/java-readability-class-400",
-    "selection": "high-readability complete classes only"
+    "embedded_source_directory": "level-00-original",
+    "java_file_count": 100,
+    "policy": "fixed readable-source corpus balanced across four projects",
+    "source_manifest_sha256": "beae925e07dea122d0abccae8ae23cff45544d9cd2738b0fe2a4fe6d09317490"
   },
-  "module": "progressive-obfuscation",
+  "module": "source-degradation",
   "requested_levels": [
     1,
     2,
@@ -35,46 +36,98 @@
   "seed": 20260823,
   "stages": [
     {
-      "cumulative": true,
+      "application": "previous-stage-output",
       "description": "Remove comments and documentation",
+      "interferences": [
+        {
+          "description": "Remove line comments, block comments, and Javadoc",
+          "implementation": "readability_data.obfuscation_module.interferences.comments.remove.RemoveComments",
+          "slug": "remove-comments"
+        }
+      ],
       "level": 1,
       "slug": "comments-removed"
     },
     {
-      "cumulative": true,
+      "application": "previous-stage-output",
       "description": "Shorten method, parameter, and local names without collisions",
+      "interferences": [
+        {
+          "description": "Shorten method, parameter, and local names without collisions",
+          "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+          "slug": "shorten-identifiers"
+        }
+      ],
       "level": 2,
       "slug": "names-shortened"
     },
     {
-      "cumulative": true,
-      "description": "Encode integer and boolean literals",
+      "application": "previous-stage-output",
+      "description": "Encode integer and Boolean literals with complex constant expressions",
+      "interferences": [
+        {
+          "description": "Replace eligible decimal integer literals with complex expressions",
+          "implementation": "readability_data.obfuscation_module.interferences.expressions.literals.integers.EncodeIntegerLiterals",
+          "slug": "encode-integer-literals"
+        },
+        {
+          "description": "Replace true and false literals with complex constant predicates",
+          "implementation": "readability_data.obfuscation_module.interferences.expressions.literals.booleans.EncodeBooleanLiterals",
+          "slug": "encode-boolean-literals"
+        }
+      ],
       "level": 3,
       "slug": "literals-encoded"
     },
     {
-      "cumulative": true,
-      "description": "Invert conditions, insert unreachable branches, and fragment strings",
+      "application": "previous-stage-output",
+      "description": "Invert conditions and insert dead branches",
+      "interferences": [
+        {
+          "description": "Invert eligible conditions and exchange their branches",
+          "implementation": "readability_data.obfuscation_module.interferences.expressions.conditions.InvertConditions",
+          "slug": "invert-conditions"
+        },
+        {
+          "description": "Insert deterministic runtime-dead branches into callable bodies",
+          "implementation": "readability_data.obfuscation_module.interferences.code_injection.dead_branch.InsertDeadBranches",
+          "slug": "insert-dead-branches"
+        }
+      ],
       "level": 4,
       "slug": "combined-obfuscation"
     },
     {
-      "cumulative": true,
-      "description": "Remove a deterministic 40% of line-break groups while retaining partial structure",
+      "application": "previous-stage-output",
+      "description": "Remove a deterministic 40% of line-break groups while retaining structure",
+      "interferences": [
+        {
+          "description": "Remove about 40% of line-break groups while retaining structure",
+          "implementation": "readability_data.obfuscation_module.interferences.layout.compact.PartiallyCompactLayout",
+          "slug": "partially-compact-layout"
+        }
+      ],
       "level": 5,
       "slug": "layout-partially-compacted"
     },
     {
-      "cumulative": true,
-      "description": "Replace method, parameter, and local names with deterministic gibberish",
+      "application": "previous-stage-output",
+      "description": "Replace method, parameter, and local names with deterministic ProGuard-style short identifiers",
+      "interferences": [
+        {
+          "description": "Replace method, parameter, and local names with deterministic ProGuard-style short identifiers",
+          "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+          "slug": "garble-identifiers"
+        }
+      ],
       "level": 6,
       "slug": "names-garbled"
     }
   ],
   "validation": {
     "parser": "tree-sitter-java",
-    "policy": "every original and cumulative stage must parse without syntax errors",
-    "semantic_scope": "local bindings and direct class-local method calls are renamed consistently; constructors are unchanged; external call sites and override contracts are not resolved, so project-level compilation and behavior preservation are not claimed"
+    "policy": "source and every generated stage must parse without syntax errors",
+    "semantic_scope": "local bindings and recognized direct class-local method calls are renamed consistently; constructors are unchanged; external call sites and override contracts are not resolved, so project-level compilation and behavior preservation are not claimed"
   },
   "variant_count_including_originals": 700
 }

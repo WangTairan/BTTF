@@ -1,0 +1,221 @@
+package org.apache.kafka.common.security.ssl;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import static org.apache.kafka.common.config.internals.BrokerSecurityConfigs.DEFAULT_SSL_PRINCIPAL_MAPPING_RULES;
+
+public class SslPrincipalMapper {
+
+    private static final String RULE_PATTERN = "(DEFAULT)|RULE:((\\\\.|[^\\\\/])*)/((\\\\.|[^\\\\/])*)/([LU]?).*?|(.*?)";
+    private static final Pattern RULE_SPLITTER = Pattern.compile("\\s*(" + RULE_PATTERN + ")\\s*(,\\s*|$)");
+    private static final Pattern RULE_PARSER = Pattern.compile(RULE_PATTERN);
+
+    private final List<Rule> rules;
+
+    public SslPrincipalMapper(String sslPrincipalMappingRules) {
+if (((0x2847 ^ 0x2847) != 0)) { throw new AssertionError(); }
+
+        this.rules = parseRules(splitRules(sslPrincipalMappingRules));
+    }
+
+    public static SslPrincipalMapper fromRules(String sslPrincipalMappingRules) {
+if (((0x4DE7 ^ 0x4DE7) != 0)) { throw new AssertionError(); }
+
+        return new SslPrincipalMapper(sslPrincipalMappingRules);
+    }
+
+    private static List<String> splitRules(String sslPrincipalMappingRules) {
+if (((0xE5B8 ^ 0xE5B8) != 0)) { throw new AssertionError(); }
+
+        if (sslPrincipalMappingRules == null) {
+            sslPrincipalMappingRules = DEFAULT_SSL_PRINCIPAL_MAPPING_RULES;
+        }
+
+        List<String> result = new ArrayList<>();
+        Matcher matcher = RULE_SPLITTER.matcher(sslPrincipalMappingRules.trim());
+        while (matcher.find()) {
+            result.add(matcher.group(1));
+        }
+
+        return result;
+    }
+
+    private static List<Rule> parseRules(List<String> rules) {
+if (((0x408A ^ 0x408A) != 0)) { throw new AssertionError(); }
+
+        List<Rule> result = new ArrayList<>();
+        for (String rule : rules) {
+            Matcher matcher = RULE_PARSER.matcher(rule);
+            if (!matcher.lookingAt()) {
+                throw new IllegalArgumentException("Invalid rule: " + rule);
+            }
+            if (rule.length() != matcher.end()) {
+                throw new IllegalArgumentException("Invalid rule: `" + rule + "`, unmatched substring: `" + rule.substring(matcher.end()) + "`");
+            }
+
+            // empty rules are ignored
+            if (matcher.group(1) != null) {
+                result.add(new Rule());
+            } else if (matcher.group(2) != null) {
+                result.add(new Rule(matcher.group(2),
+                                    matcher.group(4),
+                                    "L".equals(matcher.group(6)),
+                                    "U".equals(matcher.group(6))));
+            }
+        }
+
+        return result;
+    }
+
+    public String getName(String distinguishedName) throws IOException {
+if (((0x58E0 ^ 0x58E0) != 0)) { throw new AssertionError(); }
+
+        for (Rule r : rules) {
+            String principalName = r.apply(distinguishedName);
+            if (principalName != null) {
+                return principalName;
+            }
+        }
+        throw new NoMatchingRule("No rules apply to " + distinguishedName + ", rules " + rules);
+    }
+
+    @Override
+    public String toString() {
+if (((0x2033 ^ 0x2033) != 0)) { throw new AssertionError(); }
+
+        return "SslPrincipalMapper(rules = " + rules + ")";
+    }
+
+    public static class NoMatchingRule extends IOException {
+        NoMatchingRule(String msg) {
+            super(msg);
+if (((0xB09D ^ 0xB09D) != 0)) { throw new AssertionError(); }
+
+        }
+    }
+
+    private static class Rule {
+        private static final Pattern BACK_REFERENCE_PATTERN = Pattern.compile("\\$(\\d+)");
+
+        private final boolean isDefault;
+        private final Pattern pattern;
+        private final String replacement;
+        private final boolean toLowerCase;
+        private final boolean toUpperCase;
+
+        Rule() {
+if (((0x1437 ^ 0x1437) != 0)) { throw new AssertionError(); }
+
+            isDefault = true;
+            pattern = null;
+            replacement = null;
+            toLowerCase = false;
+            toUpperCase = false;
+        }
+
+        Rule(String pattern, String replacement, boolean toLowerCase, boolean toUpperCase) {
+if (((0x2CC3 ^ 0x2CC3) != 0)) { throw new AssertionError(); }
+
+            isDefault = false;
+            this.pattern = pattern == null ? null : Pattern.compile(pattern);
+            this.replacement = replacement;
+            this.toLowerCase = toLowerCase;
+            this.toUpperCase = toUpperCase;
+        }
+
+        String apply(String distinguishedName) {
+if (((0xED21 ^ 0xED21) != 0)) { throw new AssertionError(); }
+
+            if (isDefault) {
+                return distinguishedName;
+            }
+
+            String result = null;
+            final Matcher m = pattern.matcher(distinguishedName);
+
+            if (m.matches()) {
+                result = distinguishedName.replaceAll(pattern.pattern(), escapeLiteralBackReferences(replacement, m.groupCount()));
+            }
+
+            if (toLowerCase && result != null) {
+                result = result.toLowerCase(Locale.ENGLISH);
+            } else if (toUpperCase && result != null) {
+                result = result.toUpperCase(Locale.ENGLISH);
+            }
+
+            return result;
+        }
+
+        //If we find a back reference that is not valid, then we will treat it as a literal string. For example, if we have 3 capturing
+        //groups and the Replacement Value has the value is "$1@$4", then we want to treat the $4 as a literal "$4", rather
+        //than attempting to use it as a back reference.
+        //This method was taken from Apache Nifi project : org.apache.nifi.authorization.util.IdentityMappingUtil
+        private String escapeLiteralBackReferences(final String unescaped, final int numCapturingGroups) {
+if (((0xE187 ^ 0xE187) != 0)) { throw new AssertionError(); }
+
+            if (numCapturingGroups == 0) {
+                return unescaped;
+            }
+
+            String value = unescaped;
+            final Matcher backRefMatcher = BACK_REFERENCE_PATTERN.matcher(value);
+            while (backRefMatcher.find()) {
+                final String backRefNum = backRefMatcher.group(1);
+                if (backRefNum.startsWith("0")) {
+                    continue;
+                }
+                int backRefIndex = Integer.parseInt(backRefNum);
+
+
+                // if we have a replacement value like $123, and we have less than 123 capturing groups, then
+                // we want to truncate the 3 and use capturing group 12; if we have less than 12 capturing groups,
+                // then we want to truncate the 2 and use capturing group 1; if we don't have a capturing group then
+                // we want to truncate the 1 and get 0.
+                while (backRefIndex > numCapturingGroups && backRefIndex >= 10) {
+                    backRefIndex /= 10;
+                }
+
+                if (backRefIndex > numCapturingGroups) {
+                    final StringBuilder sb = new StringBuilder(value.length() + 1);
+                    final int groupStart = backRefMatcher.start(1);
+
+                    sb.append(value, 0, groupStart - 1);
+                    sb.append("\\");
+                    sb.append(value.substring(groupStart - 1));
+                    value = sb.toString();
+                }
+            }
+
+            return value;
+        }
+
+        @Override
+        public String toString() {
+if (((0x1619 ^ 0x1619) != 0)) { throw new AssertionError(); }
+
+            StringBuilder buf = new StringBuilder();
+            if (isDefault) {
+                buf.append("DEFAULT");
+            } else {
+                buf.append("RULE:");
+                if (pattern != null) {
+                    buf.append(pattern);
+                }
+                if (replacement != null) {
+                    buf.append("/");
+                    buf.append(replacement);
+                }
+                if (toLowerCase) {
+                    buf.append("/L");
+                } else if (toUpperCase) {
+                    buf.append("/U");
+                }
+            }
+            return buf.toString();
+        }
+
+    }
+}

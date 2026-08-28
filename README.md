@@ -8,7 +8,7 @@ and adaptive clustering summaries.
 Two CognaScore routes are retained:
 
 - **CognaScore ML** uses data-driven stability screening and a Ridge model. The
-  frozen development model uses 30 features.
+  frozen model uses 18 features.
 - **CognaScore Compact** is restricted to at most five features and exposes a
   short linear formula.
 
@@ -55,13 +55,16 @@ versioned.
 ## Datasets
 
 The six established development/evaluation datasets are MBJP, Buse,
-Scalabrino, JetBrains, Dorn, and Schnappinger. Two additional registered
+Scalabrino, JetBrains, Dorn, and Schnappinger. Additional registered
 datasets are retained as first-class evaluation datasets:
 
 - `generated_readability_90`: 90 generated Java examples with low, normal, or
   high readability instructions.
 - `java_progressive_obfuscation`: 100 Java classes with complete L0--L6
   cumulative obfuscation chains for grouped trend evaluation.
+- `java_comparative_obfuscation`: 12 independently applied interference types
+  paired with the same 100 original Java classes for fine-grained response
+  analysis.
 
 Their canonical paths, labels, metrics, and reconstruction command are
 documented in [`datasets/README.md`](datasets/README.md). Dataset adapters
@@ -84,14 +87,22 @@ PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
   bash scripts/refresh_cognascore_after_extractor_change.sh
 ```
 
+Source references are atomically replaced by default. Existing vectors are
+content-addressed and reused; vectors no longer referenced by any current task
+may remain in SQLite but cannot enter a feature row. Embedding-derived tables
+carry a build version, so the first run after an algorithm/schema change is a
+full rebuild and an interrupted run resumes from its checkpoints.
+
 If embeddings and source references are already current, rebuild feature
 tables without recomputing vectors:
 
 ```bash
 PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  REBUILD_EMBEDDING_FEATURES=0 \
   bash scripts/rebuild_cognascore_feature_tables.sh
 ```
+
+Use `BASE_ONLY=1` only when intentionally rebuilding the model-independent
+tables while leaving the existing embedding-derived tables untouched.
 
 Validate existing tables directly:
 
@@ -112,25 +123,25 @@ python -m src.methods.cognascore.runners.supervised_ridge
 ```
 
 The complete frozen model is written under
-`frozen_models/cognascore/consensus30_5continuous_nomic/`. It includes the exact
+`frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/`. It includes the exact
 serialized pipeline and a readable manifest containing the ordered features,
-imputation and scaling values, Ridge parameters, training-data hashes, and the
-fixed classification threshold learned from the five continuous-score datasets.
+imputation and scaling values, Ridge parameters, and training-data hashes.
+Its 18-feature list is fitted on the six continuous-score development datasets.
 
 Research-only selection code is isolated under `experiments/cognascore/`.
-The current five-model consensus experiment is invoked as:
+The retained five-model consensus implementation can reproduce or extend the
+selection analysis. Exploratory runs must use a separate output directory and
+cannot overwrite the frozen scorer.
 
 ```bash
 python -m experiments.cognascore.consensus_selection \
-  --select-top 30 \
-  --candidate-limit 220 \
-  --c 0.08 \
-  --ridge-alpha 200 \
-  --stability-rounds 200 \
+  --select-top 30 --candidate-limit 220 \
+  --c 0.08 --ridge-alpha 200 --stability-rounds 200 \
   --fit-dataset mbjp --fit-dataset buse --fit-dataset dorn \
   --fit-dataset scalabrino --fit-dataset schnappinger \
+  --fit-dataset jetbrains \
   --final-embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  -o results/experiments/cognascore/consensus_k30_fit_5continuous
+  -o results/experiments/cognascore/selection_sandbox
 ```
 
 This is a development experiment, not the production feature extractor. It
@@ -145,10 +156,18 @@ python -m src.methods.cognascore.runners.supervised_ridge
 python -m src.methods.cognascore.runners.compact_formula
 ```
 
-The frozen ML runner fits its reported model on Buse, Dorn, and Scalabrino and
-writes predictions for all registered report datasets. Selection experiments
-and their outputs remain separate so exploratory results cannot silently
-replace the frozen scorer.
+The frozen ML runner fits one dataset-balanced model on MBJP, Buse, Dorn,
+Scalabrino, Schnappinger, and the continuous JetBrains human-vote fraction,
+then writes predictions for every registered report dataset. Selection
+experiments remain separate so exploratory results cannot silently replace the
+frozen scorer.
+
+The two retained controlled experiments are reproduced together with:
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  bash scripts/run_constructed_variants_nomic.sh
+```
 
 ## Comparison methods
 
@@ -180,6 +199,15 @@ python -m experiments.cognascore.figures.plot_feature_count_sensitivity
 ```
 
 The script writes both the PDF and its plotted CSV data to `figures/`.
+
+Generate the normalized human-label distribution figure:
+
+```bash
+python figures/plot_readability_label_distributions.py
+```
+
+This figure uses each dataset's documented rating scale; JetBrains contributes
+its readable-vote fraction rather than its majority-vote binary label.
 
 ## Reproducibility notes
 

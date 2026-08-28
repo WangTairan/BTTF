@@ -11,8 +11,10 @@ Each CognaScore model directory contains:
   statistics, linear coefficients, intercept, training provenance, and fixed
   classification threshold.
 
-Regenerate the current model with:
+Only the publication model
+`cognascore/consensus18_6dataset_sampled_margin_nomic/` is retained. Regenerate it
+with:
 
 ```bash
-python -m src.methods.cognascore.runners.supervised_ridge
+python -m src.methods.cognascore.runners.supervised_ridge --overwrite-artifact
 ```

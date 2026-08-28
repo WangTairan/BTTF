@@ -22,7 +22,8 @@ PRE_LAYOUT_MAX_LEVEL = 4
 
 DEFAULT_INPUTS = {
     "CognaScore ML": Path(
-        "results/experiments/cognascore/progressive_obfuscation_nomic/predictions.csv"
+        "results/experiments/cognascore/consensus18_6dataset_sampled_margin_nomic/"
+        "progressive_obfuscation_nomic/predictions.csv"
     ),
     "Posnett": Path(
         "results/methods/posnett/java_progressive_obfuscation/summary.json"

@@ -43,43 +43,36 @@ ALL_DATASETS = (
     "jetbrains",
     "generated_readability_90",
 )
-TRAIN_DATASETS = ("mbjp", "buse", "dorn", "scalabrino", "schnappinger")
+TRAIN_DATASETS = ("mbjp", "buse", "dorn", "scalabrino", "schnappinger", "jetbrains")
 EXTERNAL_DATASETS = ("generated_readability_90",)
-SCORE_MODEL_NAME = "consensus26_progressive_optics_identifier_cv_development_nomic"
+SCORE_MODEL_NAME = "consensus18_6dataset_sampled_margin_nomic"
+METHOD_KEY = "cognascore_ml_consensus18_6dataset_sampled_margin"
 TRAINING_DROP_MIDDLE = 0.0
 
 SELECTED_FEATURES = [
-    "base__byte_entropy",
     "base__operator_density",
-    "base__visual_period_y_mean",
+    "base__byte_entropy",
+    "base__type_literal_ratio",
     "base__max_line_length",
+    "embedding__structural_core__auto_kmeans_selected_k",
     "embedding__only_identifier__embedding_first_pc_explained_variance",
-    "base__type_unused_import_count",
-    "base__chunk_chars_cv",
-    "base__type_regex_ratio",
     "base__indent_transition_mean",
     "embedding__structural_core__optics_cluster_type_entropy_mean",
+    "embedding__structural_core__embedding_first_pc_explained_variance",
+    "base__type_regex_ratio",
+    "embedding__structural_core__auto_agglo_cluster_type_entropy_mean",
+    "semantic__short_identifier_candidate_ratio",
+    "semantic__short_identifier_math_application_margin_mean",
     "base__type_bitwise_ratio",
     "embedding__structural_core__optics_noise_ratio",
-    "base__log_max_chunk_chars",
-    "base__identifier_single_letter_ratio",
-    "base__scalabrino_visual_comparison_density",
-    "compression__zlib_line_ratio_std",
-    "base__std_indent",
-    "base__scalabrino_visual_parenthesis_density",
-    "base__long_line_ratio_100",
-    "embedding__structural_core__auto_agglo_cluster_type_entropy_mean",
-    "embedding__structural_core__optics_cluster_size_cv",
-    "base__scalabrino_comment_identifier_word_coverage",
-    "base__type_literal_ratio",
-    "embedding__only_identifier__optics_cluster_size_cv",
-    "embedding__all__optics_cluster_size_cv",
     "base__identifier_length_cv",
+    "base__comparison_operator_density",
+    "base__operator_character_density",
 ]
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Materialize the current 26-feature CognaScore ML Ridge model."
+        description="Materialize the current 18-feature CognaScore ML Ridge model."
     )
     parser.add_argument("--feature-root", type=Path, default=BASE_FEATURE_ROOT)
     parser.add_argument(
@@ -91,18 +84,38 @@ def main() -> None:
     parser.add_argument("--artifact-root", type=Path, default=TRAINED_MODEL_ROOT)
     parser.add_argument("--ridge-alpha", type=float, default=200.0)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--method", default="cognascore_ml_consensus26_progressive_optics_identifier_cv_development")
+    parser.add_argument("--method", default=METHOD_KEY)
     parser.add_argument("--score-model-name", default=SCORE_MODEL_NAME)
+    parser.add_argument(
+        "--overwrite-artifact",
+        action="store_true",
+        help=(
+            "Explicitly allow replacement of an existing frozen model artifact. "
+            "Without this flag, an existing model directory is protected."
+        ),
+    )
     parser.add_argument(
         "--selected-features-metadata",
         type=Path,
-        help="Experiment metadata containing selected_features. Defaults to the current 26-feature list.",
+        help="Experiment metadata containing selected_features. Defaults to the current 18-feature list.",
+    )
+    parser.add_argument(
+        "--remove-feature",
+        action="append",
+        default=[],
+        help="Remove a feature from the selected list before fitting. Repeatable.",
+    )
+    parser.add_argument(
+        "--add-feature",
+        action="append",
+        default=[],
+        help="Append a feature to the selected list before fitting. Repeatable.",
     )
     parser.add_argument(
         "--train-dataset",
         action="append",
         default=[],
-        help="Dataset used to fit the final ML Ridge model. Can be repeated. Defaults to the five continuous-score datasets.",
+        help="Dataset used to fit the final ML Ridge model. Can be repeated. Defaults to the six continuous-score datasets.",
     )
     parser.add_argument(
         "--report-dataset",
@@ -111,11 +124,29 @@ def main() -> None:
         help="Dataset to materialize predictions for. Can be repeated. Defaults to the six development datasets and Generated 90.",
     )
     args = parser.parse_args()
+    requested_artifact_dir = (
+        args.artifact_root / args.score_model_name / EMBEDDING_SLUG
+    )
+    if requested_artifact_dir.exists() and not args.overwrite_artifact:
+        raise SystemExit(
+            f"Refusing to overwrite frozen model artifact: {requested_artifact_dir}. "
+            "Use a new --score-model-name for experiments, or pass "
+            "--overwrite-artifact explicitly."
+        )
     selected_features = (
         load_selected_features(args.selected_features_metadata)
         if args.selected_features_metadata
         else list(SELECTED_FEATURES)
     )
+    unknown_removals = sorted(set(args.remove_feature) - set(selected_features))
+    if unknown_removals:
+        raise SystemExit(f"Cannot remove unselected features: {unknown_removals}")
+    selected_features = [
+        feature for feature in selected_features if feature not in args.remove_feature
+    ]
+    for feature in args.add_feature:
+        if feature not in selected_features:
+            selected_features.append(feature)
     feature_category_counts = feature_category_counts_for(selected_features)
 
     report_datasets = tuple(args.report_dataset or ALL_DATASETS)
@@ -131,12 +162,20 @@ def main() -> None:
     fit_mask = training_middle_keep_mask(train, TRAINING_DROP_MIDDLE)
     ridge = fit_ridge(train, fit_mask, args.ridge_alpha, selected_features)
     coefficients = ridge_coefficients(ridge, selected_features)
-    fixed_threshold, threshold_metrics = calibrate_classification_threshold(
-        ridge,
-        train,
-        fit_mask,
-        selected_features,
+    binary_training_dataset = any(
+        DATASETS[name].label_type == "binary"
+        for name in train_datasets
+        if name in DATASETS
     )
+    if binary_training_dataset:
+        fixed_threshold, threshold_metrics = calibrate_classification_threshold(
+            ridge,
+            train,
+            fit_mask,
+            selected_features,
+        )
+    else:
+        fixed_threshold, threshold_metrics = None, None
     artifact_dir = write_model_artifact(
         model=ridge,
         artifact_root=args.artifact_root,
@@ -358,8 +397,12 @@ def write_summary(
         and row.get("score") is not None
         and math.isfinite(float(row["score"]))
     ]
-    binary = dataset == "jetbrains" or (
-        bool(valid)
+    dataset_spec = DATASETS.get(dataset)
+    binary = (
+        dataset_spec is not None and dataset_spec.label_type == "binary"
+    ) or (
+        dataset_spec is None
+        and bool(valid)
         and all(row.get("metadata", {}).get("evaluation_metric") == "mcc" for row in valid)
     )
 
@@ -415,7 +458,7 @@ def write_summary(
                 "for datasets outside the final fit pool"
             ),
             "feature_selection": (
-                "Current 30-feature development list derived from five-embedding-model "
+                f"Current {len(selected_features)}-feature development list derived from five-embedding-model "
                 "consensus stability screening across the six development datasets, "
                 "followed by correlation filtering and feature removal"
             ),
@@ -439,8 +482,7 @@ def write_summary(
             "training_drop_middle": TRAINING_DROP_MIDDLE,
             "training_drop_middle_scope": "none",
             "target": (
-                "per-dataset rank-percentile readability for continuous datasets; "
-                "original binary labels for binary datasets"
+                "per-dataset rank-percentile readability for the six continuous datasets"
             ),
             "final_model": (
                 f"Ridge(alpha={ridge_alpha:g}) with median imputation and standardization"
@@ -453,9 +495,8 @@ def write_summary(
             "standardized_coefficients": coefficients,
             "frozen_model_artifact": str(model_artifact),
             "limitations": (
-                "The feature list uses the six-dataset development consensus. The continuous "
-                "Ridge fit excludes binary-only JetBrains; JetBrains and Generated 90 are "
-                "transfer evaluations."
+                "The feature list and final Ridge fit use the six-dataset development pool; "
+                "Generated 90 remains a transfer evaluation."
             ),
         },
     }

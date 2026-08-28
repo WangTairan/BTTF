@@ -7,7 +7,7 @@ adaptive cluster structure.
 
 Two reported routes consume the same stable feature tables:
 
-- **CognaScore ML**: a performance-oriented Ridge model using 30 frozen
+- **CognaScore ML**: a performance-oriented Ridge model using 18 frozen
   features;
 - **CognaScore Compact**: an interpretable linear formula restricted to at
   most five features.
@@ -47,10 +47,10 @@ and comments.
 
 Every dataset receives the same schema:
 
-- **126 base features**: code size and layout, token and Halstead statistics,
+- **92 base features**: code size and layout, token and Halstead statistics,
   visual density and position, DFT summaries, chunk inventory and geometry,
   type-aware counts and ratios, identifier quality, and compression signals;
-- **112 embedding-derived features per model**: coverage, semantic-context
+- **102 embedding-derived features per model**: coverage, semantic-context
   indicators, embedding geometry, and adaptive clustering summaries.
 
 The embedding families are evaluated over four chunk views: `all`,
@@ -67,10 +67,10 @@ ML-facing columns use explicit namespaces:
 - `embedding__` for embedding geometry and clustering features;
 - `semantic__` for short-identifier semantic-context features.
 
-For one embedding model, the candidate table therefore contains 238 features
-(126 base plus 112 model-specific features). Five-model consensus selection
-runs five separate 238-feature screens; it does not concatenate all model
-vectors into one enlarged training matrix.
+Five-model consensus selection runs five separate screens over the same
+canonical feature names; it does not concatenate model-specific columns into
+one enlarged training matrix. Exact feature counts are recorded in generated
+table metadata so documentation cannot drift when the candidate schema changes.
 
 ## Supported embedding models
 
@@ -85,6 +85,23 @@ Each model has an independent cache under:
 ```text
 artifacts/cognascore/embeddings/<embedding-model>/embeddings.sqlite
 ```
+
+The embedding runner also materializes a versioned, benchmark-independent
+comment-relevance calibration set. Before feature extraction, each embedding
+model deterministically learns its own comment/code similarity threshold by
+maximizing balanced accuracy on these calibration anchors. The resulting
+artifact is stored at:
+
+```text
+artifacts/cognascore/calibration/<embedding-model>/comment_relevance.json
+```
+
+The threshold is never fitted on a readability benchmark. Each comment is
+aligned to its most similar non-comment semantic chunk, since a local comment
+need not describe an entire class. Four features summarize these alignments:
+their mean and minimum, the fraction below the calibrated threshold, and the
+mean similarity deficit.
+Feature extraction fails loudly when the calibration embeddings are missing.
 
 Download models explicitly when desired:
 
@@ -143,11 +160,17 @@ and all five embedding models:
 
 ```bash
 bash scripts/refresh_cognascore_after_extractor_change.sh
-REBUILD_EMBEDDING_FEATURES=0 bash scripts/rebuild_cognascore_feature_tables.sh
+bash scripts/rebuild_cognascore_feature_tables.sh
 ```
 
-The second form above rebuilds base tables and validates existing
-embedding-derived tables without rerunning embedding-feature computation.
+The refresh command atomically replaces the selected datasets' source
+references while retaining reusable text-keyed vectors. The feature builder
+uses a versioned, checkpointed rebuild: old build versions are recomputed, and
+restarting an interrupted current-version run reuses completed rows.
+
+The second form rebuilds all feature tables from existing vector caches without
+running an embedding model. Set `BASE_ONLY=1` only for an intentional base-only
+refresh.
 
 ## CognaScore ML
 
@@ -157,13 +180,13 @@ The stable materializer is:
 python -m src.methods.cognascore.runners.supervised_ridge
 ```
 
-The current frozen configuration uses 30 selected features, Nomic feature
-instantiations, `Ridge(alpha=200)`, and the five continuous-score datasets as
-the final fit pool. JetBrains remains an external binary evaluation. It writes
+The current frozen configuration uses 18 selected features, Nomic feature
+instantiations, `Ridge(alpha=200)`, and all six continuous-score datasets as
+the final fit pool. It writes
 predictions under:
 
 ```text
-results/methods/cognascore_ml_consensus30/<dataset>/<embedding-model>/summary.json
+results/methods/cognascore_ml_consensus18_6dataset_sampled_margin/<dataset>/<embedding-model>/summary.json
 ```
 
 The ranking and selection experiment that produced the frozen list lives in
@@ -180,7 +203,6 @@ python -m src.methods.cognascore.runners.compact_formula
 ```
 
 It retains a fixed four-feature linear formula and writes results under
-`results/methods/cognascore_compact/`. Alternative compact-formula searches are research
-experiments and live in `experiments/cognascore/compact_search.py`. Its default
-run covers the six established datasets; either generated dataset can be added
-explicitly with `--dataset` after its Qwen feature table has been materialized.
+`results/methods/cognascore_compact/`. Alternative compact-formula searches are
+research experiments in `experiments/cognascore/compact_search.py`. Its default
+run covers the six established datasets.

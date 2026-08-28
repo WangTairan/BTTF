@@ -1,0 +1,11 @@
+public static void main(String[] args) {
+        final ChineseRings rings = new ChineseRings(new Vector3D(1, 2, 3),
+                                                    25, 2,
+                                                    20, 1,
+                                                    2000, 1500);
+        final ChineseRingsClassifier classifier = new ChineseRingsClassifier(rings, 15, 15);
+        printU("before.chinese.U.seq.dat", classifier);
+        classifier.createSequentialTask(100000).run();
+        printU("after.chinese.U.seq.dat", classifier);
+        printHit("after.chinese.hit.seq.dat", classifier);
+    }

@@ -1,0 +1,5 @@
+def check(self):
+        messages = []
+        for pattern in self.url_patterns:
+            messages.extend(check_resolver(pattern))
+        return messages or self.pattern.check()

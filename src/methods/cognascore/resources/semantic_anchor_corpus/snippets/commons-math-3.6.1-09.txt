@@ -1,0 +1,7 @@
+protected void checkIndex(final int index) throws OutOfRangeException {
+        if (index < 0 ||
+            index >= getDimension()) {
+            throw new OutOfRangeException(LocalizedFormats.INDEX,
+                                          index, 0, getDimension() - 1);
+        }
+    }

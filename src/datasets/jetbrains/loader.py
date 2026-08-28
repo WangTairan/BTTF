@@ -27,12 +27,16 @@ def load_dataset(path: Path = DEFAULT_DATASET) -> list[DatasetItem]:
             unreadable = float(row["unreadable"])
             vote_total = readable + unreadable
             human_vote_fraction = readable / vote_total if vote_total else None
+            if human_vote_fraction is None:
+                raise ValueError(
+                    f"JetBrains score on CSV line {line_number} has no human votes"
+                )
             binary_readability = int(row["readability"])
             items.append(
                 DatasetItem(
                     task_id=f"JetBrains/{snippet_id}",
                     content=snippet["snippet"],
-                    readability_score=float(binary_readability),
+                    readability_score=float(human_vote_fraction),
                     readability_prompt=snippet["task"],
                     metadata={
                         "snippet_id": snippet_id,
@@ -41,14 +45,17 @@ def load_dataset(path: Path = DEFAULT_DATASET) -> list[DatasetItem]:
                         "human_readable_vote_fraction": human_vote_fraction,
                         "neutral": row["neutral"].lower() == "true",
                         "binary_readability": binary_readability,
-                        "evaluation_metric": "mcc",
+                        "evaluation_metric": "spearman",
                         "existing_metrics": {
                             "posnett": int(row["posnett"]),
                             "dorn_reversed": int(row["dorn_reversed"]),
                             "scalabrino_reversed": int(row["scalabrino_reverced"]),
                             "mi": int(row["mi"]),
                         },
-                        "readability_scale": "binary human readability classification; 1=readable, 0=unreadable",
+                        "readability_scale": (
+                            "continuous fraction of human votes marked readable; "
+                            "1=unanimously readable, 0=unanimously unreadable"
+                        ),
                     },
                 )
             )

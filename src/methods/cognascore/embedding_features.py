@@ -12,6 +12,7 @@ from sklearn.cluster import AgglomerativeClustering, KMeans, OPTICS
 from sklearn.metrics import pairwise_distances
 from sklearn.metrics import silhouette_score
 
+from .comment_relevance import maximum_cosine_to_code, normalized_code_matrix
 from .semantic_context import (
     WHOLE_CODE_CONTEXT_TYPE,
     semantic_context_feature_names,
@@ -20,6 +21,14 @@ from .semantic_context import (
 
 OPTICS_XI = 0.05
 AUTO_KMEANS_K_VALUES = (2, 3, 4, 6, 8, 12, 16)
+EMBEDDING_FEATURE_BUILD_VERSION = 3
+
+COMMENT_RELEVANCE_FEATURE_NAMES = (
+    "comment_code_similarity_mean",
+    "comment_code_similarity_min",
+    "irrelevant_comment_ratio",
+    "irrelevant_comment_deficit_mean",
+)
 
 SEMANTIC_CORE_CHUNK_TYPES = frozenset(("IDENTIFIER", "DECLARATION", "CALL", "LITERAL"))
 STRUCTURAL_CORE_CHUNK_TYPES = frozenset(("CONTROL_FLOW", "ASSIGNMENT", "ARITHMETIC", "COMPARISON", "LOGICAL", "BITWISE"))
@@ -72,6 +81,18 @@ VIEW_FAMILY_SUFFIXES: dict[str, tuple[str, ...]] = {
     ),
 }
 
+REMOVED_EMBEDDING_FEATURE_NAMES = frozenset(
+    {
+        "all__coverage_ratio",
+        "all__embedding_effective_rank",
+        "only_identifier__embedding_effective_rank",
+        "semantic_core__embedding_effective_rank",
+        "only_identifier__optics_cluster_type_entropy_mean",
+        "only_identifier__hdbscan_cluster_type_entropy_mean",
+        "only_identifier__auto_agglo_cluster_type_entropy_mean",
+    }
+)
+
 
 IDENTITY_COLUMNS = ("dataset", "task_id", "readability_score")
 
@@ -85,15 +106,10 @@ class EmbeddingFeatureDefinition:
 
 def embedding_feature_names() -> list[str]:
     names = [
-        "embedding_coverage_ratio",
-        "embedding_mean_cosine_to_centroid",
-        "embedding_pairwise_cosine_std",
-        "embedding_effective_rank",
-        "embedding_first_pc_explained_variance",
-        "scalabrino_comment_embedding_coverage_ratio",
         "scalabrino_comment_identifier_cosine_mean",
         "scalabrino_comment_identifier_cosine_max",
         "scalabrino_comment_identifier_centroid_cosine",
+        *COMMENT_RELEVANCE_FEATURE_NAMES,
     ]
     names.extend(semantic_context_feature_names())
     names.extend(view_clustering_feature_names())
@@ -104,10 +120,14 @@ def view_clustering_feature_names() -> list[str]:
     names: list[str] = []
     for view_name, _, _ in CHUNK_VIEW_RULES:
         for suffix in VIEW_COVERAGE_SUFFIXES:
-            names.append(f"{view_name}__{suffix}")
+            name = f"{view_name}__{suffix}"
+            if name not in REMOVED_EMBEDDING_FEATURE_NAMES:
+                names.append(name)
         for family, suffixes in VIEW_FAMILY_SUFFIXES.items():
             for suffix in suffixes:
-                names.append(f"{view_name}__{family}_{suffix}")
+                name = f"{view_name}__{family}_{suffix}"
+                if name not in REMOVED_EMBEDDING_FEATURE_NAMES:
+                    names.append(name)
     return names
 
 
@@ -134,18 +154,15 @@ def _feature_description(name: str) -> str:
 
 def embedding_feature_definitions() -> list[EmbeddingFeatureDefinition]:
     definitions = [
-        EmbeddingFeatureDefinition("embedding_coverage_ratio", "embedding_coverage", "Available embedded chunk count divided by total chunk source count."),
-        EmbeddingFeatureDefinition("embedding_mean_cosine_to_centroid", "embedding_geometry", "Weighted mean cosine distance to the task centroid."),
-        EmbeddingFeatureDefinition("embedding_pairwise_cosine_std", "embedding_geometry", "Weighted standard deviation of pairwise cosine distance."),
-        EmbeddingFeatureDefinition("embedding_effective_rank", "embedding_geometry", "Entropy-based effective rank of the weighted embedding covariance."),
-        EmbeddingFeatureDefinition("embedding_first_pc_explained_variance", "embedding_geometry", "Variance ratio explained by the first principal component."),
-        EmbeddingFeatureDefinition("scalabrino_comment_embedding_coverage_ratio", "scalabrino_comment_identifier_alignment", "Embedded comment source count divided by total chunk source count."),
         EmbeddingFeatureDefinition("scalabrino_comment_identifier_cosine_mean", "scalabrino_comment_identifier_alignment", "Source-count-weighted mean cosine similarity between comment and identifier embeddings."),
         EmbeddingFeatureDefinition("scalabrino_comment_identifier_cosine_max", "scalabrino_comment_identifier_alignment", "Maximum cosine similarity between a comment embedding and an identifier embedding."),
         EmbeddingFeatureDefinition("scalabrino_comment_identifier_centroid_cosine", "scalabrino_comment_identifier_alignment", "Cosine similarity between source-count-weighted comment and identifier centroids."),
+        EmbeddingFeatureDefinition("comment_code_similarity_mean", "comment_code_relevance", "Source-count-weighted mean of each comment's maximum cosine similarity to a non-comment semantic chunk."),
+        EmbeddingFeatureDefinition("comment_code_similarity_min", "comment_code_relevance", "Minimum across comments of their maximum cosine similarity to a non-comment semantic chunk."),
+        EmbeddingFeatureDefinition("irrelevant_comment_ratio", "comment_code_relevance", "Source-count-weighted fraction of comments below the embedding model's calibrated relevance threshold."),
+        EmbeddingFeatureDefinition("irrelevant_comment_deficit_mean", "comment_code_relevance", "Mean positive distance below the embedding model's calibrated relevance threshold."),
         EmbeddingFeatureDefinition("short_identifier_candidate_ratio", "semantic_context_gate", "Mathematical-style short identifiers divided by identifier chunks."),
-        EmbeddingFeatureDefinition("short_identifier_math_gate_delta", "semantic_context_gate", "Whole-code math-context similarity minus the stronger non-math/business similarity."),
-        EmbeddingFeatureDefinition("short_identifier_non_math_risk", "semantic_context_gate", "short_identifier_candidate_ratio multiplied by max(0, -short_identifier_math_gate_delta)."),
+        EmbeddingFeatureDefinition("short_identifier_math_application_margin_mean", "semantic_context_gate", "Mean mathematical-minus-application cosine-similarity margin across candidate-bearing code segments."),
     ]
     defined = {definition.name for definition in definitions}
     for name in embedding_feature_names():
@@ -164,10 +181,12 @@ def extract_embedding_feature_row(
     code_vector: np.ndarray | None = None,
     code_segment_vectors: list[tuple[str, np.ndarray]] | None = None,
     math_centroid: np.ndarray | None = None,
-    business_centroid: np.ndarray | None = None,
-    non_math_centroid: np.ndarray | None = None,
+    application_centroid: np.ndarray | None = None,
+    comment_relevance_threshold: float | None = None,
     max_vectors: int | None = 512,
 ) -> dict[str, Any]:
+    if comment_relevance_threshold is None or not math.isfinite(comment_relevance_threshold):
+        raise ValueError("A finite model-specific comment relevance threshold is required")
     row: dict[str, Any] = {
         "dataset": dataset,
         "task_id": task_id,
@@ -189,37 +208,71 @@ def extract_embedding_feature_row(
             code_segment_vectors=code_segment_vectors,
             identifier_lexemes=identifier_lexemes,
             math_centroid=math_centroid,
-            business_centroid=business_centroid,
-            non_math_centroid=non_math_centroid,
+            application_centroid=application_centroid,
         )
     )
     if not chunk_vector_rows:
         # An item whose extractor legitimately emits no cognitive chunks is
         # complete when zero chunk embeddings were expected. Whole-code
         # semantic-context features remain available for such an item.
-        row["embedding_coverage_ratio"] = 1.0 if total_source_count == 0 else 0.0
         return row
 
-    original_available_weight = float(sum(count for _, _, count, _ in chunk_vector_rows))
     row.update(
         _comment_identifier_alignment_features(
             chunk_vector_rows,
-            total_source_count=total_source_count,
             max_vectors_per_type=max_vectors,
+        )
+    )
+    row.update(
+        _comment_code_relevance_features(
+            chunk_vector_rows,
+            threshold=comment_relevance_threshold,
         )
     )
     if max_vectors is not None and len(chunk_vector_rows) > max_vectors:
         chunk_vector_rows = sorted(chunk_vector_rows, key=lambda item: (-item[2], item[0], item[1]))[:max_vectors]
 
-    vectors = np.stack([vector for _, _, _, vector in chunk_vector_rows]).astype(np.float64)
-    weights = np.asarray([count for _, _, count, _ in chunk_vector_rows], dtype=np.float64)
-    total_weight = float(max(total_source_count, 1))
-    normalized = _normalize_rows(vectors)
-
-    row["embedding_coverage_ratio"] = original_available_weight / total_weight
-    row.update(_geometry_features(normalized, weights))
     row.update(_view_clustering_features(chunk_vector_rows, total_source_count=total_source_count, max_vectors=max_vectors))
     return row
+
+
+def _comment_code_relevance_features(
+    vector_rows: Sequence[tuple[str, str, int, np.ndarray]],
+    *,
+    threshold: float,
+) -> dict[str, float]:
+    comment_rows = [
+        row for row in vector_rows if _normalize_chunk_type(row[0]) == "COMMENT"
+    ]
+    code_rows = [
+        row for row in vector_rows if _normalize_chunk_type(row[0]) != "COMMENT"
+    ]
+    neutral = {
+        "comment_code_similarity_mean": threshold,
+        "comment_code_similarity_min": threshold,
+        "irrelevant_comment_ratio": 0.0,
+        "irrelevant_comment_deficit_mean": 0.0,
+    }
+    if not comment_rows or not code_rows:
+        return neutral
+
+    code_matrix = normalized_code_matrix(code_rows)
+    similarities = np.asarray(
+        [maximum_cosine_to_code(row[3], code_matrix) for row in comment_rows],
+        dtype=float,
+    )
+    weights = np.asarray([max(int(row[2]), 0) for row in comment_rows], dtype=float)
+    if float(weights.sum()) <= 0:
+        return neutral
+    deficits = np.maximum(threshold - similarities, 0.0)
+    return {
+        "comment_code_similarity_mean": float(np.average(similarities, weights=weights)),
+        "comment_code_similarity_min": float(np.min(similarities)),
+        "irrelevant_comment_ratio": float(
+            np.average((similarities < threshold).astype(float), weights=weights)
+        ),
+        "irrelevant_comment_deficit_mean": float(np.average(deficits, weights=weights)),
+    }
 
 
 def write_embedding_feature_database(
@@ -228,6 +281,7 @@ def write_embedding_feature_database(
     output_dir: Path,
     metadata: Mapping[str, Any],
 ) -> tuple[Path, Path]:
+    _validate_unique_identities(rows)
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "features.csv"
     metadata_path = output_dir / "metadata.json"
@@ -279,6 +333,17 @@ def write_embedding_feature_database(
     return csv_path, metadata_path
 
 
+def _validate_unique_identities(rows: Sequence[Mapping[str, Any]]) -> None:
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        identity = (str(row.get("dataset", "")), str(row.get("task_id", "")))
+        if not all(identity):
+            raise ValueError(f"Missing embedding-feature-row identity: {identity}")
+        if identity in seen:
+            raise ValueError(f"Duplicate embedding-feature-row identity: {identity}")
+        seen.add(identity)
+
+
 def _geometry_features(x: np.ndarray, weights: np.ndarray) -> dict[str, float]:
     centroid = np.average(x, axis=0, weights=weights)
     centroid_norm = float(np.linalg.norm(centroid))
@@ -297,15 +362,12 @@ def _geometry_features(x: np.ndarray, weights: np.ndarray) -> dict[str, float]:
 def _comment_identifier_alignment_features(
     vector_rows: Sequence[tuple[str, str, int, np.ndarray]],
     *,
-    total_source_count: int,
     max_vectors_per_type: int | None = 512,
 ) -> dict[str, float]:
     """Measure whether comments describe the identifiers present in the snippet."""
     comment_rows = [row for row in vector_rows if _normalize_chunk_type(row[0]) == "COMMENT"]
     identifier_rows = [row for row in vector_rows if _normalize_chunk_type(row[0]) == "IDENTIFIER"]
-    comment_weight = float(sum(count for _, _, count, _ in comment_rows))
     values = {
-        "scalabrino_comment_embedding_coverage_ratio": comment_weight / max(float(total_source_count), 1.0),
         "scalabrino_comment_identifier_cosine_mean": 0.0,
         "scalabrino_comment_identifier_cosine_max": 0.0,
         "scalabrino_comment_identifier_centroid_cosine": 0.0,
@@ -364,7 +426,8 @@ def _view_clustering_features(
                 max_vectors=max_vectors,
             )
         )
-    return features
+    retained = set(view_clustering_feature_names())
+    return {name: value for name, value in features.items() if name in retained}
 
 
 def _single_view_clustering_features(

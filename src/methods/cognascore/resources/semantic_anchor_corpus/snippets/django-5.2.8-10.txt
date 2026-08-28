@@ -1,0 +1,11 @@
+def get_fallback_sql(self, compiler, connection):
+        if isinstance(self.rhs, Query):
+            return super(TupleLookupMixin, self).as_sql(compiler, connection)
+        # Process right-hand-side to trigger sanitization.
+        self.process_rhs(compiler, connection)
+        # e.g.: (a, b, c) == (x, y, z) as SQL:
+        # WHERE a = x AND b = y AND c = z
+        lookups = [Exact(col, val) for col, val in zip(self.lhs, self.rhs)]
+        root = WhereNode(lookups, connector=AND)
+
+        return root.as_sql(compiler, connection)

@@ -1,0 +1,13 @@
+def dimension(self):
+        """Dimension of the vector space V underlying the Lie algebra
+
+        Examples
+        ========
+
+        >>> from sympy.liealgebras.cartan_type import CartanType
+        >>> c = CartanType("E6")
+        >>> c.dimension()
+        8
+        """
+
+        return 8

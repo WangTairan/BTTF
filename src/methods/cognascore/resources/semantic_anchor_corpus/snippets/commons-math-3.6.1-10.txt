@@ -1,0 +1,4 @@
+public Dfp linearCombination(final Dfp a1, final Dfp b1, final Dfp a2, final Dfp b2,
+                                 final Dfp a3, final Dfp b3, final Dfp a4, final Dfp b4) {
+        return a1.multiply(b1).add(a2.multiply(b2)).add(a3.multiply(b3)).add(a4.multiply(b4));
+    }

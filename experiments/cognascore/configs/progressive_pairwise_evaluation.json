@@ -1,0 +1,28 @@
+{
+  "name": "progressive_pairwise_evaluation",
+  "status": "frozen",
+  "frozen_at": "2026-08-25",
+  "dataset": "java_progressive_obfuscation",
+  "grouping_unit": "original source class",
+  "levels": ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
+  "primary_stage_pairs": [
+    "L0->L1",
+    "L1->L2",
+    "L2->L3",
+    "L3->L4",
+    "L4->L5",
+    "L5->L6"
+  ],
+  "primary_metrics": [
+    "adjacent_stage_decrease_rate",
+    "adjacent_stage_mean_score_drop",
+    "mean_within_group_spearman",
+    "non_increasing_group_rate",
+    "endpoint_first_above_last_rate"
+  ],
+  "pooled_spearman": {
+    "status": "diagnostic_only",
+    "selection_signal": false,
+    "reason": "Pooling variants across unrelated source classes mixes within-class degradation with between-class score differences."
+  }
+}

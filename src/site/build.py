@@ -12,6 +12,13 @@ from src.experiments.paths import safe_path_part
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.methods.llm_prompt import LLM_READABILITY_PROMPT_TEMPLATE
 from src.methods.posnett.method import JAVA_KEYWORDS, JAVA_OPERATORS, TOKEN_PATTERN, strip_comments
+from src.methods.cognascore.embedding_features import embedding_feature_definitions
+from src.methods.cognascore.feature_database import feature_definitions
+from src.methods.cognascore.runners.supervised_ridge import (
+    METHOD_KEY as COGNASCORE_ML_METHOD,
+    SELECTED_FEATURES as COGNASCORE_ML_FEATURES,
+    feature_category_counts_for as cognascore_feature_category_counts,
+)
 from src.methods.rmc.prompts import (
     CODE_MASK_JSON_PROMPT_TEMPLATE,
     GENERALIST_NEGATIVE_3SHOT_VARIANT,
@@ -55,7 +62,7 @@ _TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
 _RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
 _DATASET_TOTAL_CACHE: dict[str, int | None] = {}
 COGNASCORE_ML_METHODS = {
-    "cognascore_ml_consensus24",
+    COGNASCORE_ML_METHOD,
 }
 HIDDEN_METHODS: set[str] = set()
 HIDDEN_DATASETS: set[str] = set()
@@ -411,12 +418,14 @@ def method_description(method: str) -> str:
           <pre class="code-block"><code>{escape(user_prompt)}</code></pre>
         """
     if method in COGNASCORE_ML_METHODS:
+        feature_counts = cognascore_feature_category_counts(COGNASCORE_ML_FEATURES)
+        selected_feature_rows = cognascore_selected_feature_rows()
         training_note = (
-            "This Consensus-24 ML route first ranks features independently under five "
+            "The current ML route first ranks features independently under five "
             "embedding models, then retains a compact consensus set whose feature names "
             "are stable across embedding spaces. After the feature set is fixed, the final "
             "readability score is fitted with Ridge regression using the Nomic feature "
-            "instantiation. The selected 24 features are evaluated on MBJP, Buse, Dorn, "
+            f"instantiation. The selected {len(COGNASCORE_ML_FEATURES)} features are evaluated on MBJP, Buse, Dorn, "
             "Scalabrino, Schnappinger, and JetBrains."
         )
         return f"""
@@ -433,7 +442,7 @@ def method_description(method: str) -> str:
                   <h3>Code size and lexical statistics</h3>
                   <p>Code-scale and token-distribution controls.</p>
                   <div class="feature-tags">
-                    <code>loc</code><code>vocabulary_size</code><code>token_count</code><code>halstead_volume</code><code>byte_entropy</code>
+                    <code>loc</code><code>log_vocabulary_size</code><code>log_token_count</code><code>log_halstead_volume</code><code>byte_entropy</code>
                   </div>
                 </div>
                 <div class="feature-box">
@@ -465,28 +474,28 @@ if score &gt; limit:
                     <h3>Cognitive chunk inventory</h3>
                     <p>Chunk count, coverage, and local unevenness.</p>
                     <div class="feature-tags embedding-tags">
-                      <code>semantic_chunk_count</code><code>std_chunks_per_source_line</code><code>chunk_chars_cv</code><code>chunk_line_span_ratio</code>
+                      <code>lexeme_count</code><code>mean_chunks_per_source_line</code><code>std_chunks_per_source_line</code><code>chunk_chars_cv</code>
                     </div>
                   </div>
                   <div class="feature-box embedding-box">
                     <h3>Type-aware chunk families</h3>
                     <p>Chunk statistics split by cognitive role.</p>
                     <div class="feature-tags embedding-tags">
-                      <code>type_identifier_count</code><code>type_call_count</code><code>type_control_flow_count</code><code>type_logical_count</code>
+                      <code>type_call_count</code><code>type_control_flow_count</code><code>type_assignment_ratio</code><code>type_logical_count</code>
                     </div>
                   </div>
                   <div class="feature-box embedding-box">
                     <h3>Embedding-space geometry</h3>
                     <p>Semantic concentration versus dispersion.</p>
                     <div class="feature-tags embedding-tags">
-                      <code>embedding_mean_cosine_to_centroid</code><code>embedding_pairwise_cosine_std</code><code>embedding_effective_rank</code><code>embedding_first_pc_explained_variance</code>
+                      <code>all__embedding_mean_cosine_to_centroid</code><code>all__embedding_pairwise_cosine_std</code><code>structural_core__embedding_effective_rank</code><code>all__embedding_first_pc_explained_variance</code>
                     </div>
                   </div>
                   <div class="feature-box cluster-box">
                     <h3>Automatic clustering</h3>
                     <p>Adaptive grouping over embedded chunks.</p>
                     <div class="feature-tags cluster-tags">
-                      <code>hdbscan_noise_ratio</code><code>optics_reachability_mean</code><code>auto_kmeans_selected_k</code><code>auto_agglo_cluster_count</code>
+                      <code>all__hdbscan_noise_ratio</code><code>all__optics_reachability_mean</code><code>structural_core__auto_kmeans_selected_k</code><code>all__auto_agglo_cluster_count</code>
                     </div>
                   </div>
                   <div class="feature-box embedding-box wide-box">
@@ -500,37 +509,16 @@ if score &gt; limit:
               </section>
             </div>
           </figure>
-          <p class="muted wide">The initial ML feature table contains code-scale, visual-layout, chunk-inventory, identifier-quality, type-aware chunk, compression, embedding-geometry, semantic-context, and adaptive-clustering features. The stable schema contains 111 base features plus 108 embedding-derived features for each model. Feature selection is performed as a cross-embedding consensus: L1 logistic stability screening is run separately under Nomic, Jina Code, Qwen3, Snowflake Arctic, and Voyage Nano; canonical feature names are aggregated and redundant candidates are filtered. The final score is a Ridge model over the fixed consensus feature set. {escape(training_note)}</p>
+          <p class="muted wide">The initial ML feature table contains code-scale, visual-layout, chunk-inventory, identifier-quality, type-aware chunk, compression, embedding-geometry, semantic-context, and adaptive-clustering features. The stable schema contains 98 base features plus 99 embedding-derived features for each model. Feature selection is performed as a cross-embedding consensus: L1 logistic stability screening is run separately under Nomic, Jina Code, Qwen3, Snowflake Arctic, and Voyage Nano; canonical feature names are aggregated and candidates above the collinearity threshold are replaced by the next-ranked non-redundant feature. The final score is a Ridge model over the fixed consensus feature set. {escape(training_note)}</p>
           <section class="method-note">
-            <h2>Final Consensus-24 feature set</h2>
-            <p class="muted wide">The final ML model uses 24 selected features: 19 base/CognaScore features, 4 embedding-derived features, and 1 compression feature. Each feature below is instantiated with the Nomic feature table for the final Ridge model.</p>
+            <h2>Current frozen feature set</h2>
+            <p class="muted wide">The final ML model uses {len(COGNASCORE_ML_FEATURES)} selected features: {feature_counts['base']} base features, {feature_counts['embedding_derived']} embedding-derived features, {feature_counts['compression']} compression feature, and {feature_counts['semantic_context']} semantic-context features. The final Ridge model uses the Nomic instantiation.</p>
             <table class="records compact-feature-table">
               <thead><tr><th>Feature</th><th>One-sentence interpretation</th></tr></thead>
-              <tbody>
-                <tr><td><code>base__operator_density</code></td><td>Measures how densely operator symbols occupy the visible code area, capturing local symbolic load.</td></tr>
-                <tr><td><code>base__byte_entropy</code></td><td>Measures character-level textual entropy, used as a broad proxy for lexical irregularity.</td></tr>
-                <tr><td><code>base__blank_line_ratio</code></td><td>Measures the fraction of empty lines, capturing visual separation and spacing in the snippet.</td></tr>
-                <tr><td><code>base__type_literal_ratio</code></td><td>Measures the fraction of chunks classified as literal constants.</td></tr>
-                <tr><td><code>base__visual_period_y_mean</code></td><td>Measures the average vertical position of period/dot tokens, which often mark member access or qualified names.</td></tr>
-                <tr><td><code>embedding__structural_core__auto_kmeans_selected_k</code></td><td>Measures the automatically selected number of semantic clusters among structural-core chunks.</td></tr>
-                <tr><td><code>base__max_line_length</code></td><td>Measures the longest source line, capturing the worst-case horizontal reading span.</td></tr>
-                <tr><td><code>embedding__only_identifier__embedding_first_pc_explained_variance</code></td><td>Measures whether identifier embeddings collapse along one dominant semantic direction.</td></tr>
-                <tr><td><code>base__chunk_chars_cv</code></td><td>Measures coefficient of variation in chunk character lengths, capturing uneven chunk size.</td></tr>
-                <tr><td><code>base__type_unused_import_count</code></td><td>Counts imports detected as unused, acting as a sparse signal of dead or distracting dependencies.</td></tr>
-                <tr><td><code>base__type_regex_ratio</code></td><td>Measures the fraction of chunks associated with regular-expression content.</td></tr>
-                <tr><td><code>base__std_indent</code></td><td>Measures dispersion of indentation depth across lines.</td></tr>
-                <tr><td><code>base__type_bitwise_ratio</code></td><td>Measures the fraction of chunks involving bitwise operations or masks.</td></tr>
-                <tr><td><code>embedding__structural_core__optics_cluster_type_entropy_mean</code></td><td>Measures average chunk-type entropy inside OPTICS clusters over structural-core embeddings.</td></tr>
-                <tr><td><code>base__indent_transition_mean</code></td><td>Measures average line-to-line indentation change, capturing control-structure movement in the visual layout.</td></tr>
-                <tr><td><code>base__identifier_single_letter_ratio</code></td><td>Measures the fraction of identifiers that are single-letter names.</td></tr>
-                <tr><td><code>base__log_max_chunk_chars</code></td><td>Log-transforms the largest chunk length, capturing the largest local cognitive unit while reducing scale dominance.</td></tr>
-                <tr><td><code>embedding__structural_core__optics_noise_ratio</code></td><td>Measures the fraction of structural-core chunks treated as noise by adaptive OPTICS clustering.</td></tr>
-                <tr><td><code>compression__zlib_line_ratio_std</code></td><td>Measures the line-to-line variability of zlib compression ratio, capturing uneven repetition or regularity across source lines.</td></tr>
-                <tr><td><code>base__long_line_ratio_100</code></td><td>Measures the fraction of source lines longer than 100 characters, capturing extreme horizontal reading burden.</td></tr>
-              </tbody>
+              <tbody>{selected_feature_rows}</tbody>
             </table>
-            <h3>Collinearity and sparsity</h3>
-            <p class="muted wide">The final 24 features are not strongly redundant: no pair has Pearson or Spearman correlation above 0.9, and only two pairs exceed 0.8. The main overlap is expected: short-identifier ratio and single-letter identifier ratio both measure short-name behavior. Overall sparsity is moderate, although a few rare-pattern features such as regex, bitwise operations, and unused imports are active only in a small subset of samples.</p>
+            <h3>Collinearity control</h3>
+            <p class="muted wide">Consensus candidates are considered in ranked order. A later candidate is rejected when its absolute Pearson or Spearman correlation with any retained feature exceeds 0.9, and selection continues with the next non-redundant candidate.</p>
           </section>
         """
     if method == "cognascore_compact":
@@ -574,6 +562,42 @@ if score &gt; limit:
           <pre class="code-block"><code>{escape(prompt)}</code></pre>
         """
     return '<p class="muted">Method implementation details are not available for this method yet.</p>'
+
+
+def cognascore_selected_feature_rows() -> str:
+    base_descriptions = {
+        definition.name: definition.description
+        for definition in feature_definitions()
+    }
+    embedding_descriptions = {
+        definition.name: definition.description
+        for definition in embedding_feature_definitions()
+    }
+    rows = []
+    for feature in COGNASCORE_ML_FEATURES:
+        if feature.startswith("compression__"):
+            raw_name = f"compression_{feature.removeprefix('compression__')}"
+            description = base_descriptions.get(raw_name)
+        elif feature.startswith("base__"):
+            raw_name = feature.removeprefix("base__")
+            description = base_descriptions.get(raw_name)
+            if description is None and raw_name.startswith("type_"):
+                description = f"CognaScore typed-chunk inventory statistic: {raw_name}."
+        elif feature.startswith("embedding__"):
+            raw_name = feature.removeprefix("embedding__")
+            description = embedding_descriptions.get(raw_name)
+        elif feature.startswith("semantic__"):
+            raw_name = feature.removeprefix("semantic__")
+            description = embedding_descriptions.get(raw_name)
+        else:
+            description = None
+        if description is None:
+            raise ValueError(f"Missing CognaScore feature description: {feature}")
+        rows.append(
+            f"<tr><td><code>{escape(feature)}</code></td>"
+            f"<td>{escape(description)}</td></tr>"
+        )
+    return "".join(rows)
 
 
 def rmc_prompt_for_method(method: str) -> tuple[str | None, str]:
@@ -681,7 +705,10 @@ def dataset_note(dataset: str) -> str:
         "mbjp": "MBJP is a small Java programming readability dataset with continuous human scores.",
         "buse": "Buse contains 100 short Java snippets with averaged human Likert readability ratings from the Buse and Weimer study.",
         "scalabrino": "Scalabrino contains Java snippets with continuous readability scores from the original dataset.",
-        "jetbrains": "JetBrains contains Java snippets with binary human readability labels.",
+        "jetbrains": (
+            "JetBrains contains Java snippets scored by the continuous fraction "
+            "of human votes marked readable."
+        ),
         "dorn": "Dorn is the original mixed-language readability dataset with CUDA, Java, and Python snippets.",
         "schnappinger": "Schnappinger contains Java class-level examples with continuous readability labels derived from the study probabilities.",
     }

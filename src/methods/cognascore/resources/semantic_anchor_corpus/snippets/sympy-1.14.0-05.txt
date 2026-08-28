@@ -1,0 +1,19 @@
+def det_LU_decomposition(self):
+        """Compute matrix determinant using LU decomposition.
+
+
+        Note that this method fails if the LU decomposition itself
+        fails. In particular, if the matrix has no inverse this method
+        will fail.
+
+        TODO: Implement algorithm for sparse matrices (SFF),
+        http://www.eecis.udel.edu/~saunders/papers/sffge/it5.ps.
+
+        See Also
+        ========
+
+
+        det
+        berkowitz_det
+        """
+        return self.det(method='lu')

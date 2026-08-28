@@ -1,0 +1,25 @@
+def _eval_pow_by_recursion_dotprodsimp(self, num, prevsimp=None):
+        if prevsimp is None:
+            prevsimp = [True]*len(self)
+
+        if num == 1:
+            return self
+
+        if num % 2 == 1:
+            a, b = self, self._eval_pow_by_recursion_dotprodsimp(num - 1,
+                    prevsimp=prevsimp)
+        else:
+            a = b = self._eval_pow_by_recursion_dotprodsimp(num // 2,
+                    prevsimp=prevsimp)
+
+        m     = a.multiply(b, dotprodsimp=False)
+        lenm  = len(m)
+        elems = [None]*lenm
+
+        for i in range(lenm):
+            if prevsimp[i]:
+                elems[i], prevsimp[i] = _dotprodsimp(m[i], withsimp=True)
+            else:
+                elems[i] = m[i]
+
+        return m._new(m.rows, m.cols, elems)

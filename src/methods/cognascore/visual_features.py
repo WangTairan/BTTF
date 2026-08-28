@@ -32,15 +32,9 @@ def visual_layout_features(
     identifier_area = 0
     keyword_area = 0
     operator_area = 0
-    comment_area = sum(
-        len(chunk.lexeme.removeprefix("comment_"))
-        for chunk in chunks
-        if chunk.type.upper() == "COMMENT"
-    )
     per_line_identifier_counts = [0.0 for _ in range(physical_line_count)]
     per_line_keyword_counts = [0.0 for _ in range(physical_line_count)]
     per_line_period_counts = [0.0 for _ in range(physical_line_count)]
-    per_line_comma_counts = [0.0 for _ in range(physical_line_count)]
     per_line_comparison_counts = [0.0 for _ in range(physical_line_count)]
     per_line_number_counts = [0.0 for _ in range(physical_line_count)]
     per_line_parenthesis_counts = [0.0 for _ in range(physical_line_count)]
@@ -59,7 +53,6 @@ def visual_layout_features(
                 per_line_period_counts[index] += 1.0
             elif token == ",":
                 comma_positions.append(line_number)
-                per_line_comma_counts[index] += 1.0
             elif token in {"==", "!=", ">=", "<=", ">", "<"}:
                 comparison_positions.append(line_number)
                 per_line_comparison_counts[index] += 1.0
@@ -74,25 +67,18 @@ def visual_layout_features(
             per_line_identifier_counts[index] += 1.0
 
     line_lengths = [float(len(line)) for line in lines] or [0.0]
-    space_counts = [float(sum(1 for char in line if char.isspace())) for line in lines] or [0.0]
     chunk_span = _chunk_line_span(chunks)
 
     return {
-        "visual_token_density": len(tokens_by_line) / max(loc, 1),
-        "visual_identifier_density": len(identifier_positions) / max(loc, 1),
         "visual_keyword_density": len(keyword_positions) / max(loc, 1),
         "operator_density": len(operator_positions) / max(loc, 1),
-        "visual_number_density": len(number_positions) / max(loc, 1),
-        "visual_period_density": len(period_positions) / max(loc, 1),
         "visual_comma_density": len(comma_positions) / max(loc, 1),
-        "scalabrino_visual_comparison_density": len(comparison_positions) / max(loc, 1),
+        "comparison_operator_density": len(comparison_positions) / max(loc, 1),
         "scalabrino_visual_parenthesis_density": sum(per_line_parenthesis_counts) / max(loc, 1),
         "scalabrino_visual_max_identifiers_per_line": max(per_line_identifier_counts, default=0.0),
         "scalabrino_visual_max_numbers_per_line": max(per_line_number_counts, default=0.0),
-        "visual_identifier_area_ratio": identifier_area / max(non_whitespace_area, 1),
         "visual_keyword_area_ratio": keyword_area / max(non_whitespace_area, 1),
-        "visual_operator_area_ratio": operator_area / max(non_whitespace_area, 1),
-        "scalabrino_visual_comment_area_ratio": comment_area / max(non_whitespace_area, 1),
+        "operator_character_density": operator_area / max(non_whitespace_area, 1),
         "visual_keyword_identifier_area_ratio": keyword_area / max(identifier_area, 1),
         "visual_identifier_y_mean": _normalized_position_mean(identifier_positions, physical_line_count),
         "visual_identifier_y_std": _normalized_position_std(identifier_positions, physical_line_count),
@@ -101,21 +87,16 @@ def visual_layout_features(
         "visual_operator_y_mean": _normalized_position_mean(operator_positions, physical_line_count),
         "visual_operator_y_std": _normalized_position_std(operator_positions, physical_line_count),
         "visual_period_y_mean": _normalized_position_mean(period_positions, physical_line_count),
-        "visual_period_y_std": _normalized_position_std(period_positions, physical_line_count),
         "scalabrino_visual_comment_y_mean": _normalized_position_mean(comment_positions, physical_line_count),
         "scalabrino_visual_number_y_mean": _normalized_position_mean(number_positions, physical_line_count),
         "visual_line_length_dft_energy": _low_frequency_dft_energy(line_lengths),
-        "visual_space_dft_energy": _low_frequency_dft_energy(space_counts),
         "visual_identifier_dft_energy": _low_frequency_dft_energy(per_line_identifier_counts),
         "visual_keyword_dft_energy": _low_frequency_dft_energy(per_line_keyword_counts),
         "visual_period_dft_energy": _low_frequency_dft_energy(per_line_period_counts),
-        "scalabrino_visual_comma_dft_energy": _low_frequency_dft_energy(per_line_comma_counts),
         "scalabrino_visual_comparison_dft_energy": _low_frequency_dft_energy(per_line_comparison_counts),
         "scalabrino_align_blocks_count": float(_aligned_character_block_count(lines)),
         "chunk_y_mean": _chunk_y_mean(chunks, physical_line_count),
-        "chunk_y_std": _chunk_y_std(chunks, physical_line_count),
         "chunk_line_span": chunk_span,
-        "chunk_line_span_ratio": chunk_span / max(loc, 1),
     }
 
 
@@ -173,11 +154,6 @@ def _low_frequency_dft_energy(values: Sequence[float], bins: int = 4) -> float:
 def _chunk_y_mean(chunks: Sequence[LexemeChunk], line_count: int) -> float:
     positions = [chunk.line for chunk in chunks if chunk.line > 0]
     return _normalized_position_mean(positions, line_count)
-
-
-def _chunk_y_std(chunks: Sequence[LexemeChunk], line_count: int) -> float:
-    positions = [chunk.line for chunk in chunks if chunk.line > 0]
-    return _normalized_position_std(positions, line_count)
 
 
 def _chunk_line_span(chunks: Sequence[LexemeChunk]) -> int:

@@ -21,6 +21,9 @@ DATASETS: dict[str, Path] = {
     "java_progressive_obfuscation": Path(
         "datasets/constructed/java-progressive-obfuscation-class-100"
     ),
+    "java_comparative_obfuscation": Path(
+        "datasets/constructed/java-comparative-obfuscation-class-100"
+    ),
 }
 
 

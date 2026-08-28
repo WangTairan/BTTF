@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 PYCACHE="${PYTHONPYCACHEPREFIX:-/tmp/readability_pycache}"
 MAX_VECTORS_PER_TASK="${MAX_VECTORS_PER_TASK:-512}"
-REBUILD_EMBEDDING_FEATURES="${REBUILD_EMBEDDING_FEATURES:-1}"
 BASE_ONLY="${BASE_ONLY:-0}"
 
 DATASET_PATHS=(
@@ -16,6 +19,7 @@ DATASET_PATHS=(
   "datasets/schnappinger"
   "datasets/generated_readability_90/dataset.jsonl"
   "datasets/constructed/java-progressive-obfuscation-class-100"
+  "datasets/constructed/java-comparative-obfuscation-class-100"
 )
 
 DATASET_NAMES=(
@@ -27,6 +31,7 @@ DATASET_NAMES=(
   "schnappinger"
   "generated_readability_90"
   "java_progressive_obfuscation"
+  "java_comparative_obfuscation"
 )
 
 EMBEDDING_MODELS=(
@@ -46,15 +51,19 @@ for index in "${!DATASET_PATHS[@]}"; do
     "${PYTHON_BIN}" -m src.methods.cognascore.runners.features
     "${dataset_path}"
   )
-  for embedding_model in "${EMBEDDING_MODELS[@]}"; do
-    base_command+=(--embedding-model "${embedding_model}")
-  done
+  if (( index < 6 )); then
+    for embedding_model in "${EMBEDDING_MODELS[@]}"; do
+      base_command+=(--embedding-model "${embedding_model}")
+    done
+  else
+    base_command+=(--embedding-model "nomic-ai/nomic-embed-text-v1.5")
+  fi
   PYTHONPYCACHEPREFIX="${PYCACHE}" "${base_command[@]}"
 done
 
 if [[ "${BASE_ONLY}" == "1" ]]; then
   echo "BASE_ONLY=1: skipping all embedding-derived feature updates."
-elif [[ "${REBUILD_EMBEDDING_FEATURES}" != "0" ]]; then
+else
   echo "Rebuilding embedding-derived feature tables from existing embedding caches."
   for embedding_model in "${EMBEDDING_MODELS[@]}"; do
     echo "Embedding features: ${embedding_model}"
@@ -62,35 +71,16 @@ elif [[ "${REBUILD_EMBEDDING_FEATURES}" != "0" ]]; then
       "${DATASET_PATHS[@]:0:6}" \
       --embedding-model "${embedding_model}" \
       --max-vectors-per-task "${MAX_VECTORS_PER_TASK}" \
-      --replace-existing \
       --resume \
-      --update-all \
       --checkpoint-every 50
   done
   echo "Embedding features for Nomic-only additional datasets."
   PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runners.embedding_features \
-    "${DATASET_PATHS[@]:6:2}" \
+    "${DATASET_PATHS[@]:6:3}" \
     --embedding-model "nomic-ai/nomic-embed-text-v1.5" \
     --max-vectors-per-task "${MAX_VECTORS_PER_TASK}" \
-    --replace-existing \
     --resume \
-    --update-all \
     --checkpoint-every 50
-else
-  echo "Skipping full embedding-derived feature rebuild."
-  echo "Updating only Scalabrino-inspired comment alignment columns from existing caches."
-  for embedding_model in "${EMBEDDING_MODELS[@]}"; do
-    echo "Comment alignment: ${embedding_model}"
-    PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runners.comment_alignment_features \
-      "${DATASET_PATHS[@]:0:6}" \
-      --embedding-model "${embedding_model}" \
-      --max-vectors-per-type "${MAX_VECTORS_PER_TASK}"
-  done
-  echo "Comment alignment for Nomic-only additional datasets."
-  PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runners.comment_alignment_features \
-    "${DATASET_PATHS[@]:6:2}" \
-    --embedding-model "nomic-ai/nomic-embed-text-v1.5" \
-    --max-vectors-per-type "${MAX_VECTORS_PER_TASK}"
 fi
 
 echo "Validating feature schema."
@@ -106,5 +96,12 @@ PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runne
   --embedding-model "jinaai/jina-embeddings-v2-base-code" \
   --embedding-model "Snowflake/snowflake-arctic-embed-m-v2.0" \
   --embedding-model "voyageai/voyage-4-nano"
+
+echo "Validating Nomic-only additional datasets."
+PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runners.validate_feature_tables \
+  --dataset generated_readability_90 \
+  --dataset java_progressive_obfuscation \
+  --dataset java_comparative_obfuscation \
+  --embedding-model "nomic-ai/nomic-embed-text-v1.5"
 
 echo "Done."
