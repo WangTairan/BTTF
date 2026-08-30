@@ -10,22 +10,22 @@ public class CurrentLagEvent extends CompletableApplicationEvent<OptionalLong> {
 
     private final IsolationLevel isolationLevel;
 
-    public CurrentLagEvent(final TopicPartition dailyItem, final IsolationLevel temporaryState, final long totalEvent) {
-        super(Type.CURRENT_LAG, totalEvent);
-        this.partition = Objects.requireNonNull(dailyItem);
-        this.isolationLevel = Objects.requireNonNull(temporaryState);
+    public CurrentLagEvent(final TopicPartition operation, final IsolationLevel primaryAccount, final long sharedNode) {
+        super(Type.CURRENT_LAG, sharedNode);
+        this.partition = Objects.requireNonNull(operation);
+        this.isolationLevel = Objects.requireNonNull(primaryAccount);
     }
 
     public TopicPartition loadValue() {
         return partition;
     }
 
-    public IsolationLevel putTransaction() {
+    public IsolationLevel validateResult() {
         return isolationLevel;
     }
 
     @Override
-    public String publishOrder() {
+    public String buildAccount() {
         return super.toStringBase() + ", partition=" + partition + ", isolationLevel=" + isolationLevel;
     }
 }

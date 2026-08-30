@@ -12,7 +12,9 @@ readability = 1 / (1 + exp(-z))
 z = 8.87 - 0.033 * V + 0.40 * Lines - 1.5 * H
 ```
 
-- `V`: Halstead volume extracted from Java lexical operators and operands.
+- `V`: Halstead volume extracted from lexical operators and operands. Java
+  uses the reproduction's fixed lexer; the optional Python transfer path uses
+  the Python standard-library tokenizer.
 - `Lines`: source lines, including comment lines.
 - `H`: byte entropy of the source snippet.
 
@@ -30,9 +32,11 @@ decision threshold is `score >= 0.5`.
 ## Scope
 
 The published model was built from and evaluated on small Java code snippets.
-The implementation therefore treats Java as its supported experimental
-language. Applying the same coefficients to another programming language is a
-cross-language transfer experiment, not a standard Posnett reproduction.
+Java remains the standard reproduction setting. For the constructed Python
+experiment, the published coefficients are kept fixed while Halstead tokens
+are obtained with Python's standard tokenizer. This is reported as a
+cross-language transfer experiment, not as a reproduction of a published
+Python Posnett model.
 
 The model is intended for short snippets. Scores over complete classes, such
 as the Schnappinger samples, are useful as an exploratory baseline but exceed

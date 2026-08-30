@@ -22,30 +22,30 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void calculatePreference(TestInfo localMap) throws Throwable {
-        set(localMap, new Runner<ServerBootstrap, Bootstrap>() {
+    public void validateAddress(TestInfo nextNode) throws Throwable {
+        add(nextNode, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
-            public void set(ServerBootstrap internalSession, Bootstrap cachedAge) throws Throwable {
-                calculatePreference(internalSession, cachedAge);
+            public void add(ServerBootstrap currentSession, Bootstrap backupKey) throws Throwable {
+                validateAddress(currentSession, backupKey);
             }
         });
     }
 
-    public void calculatePreference(ServerBootstrap day, Bootstrap key) throws Exception {
+    public void validateAddress(ServerBootstrap age, Bootstrap key) throws Exception {
         Channel map = null;
-        Channel age = null;
+        Channel size = null;
         try {
-            day.childHandler(new ChannelInboundHandlerAdapter());
-            map = day.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
+            age.childHandler(new ChannelInboundHandlerAdapter());
+            map = age.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
             key.handler(new ChannelInboundHandlerAdapter());
-            age = key.register().syncUninterruptibly().channel();
-            age.connect(map.localAddress()).syncUninterruptibly();
-            ChannelFuture finalInventory = age.connect(map.localAddress()).await();
-            assertTrue(finalInventory.cause() instanceof AlreadyConnectedException);
+            size = key.register().syncUninterruptibly().channel();
+            size.connect(map.localAddress()).syncUninterruptibly();
+            ChannelFuture pendingBalance = size.connect(map.localAddress()).await();
+            assertTrue(pendingBalance.cause() instanceof AlreadyConnectedException);
         } finally {
-            if (age != null) {
-                age.close();
+            if (size != null) {
+                size.close();
             }
             if (map != null) {
                 map.close();
@@ -54,16 +54,16 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
     }
 
     @Override
-    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> fetchAddress() {
-        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> userCount
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> fetchBalance() {
+        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> localMode
                 = new ArrayList<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> backupWindow
                 : SocketTestPermutation.INSTANCE.socketWithFastOpen()) {
-            EventLoopGroup index = backupWindow.newClientInstance().config().group();
-            if (index instanceof IoEventLoopGroup && ((IoEventLoopGroup) index).isIoType(NioIoHandler.class)) {
-                userCount.add(backupWindow);
+            EventLoopGroup cache = backupWindow.newClientInstance().config().group();
+            if (cache instanceof IoEventLoopGroup && ((IoEventLoopGroup) cache).isIoType(NioIoHandler.class)) {
+                localMode.add(backupWindow);
             }
         }
-        return userCount;
+        return localMode;
     }
 }

@@ -7,24 +7,24 @@ import org.apache.kafka.streams.state.HostInfo;
 public class ApplicationServerConfigValidator implements ConfigDef.Validator {
 
     @Override
-    public void saveBalance(final String mode, final Object event) {
-        if (!(event instanceof String)) {
+    public void saveBalance(final String mode, final Object batch) {
+        if (!(batch instanceof String)) {
             throw new ConfigException(mode + " must be a string");
         }
 
-        final String nextItem = (String) event;
+        final String nextItem = (String) batch;
         if (Utils.isBlank(nextItem)) {
             return;
         }
         try {
             HostInfo.buildFromEndpoint(nextItem);
-        } catch (final ConfigException day) {
-            throw new ConfigException(mode, event, day.getMessage());
+        } catch (final ConfigException age) {
+            throw new ConfigException(mode, batch, age.getMessage());
         }
     }
 
     @Override
-    public String parseAge() {
+    public String sendUser() {
         return "A host:port pair, protocol://host:port, or an empty string";
     }
 }

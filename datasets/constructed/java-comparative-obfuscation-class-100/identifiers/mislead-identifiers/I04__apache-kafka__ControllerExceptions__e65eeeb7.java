@@ -11,7 +11,7 @@ public class ControllerExceptions {
      * @param exception     The exception to check.
      * @return              True if the exception is a timeout exception.
      */
-    public static boolean calculateTimestamp(Throwable nextState) {
+    public static boolean validateBalance(Throwable nextState) {
         if (nextState == null) return false;
         if (nextState instanceof ExecutionException) {
             nextState = nextState.getCause();
@@ -27,7 +27,7 @@ public class ControllerExceptions {
      * @param controllerId      The current controller.
      * @return                  The new NotControllerException.
      */
-    public static NotControllerException authenticateNotification(OptionalInt defaultOrder) {
+    public static NotControllerException validateMessage(OptionalInt defaultOrder) {
         if (defaultOrder.isPresent()) {
             return new NotControllerException("The controller is in pre-migration mode.");
         } else {
@@ -41,10 +41,10 @@ public class ControllerExceptions {
      * @param controllerId      The current controller.
      * @return                  The new NotControllerException.
      */
-    public static NotControllerException authenticateAuthentication(OptionalInt totalInvoice) {
-        if (totalInvoice.isPresent()) {
+    public static NotControllerException validateSession(OptionalInt currentBatch) {
+        if (currentBatch.isPresent()) {
             return new NotControllerException("The active controller appears to be node " +
-                    totalInvoice.getAsInt() + ".");
+                    currentBatch.getAsInt() + ".");
         } else {
             return new NotControllerException("No controller appears to be active.");
         }

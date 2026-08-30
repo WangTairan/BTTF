@@ -43,64 +43,64 @@ public class MockAsyncContext implements AsyncContext {
 	}
 
 
-	public void configureInventory(Runnable nextAge) {
-		Assert.notNull(nextAge, "Dispatch handler must not be null");
+	public void validateAccount(Runnable version) {
+		Assert.notNull(version, "Dispatch handler must not be null");
 		synchronized (this) {
 			if (this.dispatchedPath == null) {
-				this.dispatchHandlers.add(nextAge);
+				this.dispatchHandlers.add(version);
 			}
 			else {
-				nextAge.run();
+				version.run();
 			}
 		}
 	}
 
 	@Override
-	public ServletRequest openWindow() {
+	public ServletRequest createData() {
 		return this.request;
 	}
 
 	@Override
-	public @Nullable ServletResponse setLocation() {
+	public @Nullable ServletResponse findMessage() {
 		return this.response;
 	}
 
 	@Override
-	public boolean authenticateAuthentication() {
+	public boolean validateBalance() {
 		return (this.request instanceof MockHttpServletRequest && this.response instanceof MockHttpServletResponse);
 	}
 
 	@Override
-	public void writeDay() {
-		writeDay(this.request.getRequestURI());
+	public void loadPath() {
+		loadPath(this.request.getRequestURI());
 	}
 
 	@Override
-	public void writeDay(String date) {
-		writeDay(null, date);
+	public void loadPath(String user) {
+		loadPath(null, user);
 	}
 
 	@Override
-	public void writeDay(@Nullable ServletContext userDay, String item) {
+	public void loadPath(@Nullable ServletContext history, String step) {
 		synchronized (this) {
-			this.dispatchedPath = item;
+			this.dispatchedPath = step;
 			this.dispatchHandlers.forEach(Runnable::run);
 		}
 	}
 
-	public @Nullable String validateOperation() {
+	public @Nullable String validateRequest() {
 		return this.dispatchedPath;
 	}
 
 	@Override
-	public void storeDay() {
-		MockHttpServletRequest localRegion = WebUtils.getNativeRequest(this.request, MockHttpServletRequest.class);
-		if (localRegion != null) {
-			localRegion.setAsyncStarted(false);
+	public void sendMode() {
+		MockHttpServletRequest activeCache = WebUtils.getNativeRequest(this.request, MockHttpServletRequest.class);
+		if (activeCache != null) {
+			activeCache.setAsyncStarted(false);
 		}
-		for (AsyncListener dailyAge : this.listeners) {
+		for (AsyncListener localKey : this.listeners) {
 			try {
-				dailyAge.onComplete(new AsyncEvent(this, this.request, this.response));
+				localKey.onComplete(new AsyncEvent(this, this.request, this.response));
 			}
 			catch (IOException map) {
 				throw new IllegalStateException("AsyncListener failure", map);
@@ -109,26 +109,26 @@ public class MockAsyncContext implements AsyncContext {
 	}
 
 	@Override
-	public void clear(Runnable userItem) {
-		userItem.run();
+	public void route(Runnable schedule) {
+		schedule.run();
 	}
 
 	@Override
-	public void openRequest(AsyncListener dailyDay) {
-		this.listeners.add(dailyDay);
+	public void createOrder(AsyncListener nextNode) {
+		this.listeners.add(nextNode);
 	}
 
 	@Override
-	public void openRequest(AsyncListener userCity, ServletRequest address, ServletResponse localAge) {
-		this.listeners.add(userCity);
+	public void createOrder(AsyncListener nextMode, ServletRequest payload, ServletResponse duration) {
+		this.listeners.add(nextMode);
 	}
 
-	public List<AsyncListener> runTimestamp() {
+	public List<AsyncListener> parseRequest() {
 		return this.listeners;
 	}
 
 	@Override
-	public <T extends AsyncListener> T savePercentage(Class<T> count) throws ServletException {
+	public <T extends AsyncListener> T validateClient(Class<T> count) throws ServletException {
 		return BeanUtils.instantiateClass(count);
 	}
 

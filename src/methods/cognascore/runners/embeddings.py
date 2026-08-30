@@ -22,7 +22,8 @@ from ..comment_relevance import (
     negative_comment_for,
 )
 from ..embeddings import NomicEmbedder
-from ..extractors.python import LexemeExtractor
+from ..extractors import extractor_for_language
+from ..extractors.java import LexemeExtractor
 from ..semantic_context import ANCHOR_DATASET, WHOLE_CODE_CONTEXT_TYPE, context_anchor_groups
 from ..semantic_context import (
     DEFAULT_WHOLE_CODE_CONTEXT_MAX_CHARS,
@@ -30,7 +31,7 @@ from ..semantic_context import (
     DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_OVERLAP,
     whole_code_context_segments,
 )
-from ..dataset_io import dataset_output_name, load_items
+from ..dataset_io import dataset_output_name, item_source_sha256, load_items
 from ..paths import EMBEDDING_CACHE_ROOT
 
 
@@ -219,6 +220,9 @@ def _collect_references(
     references: list[SourceReference] = []
     text_seen: set[str] = set()
     unique_texts: list[str] = []
+    reference_templates_by_source_hash: dict[
+        tuple[str, str], list[tuple[str, str, int]]
+    ] = {}
     for reference in _comment_relevance_references(extractor):
         references.append(reference)
         if reference.text not in text_seen:
@@ -246,14 +250,32 @@ def _collect_references(
         for index, item in enumerate(items, start=1):
             if not quiet:
                 print(f"[{index}/{len(items)}] {dataset} {item.task_id}", flush=True)
-            item_references = _references_for_item(
-                dataset,
-                item,
-                extractor,
-                whole_code_max_chars=whole_code_max_chars,
-                whole_code_segment_chars=whole_code_segment_chars,
-                whole_code_segment_overlap=whole_code_segment_overlap,
-            )
+            source_hash = item_source_sha256(item)
+            source_key = (str(item.metadata.get("language") or ""), source_hash)
+            templates = reference_templates_by_source_hash.get(source_key)
+            if templates is None:
+                extracted = _references_for_item(
+                    dataset,
+                    item,
+                    whole_code_max_chars=whole_code_max_chars,
+                    whole_code_segment_chars=whole_code_segment_chars,
+                    whole_code_segment_overlap=whole_code_segment_overlap,
+                )
+                templates = [
+                    (reference.chunk_type, reference.text, reference.count)
+                    for reference in extracted
+                ]
+                reference_templates_by_source_hash[source_key] = templates
+            item_references = [
+                SourceReference(
+                    dataset=dataset,
+                    task_id=item.task_id,
+                    chunk_type=chunk_type,
+                    text=text,
+                    count=count,
+                )
+                for chunk_type, text, count in templates
+            ]
             references.extend(item_references)
             for reference in item_references:
                 if reference.text not in text_seen:
@@ -309,13 +331,16 @@ def _comment_relevance_references(
 def _references_for_item(
     dataset: str,
     item: DatasetItem,
-    extractor: LexemeExtractor,
     *,
     whole_code_max_chars: int | None = DEFAULT_WHOLE_CODE_CONTEXT_MAX_CHARS,
     whole_code_segment_chars: int = DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_CHARS,
     whole_code_segment_overlap: int = DEFAULT_WHOLE_CODE_CONTEXT_SEGMENT_OVERLAP,
 ) -> list[SourceReference]:
-    chunks, _ = extractor.extract_with_member_fallback(item.content)
+    item_extractor = extractor_for_language(
+        item.metadata.get("language"),
+        allow_fragments=item.metadata.get("source_form") == "snippet",
+    )
+    chunks, _ = item_extractor.extract_with_member_fallback(item.content)
     counts: Counter[tuple[str, str]] = Counter((chunk.type, chunk.lexeme) for chunk in chunks)
     return [
         *[

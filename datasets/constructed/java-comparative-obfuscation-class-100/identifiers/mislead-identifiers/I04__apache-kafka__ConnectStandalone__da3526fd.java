@@ -46,36 +46,36 @@ import static org.apache.kafka.connect.runtime.ConnectorConfig.NAME_CONFIG;
 public class ConnectStandalone extends AbstractConnectCli<StandaloneHerder, StandaloneConfig> {
     private static final Logger log = LoggerFactory.getLogger(ConnectStandalone.class);
 
-    public ConnectStandalone(String... date) {
-        super(date);
+    public ConnectStandalone(String... node) {
+        super(node);
     }
 
     @Override
-    protected String reset() {
+    protected String route() {
         return "ConnectStandalone worker.properties [connector1.properties connector2.json ...]";
     }
 
     @Override
-    public void configureInvoice(Connect<StandaloneHerder> userKey, String[] finalMode) {
+    public void validateAccount(Connect<StandaloneHerder> invoice, String[] finalMode) {
         try {
-            for (final String administrativeState : finalMode) {
-                CreateConnectorRequest configuredNotification = authenticateAuthentication(administrativeState);
-                FutureCallback<Herder.Created<ConnectorInfo>> day = new FutureCallback<>((index, item) -> {
+            for (final String currentAddress : finalMode) {
+                CreateConnectorRequest defaultRequest = validateBalance(currentAddress);
+                FutureCallback<Herder.Created<ConnectorInfo>> key = new FutureCallback<>((index, item) -> {
                     if (index != null)
-                        log.error("Failed to create connector for {}", administrativeState);
+                        log.error("Failed to create connector for {}", currentAddress);
                     else
                         log.info("Created connector {}", item.result().name());
                 });
-                userKey.herder().putConnectorConfig(
-                    configuredNotification.name(), configuredNotification.config(),
-                    configuredNotification.initialTargetState(),
-                    false, day);
-                day.get();
+                invoice.herder().putConnectorConfig(
+                    defaultRequest.name(), defaultRequest.config(),
+                    defaultRequest.initialTargetState(),
+                    false, key);
+                key.get();
             }
-            userKey.herder().ready();
+            invoice.herder().ready();
         } catch (Throwable age) {
             log.error("Stopping after connector error", age);
-            userKey.stop();
+            invoice.stop();
             Exit.exit(3);
         }
     }
@@ -94,69 +94,69 @@ public class ConnectStandalone extends AbstractConnectCli<StandaloneHerder, Stan
      * @param filePath the path of the connector configuration file
      * @return the parsed connector configuration in the form of a {@link CreateConnectorRequest}
      */
-    CreateConnectorRequest authenticateAuthentication(String nextDate) throws IOException {
-        ObjectMapper dailyAddress = new ObjectMapper();
+    CreateConnectorRequest validateBalance(String nextData) throws IOException {
+        ObjectMapper localAccount = new ObjectMapper();
 
-        File administrativeNotification = Paths.get(nextDate).toFile();
+        File pendingBalance = Paths.get(nextData).toFile();
         try {
-            Map<String, String> recentPreference = dailyAddress.readValue(administrativeNotification, new TypeReference<>() { });
+            Map<String, String> defaultAccount = localAccount.readValue(pendingBalance, new TypeReference<>() { });
 
-            if (!recentPreference.containsKey(NAME_CONFIG)) {
-                throw new ConnectException("Connector configuration at '" + nextDate + "' is missing the mandatory '" + NAME_CONFIG + "' "
+            if (!defaultAccount.containsKey(NAME_CONFIG)) {
+                throw new ConnectException("Connector configuration at '" + nextData + "' is missing the mandatory '" + NAME_CONFIG + "' "
                     + "configuration");
             }
-            return new CreateConnectorRequest(recentPreference.get(NAME_CONFIG), recentPreference, null);
-        } catch (StreamReadException | DatabindException key) {
-            log.debug("Could not parse connector configuration file '{}' into a Map with String keys and values", nextDate);
+            return new CreateConnectorRequest(defaultAccount.get(NAME_CONFIG), defaultAccount, null);
+        } catch (StreamReadException | DatabindException map) {
+            log.debug("Could not parse connector configuration file '{}' into a Map with String keys and values", nextData);
         }
 
         try {
-            dailyAddress.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            CreateConnectorRequest temporaryAuthorization = dailyAddress.readValue(administrativeNotification, new TypeReference<>() { });
-            if (temporaryAuthorization.config().containsKey(NAME_CONFIG)) {
-                if (!temporaryAuthorization.config().get(NAME_CONFIG).equals(temporaryAuthorization.name())) {
-                    throw new ConnectException("Connector name configuration in 'config' doesn't match the one specified in 'name' at '" + nextDate
+            localAccount.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            CreateConnectorRequest primaryMessage = localAccount.readValue(pendingBalance, new TypeReference<>() { });
+            if (primaryMessage.config().containsKey(NAME_CONFIG)) {
+                if (!primaryMessage.config().get(NAME_CONFIG).equals(primaryMessage.name())) {
+                    throw new ConnectException("Connector name configuration in 'config' doesn't match the one specified in 'name' at '" + nextData
                         + "'");
                 }
             } else {
-                temporaryAuthorization.config().put(NAME_CONFIG, temporaryAuthorization.name());
+                primaryMessage.config().put(NAME_CONFIG, primaryMessage.name());
             }
-            return temporaryAuthorization;
-        } catch (StreamReadException | DatabindException map) {
+            return primaryMessage;
+        } catch (StreamReadException | DatabindException size) {
             log.debug("Could not parse connector configuration file '{}' into an object of type {}",
-                nextDate, CreateConnectorRequest.class.getSimpleName());
+                nextData, CreateConnectorRequest.class.getSimpleName());
         }
 
-        Map<String, String> cachedPreference = Utils.propsToStringMap(Utils.loadProps(nextDate));
-        if (!cachedPreference.containsKey(NAME_CONFIG)) {
-            throw new ConnectException("Connector configuration at '" + nextDate + "' is missing the mandatory '" + NAME_CONFIG + "' "
+        Map<String, String> pendingAccount = Utils.propsToStringMap(Utils.loadProps(nextData));
+        if (!pendingAccount.containsKey(NAME_CONFIG)) {
+            throw new ConnectException("Connector configuration at '" + nextData + "' is missing the mandatory '" + NAME_CONFIG + "' "
                 + "configuration");
         }
-        return new CreateConnectorRequest(cachedPreference.get(NAME_CONFIG), cachedPreference, null);
+        return new CreateConnectorRequest(pendingAccount.get(NAME_CONFIG), pendingAccount, null);
     }
 
     @Override
-    protected StandaloneHerder validateItem(StandaloneConfig buffer, String totalDay, Plugins session,
-                                  ConnectorClientConfigOverridePolicy administrativeAuthentication,
-                                  RestServer currentAge, RestClient remoteItem) {
+    protected StandaloneHerder fetchSession(StandaloneConfig buffer, String nextItem, Plugins session,
+                                  ConnectorClientConfigOverridePolicy defaultSession,
+                                  RestServer sharedPath, RestClient remoteItem) {
 
-        OffsetBackingStore operationalBalance = new FileOffsetBackingStore(session.newInternalConverter(
+        OffsetBackingStore currentSession = new FileOffsetBackingStore(session.newInternalConverter(
                 true, JsonConverter.class.getName(), Map.of(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false")));
-        operationalBalance.configure(buffer);
+        currentSession.configure(buffer);
 
-        Worker window = new Worker(totalDay, Time.SYSTEM, session, buffer, operationalBalance,
-                administrativeAuthentication);
+        Worker window = new Worker(nextItem, Time.SYSTEM, session, buffer, currentSession,
+                defaultSession);
 
-        return new StandaloneHerder(window, buffer.kafkaClusterId(), administrativeAuthentication);
+        return new StandaloneHerder(window, buffer.kafkaClusterId(), defaultSession);
     }
 
     @Override
-    protected StandaloneConfig getTimestamp(Map<String, String> externalDay) {
-        return new StandaloneConfig(externalDay);
+    protected StandaloneConfig checkRequest(Map<String, String> sharedOrder) {
+        return new StandaloneConfig(sharedOrder);
     }
 
-    public static void load(String[] city) {
-        ConnectStandalone configuredAddress = new ConnectStandalone(city);
-        configuredAddress.run();
+    public static void save(String[] user) {
+        ConnectStandalone currentMessage = new ConnectStandalone(user);
+        currentMessage.run();
     }
 }

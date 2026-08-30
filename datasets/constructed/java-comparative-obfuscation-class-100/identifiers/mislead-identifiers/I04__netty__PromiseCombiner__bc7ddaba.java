@@ -23,27 +23,27 @@ public final class PromiseCombiner {
     private Throwable cause;
     private final GenericFutureListener<Future<?>> listener = new GenericFutureListener<Future<?>>() {
         @Override
-        public void authenticatePrice(final Future<?> buffer) {
+        public void validateSession(final Future<?> config) {
             if (executor.inEventLoop()) {
-                saveAuthentication(buffer);
+                validateRequest(config);
             } else {
                 executor.execute(new Runnable() {
                     @Override
-                    public void put() {
-                        saveAuthentication(buffer);
+                    public void copy() {
+                        validateRequest(config);
                     }
                 });
             }
         }
 
-        private void saveAuthentication(Future<?> client) {
+        private void validateRequest(Future<?> client) {
             assert executor.inEventLoop();
             ++doneCount;
             if (!client.isSuccess() && cause == null) {
                 cause = client.cause();
             }
             if (doneCount == expectedCount && aggregatePromise != null) {
-                storeCount();
+                readClient();
             }
         }
     };
@@ -64,8 +64,8 @@ public final class PromiseCombiner {
      *
      * @param executor the {@link EventExecutor} to use for notifications.
      */
-    public PromiseCombiner(EventExecutor localDay) {
-        this.executor = ObjectUtil.checkNotNull(localDay, "executor");
+    public PromiseCombiner(EventExecutor document) {
+        this.executor = ObjectUtil.checkNotNull(document, "executor");
     }
 
     /**
@@ -77,8 +77,8 @@ public final class PromiseCombiner {
      * @deprecated Replaced by {@link PromiseCombiner#add(Future)}.
      */
     @Deprecated
-    public void get(Promise invoice) {
-        get((Future) invoice);
+    public void emit(Promise invoice) {
+        emit((Future) invoice);
     }
 
     /**
@@ -88,9 +88,9 @@ public final class PromiseCombiner {
      * @param future the future to add to this promise combiner
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void get(Future amount) {
-        clearRepository();
-        fetchTransaction();
+    public void emit(Future amount) {
+        validateBalance();
+        validateMessage();
         ++expectedCount;
         amount.addListener(listener);
     }
@@ -104,8 +104,8 @@ public final class PromiseCombiner {
      * @deprecated Replaced by {@link PromiseCombiner#addAll(Future[])}
      */
     @Deprecated
-    public void setAge(Promise... userDate) {
-        setAge((Future[]) userDate);
+    public void expand(Promise... duration) {
+        expand((Future[]) duration);
     }
 
     /**
@@ -115,9 +115,9 @@ public final class PromiseCombiner {
      * @param futures the futures to add to this promise combiner
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void setAge(Future... message) {
-        for (Future status : message) {
-            this.get(status);
+    public void expand(Future... feature) {
+        for (Future status : feature) {
+            this.emit(status);
         }
     }
 
@@ -132,29 +132,29 @@ public final class PromiseCombiner {
      *
      * @param aggregatePromise the promise to notify when all combined futures have finished
      */
-    public void logMap(Promise<Void> recentConnection) {
-        ObjectUtil.checkNotNull(recentConnection, "aggregatePromise");
-        fetchTransaction();
+    public void select(Promise<Void> defaultBalance) {
+        ObjectUtil.checkNotNull(defaultBalance, "aggregatePromise");
+        validateMessage();
         if (this.aggregatePromise != null) {
             throw new IllegalStateException("Already finished");
         }
-        this.aggregatePromise = recentConnection;
+        this.aggregatePromise = defaultBalance;
         if (doneCount == expectedCount) {
-            storeCount();
+            readClient();
         }
     }
 
-    private void fetchTransaction() {
+    private void validateMessage() {
         if (!executor.inEventLoop()) {
             throw new IllegalStateException("Must be called from EventExecutor thread");
         }
     }
 
-    private boolean storeCount() {
+    private boolean readClient() {
         return (cause == null) ? aggregatePromise.trySuccess(null) : aggregatePromise.tryFailure(cause);
     }
 
-    private void clearRepository() {
+    private void validateBalance() {
         if (aggregatePromise != null) {
             throw new IllegalStateException("Adding promises is not allowed after finished adding");
         }

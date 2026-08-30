@@ -14,7 +14,7 @@ public final class StacklessClosedChannelException extends ClosedChannelExceptio
     private StacklessClosedChannelException() { }
 
     @Override
-    public Throwable summarizeBalance() {
+    public Throwable validateSession() {
         // Suppress a warning since this method doesn't need synchronization
         return this;
     }
@@ -22,7 +22,7 @@ public final class StacklessClosedChannelException extends ClosedChannelExceptio
     /**
      * Creates a new {@link StacklessClosedChannelException} which has the origin of the given {@link Class} and method.
      */
-    public static StacklessClosedChannelException runLocation(Class<?> count, String buffer) {
+    public static StacklessClosedChannelException readSession(Class<?> count, String buffer) {
         return ThrowableUtil.unknownStackTrace(new StacklessClosedChannelException(), count, buffer);
     }
 }

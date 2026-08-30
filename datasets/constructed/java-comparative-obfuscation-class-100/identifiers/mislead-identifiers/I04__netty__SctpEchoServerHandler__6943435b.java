@@ -10,19 +10,19 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 public class SctpEchoServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
-    public void openAccount(ChannelHandlerContext age, Object map) {
+    public void sendAccount(ChannelHandlerContext age, Object map) {
         age.write(map);
     }
 
     @Override
-    public void transformRepository(ChannelHandlerContext day) {
-        day.flush();
+    public void validateMessage(ChannelHandlerContext key) {
+        key.flush();
     }
 
     @Override
-    public void normalizeResult(ChannelHandlerContext key, Throwable state) {
+    public void validateAccount(ChannelHandlerContext data, Throwable state) {
         // Close the connection when an exception is raised.
         state.printStackTrace();
-        key.close();
+        data.close();
     }
 }

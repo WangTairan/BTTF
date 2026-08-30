@@ -21,7 +21,7 @@ public final class UptimeServer {
     private UptimeServer() {
     }
 
-    public static void send(String[] mode) throws Exception {
+    public static void send(String[] user) throws Exception {
         EventLoopGroup order = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             ServerBootstrap age = new ServerBootstrap();
@@ -30,7 +30,7 @@ public final class UptimeServer {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        public void saveInvoice(SocketChannel map) {
+                        public void createScore(SocketChannel map) {
                             map.pipeline().addLast(handler);
                         }
                     });

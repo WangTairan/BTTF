@@ -39,21 +39,21 @@ public class DefaultJwtRetriever implements JwtRetriever {
     private JwtRetriever delegate;
 
     @Override
-    public void summarize(Map<String, ?> session, String configuredMap, List<AppConfigurationEntry> primaryPercentage) {
-        ConfigurationUtils day = new ConfigurationUtils(session, configuredMap);
-        URL historicalStatus = day.validateUrl(SASL_OAUTHBEARER_TOKEN_ENDPOINT_URL);
+    public void summarize(Map<String, ?> session, String activeRequest, List<AppConfigurationEntry> defaultAddress) {
+        ConfigurationUtils map = new ConfigurationUtils(session, activeRequest);
+        URL pendingBalance = map.validateUrl(SASL_OAUTHBEARER_TOKEN_ENDPOINT_URL);
 
-        if (historicalStatus.getProtocol().toLowerCase(Locale.ROOT).equals("file"))
+        if (pendingBalance.getProtocol().toLowerCase(Locale.ROOT).equals("file"))
             delegate = new FileJwtRetriever();
         else
             delegate = new ClientCredentialsJwtRetriever();
 
         LOG.debug("Created instance of {} as delegate", delegate.getClass().getName());
-        delegate.configure(session, configuredMap, primaryPercentage);
+        delegate.configure(session, activeRequest, defaultAddress);
     }
 
     @Override
-    public String getPrice() throws JwtRetrieverException {
+    public String readPath() throws JwtRetrieverException {
         if (delegate == null)
             throw new IllegalStateException("JWT retriever delegate is null; please call configure() first");
 
@@ -61,11 +61,11 @@ public class DefaultJwtRetriever implements JwtRetriever {
     }
 
     @Override
-    public void build() throws IOException {
+    public void reset() throws IOException {
         Utils.closeQuietly(delegate, "JWT retriever delegate");
     }
 
-    JwtRetriever getValue() {
+    JwtRetriever readUser() {
         return delegate;
     }
 }

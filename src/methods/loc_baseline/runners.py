@@ -8,6 +8,7 @@ from statistics import mean
 
 from src.datasets import load_code_dataset
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
+from src.methods.cognascore.dataset_io import item_source_sha256
 
 
 DATASETS: dict[str, Path] = {
@@ -17,12 +18,11 @@ DATASETS: dict[str, Path] = {
     "jetbrains": Path("datasets/jetbrains"),
     "dorn": Path("datasets/dorn/dataset"),
     "schnappinger": Path("datasets/schnappinger"),
-    "generated_readability_90": Path("datasets/generated_readability_90/dataset.jsonl"),
-    "java_progressive_obfuscation": Path(
-        "datasets/constructed/java-progressive-obfuscation-class-100"
-    ),
     "java_comparative_obfuscation": Path(
         "datasets/constructed/java-comparative-obfuscation-class-100"
+    ),
+    "python_comparative_degradation": Path(
+        "datasets/constructed/python-comparative-degradation-class-100"
     ),
 }
 
@@ -59,16 +59,41 @@ def best_binary_threshold_lower_is_positive(
     return best
 
 
-def write_dataset(dataset_name: str, dataset_path: Path, output_root: Path) -> Path:
+def write_dataset(
+    dataset_name: str,
+    dataset_path: Path,
+    output_root: Path,
+    *,
+    skip_existing: bool = False,
+) -> Path:
     items = load_code_dataset(dataset_path)
+    output_dir = output_root / "loc_baseline" / dataset_name
+    summary_path = output_dir / "summary.json"
+    reusable_by_task, reusable_by_hash = load_reusable_rows(summary_path) if skip_existing else ({}, {})
     rows = []
+    computed_count = 0
+    reused_count = 0
     for item in items:
-        line_count = loc(item.content)
-        rows.append(
-            {
+        source_hash = item_source_sha256(item)
+        existing = reusable_by_task.get(item.task_id)
+        if existing is None or result_source_sha256(existing) != source_hash:
+            existing = reusable_by_hash.get(source_hash)
+        if existing is not None:
+            row = dict(existing)
+            row.update(
+                task_id=item.task_id,
+                readability_score=item.readability_score,
+                source_sha256=source_hash,
+                metadata=item.metadata,
+            )
+            reused_count += 1
+        else:
+            line_count = loc(item.content)
+            row = {
                 "task_id": item.task_id,
                 "readability_score": item.readability_score,
                 "method": "loc_baseline",
+                "source_sha256": source_hash,
                 "score": float(line_count),
                 "result": {
                     "score": float(line_count),
@@ -77,7 +102,9 @@ def write_dataset(dataset_name: str, dataset_path: Path, output_root: Path) -> P
                 },
                 "metadata": item.metadata,
             }
-        )
+            reusable_by_hash[source_hash] = row
+            computed_count += 1
+        rows.append(row)
 
     valid = [
         row
@@ -110,6 +137,9 @@ def write_dataset(dataset_name: str, dataset_path: Path, output_root: Path) -> P
         "model": None,
         "configuration": "negative_nonempty_loc",
         "output_policy": "overwrite",
+        "incremental_resume": skip_existing,
+        "computed_count": computed_count,
+        "reused_count": reused_count,
         "count": len(rows),
         "valid_count": len(valid),
         "error_count": len(rows) - len(valid),
@@ -129,11 +159,30 @@ def write_dataset(dataset_name: str, dataset_path: Path, output_root: Path) -> P
             "description": "A length-only sanity-check baseline: snippets with fewer non-empty source lines are predicted to be more readable. Continuous datasets report the raw LOC correlation with readability.",
         },
     }
-    output_dir = output_root / "loc_baseline" / dataset_name
     output_dir.mkdir(parents=True, exist_ok=True)
-    path = output_dir / "summary.json"
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    return path
+    summary_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    return summary_path
+
+
+def load_reusable_rows(path: Path) -> tuple[dict[str, dict], dict[str, dict]]:
+    if not path.is_file():
+        return {}, {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    by_task: dict[str, dict] = {}
+    by_hash: dict[str, dict] = {}
+    for row in payload.get("results", []):
+        task_id = str(row.get("task_id") or "")
+        source_hash = result_source_sha256(row)
+        if task_id:
+            by_task[task_id] = row
+        if source_hash:
+            by_hash.setdefault(source_hash, row)
+    return by_task, by_hash
+
+
+def result_source_sha256(row: dict) -> str | None:
+    value = row.get("source_sha256") or row.get("metadata", {}).get("content_sha256")
+    return str(value) if value else None
 
 
 def main() -> None:
@@ -145,6 +194,11 @@ def main() -> None:
         help="Root method-results directory.",
     )
     parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Reuse LOC rows with an unchanged source SHA-256.",
+    )
+    parser.add_argument(
         "--dataset",
         choices=sorted(DATASETS),
         action="append",
@@ -154,7 +208,12 @@ def main() -> None:
 
     selected = args.dataset or list(DATASETS)
     for name in selected:
-        path = write_dataset(name, DATASETS[name], args.output_root)
+        path = write_dataset(
+            name,
+            DATASETS[name],
+            args.output_root,
+            skip_existing=args.skip_existing,
+        )
         print(path)
 
 

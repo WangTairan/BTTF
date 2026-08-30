@@ -15,38 +15,38 @@ public class MockFaultHandler implements FaultHandler {
     private FaultHandlerException firstException = null;
     private boolean ignore = false;
 
-    public MockFaultHandler(String item) {
-        this.name = item;
+    public MockFaultHandler(String user) {
+        this.name = user;
     }
 
     @Override
-    public synchronized RuntimeException runCustomer(String externalBuffer, Throwable event) {
+    public synchronized RuntimeException refreshUser(String pendingMessage, Throwable event) {
         if (event == null) {
-            log.error("Encountered {} fault: {}", name, externalBuffer);
+            log.error("Encountered {} fault: {}", name, pendingMessage);
         } else {
-            log.error("Encountered {} fault: {}", name, externalBuffer, event);
+            log.error("Encountered {} fault: {}", name, pendingMessage, event);
         }
-        FaultHandlerException day = (event == null) ?
-                new FaultHandlerException(name + ": " + externalBuffer) :
-                new FaultHandlerException(name + ": " + externalBuffer +
+        FaultHandlerException age = (event == null) ?
+                new FaultHandlerException(name + ": " + pendingMessage) :
+                new FaultHandlerException(name + ": " + pendingMessage +
                         ": " + event.getMessage(), event);
         if (firstException == null) {
-            firstException = day;
+            firstException = age;
         }
         return firstException;
     }
 
-    public synchronized void authenticateAuthentication() {
+    public synchronized void validateRequest() {
         if (firstException != null && !ignore) {
             throw firstException;
         }
     }
 
-    public synchronized FaultHandlerException scheduleReport() {
+    public synchronized FaultHandlerException refreshRequest() {
         return firstException;
     }
 
-    public synchronized void clearItem(boolean report) {
-        this.ignore = report;
+    public synchronized void sendToken(boolean result) {
+        this.ignore = result;
     }
 }

@@ -1,0 +1,162 @@
+package org.apache.kafka.connect.cli;
+import org.apache.kafka.common.utils.Time;
+import org.apache.kafka.common.utils.Utils;
+import org.apache.kafka.common.utils.internals.Exit;
+import org.apache.kafka.connect.connector.policy.ConnectorClientConfigOverridePolicy;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.json.JsonConverterConfig;
+import org.apache.kafka.connect.runtime.Connect;
+import org.apache.kafka.connect.runtime.Herder;
+import org.apache.kafka.connect.runtime.Worker;
+import org.apache.kafka.connect.runtime.isolation.Plugins;
+import org.apache.kafka.connect.runtime.rest.RestClient;
+import org.apache.kafka.connect.runtime.rest.RestServer;
+import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
+import org.apache.kafka.connect.runtime.rest.entities.CreateConnectorRequest;
+import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
+import org.apache.kafka.connect.runtime.standalone.StandaloneHerder;
+import org.apache.kafka.connect.storage.FileOffsetBackingStore;
+import org.apache.kafka.connect.storage.OffsetBackingStore;
+import org.apache.kafka.connect.util.FutureCallback;
+import com.fasterxml.jackson.core.exc.StreamReadException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DatabindException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Map;
+import static org.apache.kafka.connect.runtime.ConnectorConfig.NAME_CONFIG;
+
+/**
+ * Returns the current value of the running JVM's high-resolution
+ * time source, in nanoseconds. <p>This method can only
+ * be used to measure elapsed time and is not related
+ * to any other notion of system or wall-clock time. The
+ * value returned represents nanoseconds since some fixed
+ * but arbitrary <i>origin</i> time (perhaps in the future,
+ * so values may be negative). The same origin is used by
+ * all invocations of this method in an instance of a Java virtual
+ * machine; other virtual machine instances are likely to use a different origin.
+ */
+public class ConnectStandalone extends AbstractConnectCli<StandaloneHerder, StandaloneConfig> {
+    private static final Logger log = LoggerFactory.getLogger(ConnectStandalone.class);
+
+    public ConnectStandalone(String... args) {
+        super(args);
+    }
+
+    @Override
+    protected String usage() {
+        return "ConnectStandalone worker.properties [connector1.properties connector2.json ...]";
+    }
+
+    @Override
+    public void processExtraArgs(Connect<StandaloneHerder> connect, String[] extraArgs) {
+        try {
+            for (final String connectorConfigFile : extraArgs) {
+                CreateConnectorRequest createConnectorRequest = parseConnectorConfigurationFile(connectorConfigFile);
+                FutureCallback<Herder.Created<ConnectorInfo>> cb = new FutureCallback<>((error, info) -> {
+                    if (error != null)
+                        log.error("Failed to create connector for {}", connectorConfigFile);
+                    else
+                        log.info("Created connector {}", info.result().name());
+                });
+                connect.herder().putConnectorConfig(
+                    createConnectorRequest.name(), createConnectorRequest.config(),
+                    createConnectorRequest.initialTargetState(),
+                    false, cb);
+                cb.get();
+            }
+            connect.herder().ready();
+        } catch (Throwable t) {
+            log.error("Stopping after connector error", t);
+            connect.stop();
+            Exit.exit(3);
+        }
+    }
+
+    /**
+     * Workers will invoke this before configuring per-connector
+     * Kafka admin, producer, and consumer client instances to
+     * validate if all the overridden client configurations are
+     * allowed per the policy implementation. This would also be
+     * invoked during the validation of connector configs via the
+     * REST API. <p> If there are any policy violations, the connector
+     * will not be started. @param connectorClientConfigRequest an
+     * instance of {@link ConnectorClientConfigRequest} that provides
+     * the configs to be overridden and its context; never {@code null}
+     * @return list of {@link ConfigValue} instances that describe each
+     * client configuration in the request and includes an {@link ConfigValue#errorMessages()
+     * error} if the configuration is not allowed by the policy; never null
+     */
+    CreateConnectorRequest parseConnectorConfigurationFile(String filePath) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        File connectorConfigurationFile = Paths.get(filePath).toFile();
+        try {
+            Map<String, String> connectorConfigs = objectMapper.readValue(connectorConfigurationFile, new TypeReference<>() { });
+
+            if (!connectorConfigs.containsKey(NAME_CONFIG)) {
+                throw new ConnectException("Connector configuration at '" + filePath + "' is missing the mandatory '" + NAME_CONFIG + "' "
+                    + "configuration");
+            }
+            return new CreateConnectorRequest(connectorConfigs.get(NAME_CONFIG), connectorConfigs, null);
+        } catch (StreamReadException | DatabindException e) {
+            log.debug("Could not parse connector configuration file '{}' into a Map with String keys and values", filePath);
+        }
+
+        try {
+            objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            CreateConnectorRequest createConnectorRequest = objectMapper.readValue(connectorConfigurationFile, new TypeReference<>() { });
+            if (createConnectorRequest.config().containsKey(NAME_CONFIG)) {
+                if (!createConnectorRequest.config().get(NAME_CONFIG).equals(createConnectorRequest.name())) {
+                    throw new ConnectException("Connector name configuration in 'config' doesn't match the one specified in 'name' at '" + filePath
+                        + "'");
+                }
+            } else {
+                createConnectorRequest.config().put(NAME_CONFIG, createConnectorRequest.name());
+            }
+            return createConnectorRequest;
+        } catch (StreamReadException | DatabindException e) {
+            log.debug("Could not parse connector configuration file '{}' into an object of type {}",
+                filePath, CreateConnectorRequest.class.getSimpleName());
+        }
+
+        Map<String, String> connectorConfigs = Utils.propsToStringMap(Utils.loadProps(filePath));
+        if (!connectorConfigs.containsKey(NAME_CONFIG)) {
+            throw new ConnectException("Connector configuration at '" + filePath + "' is missing the mandatory '" + NAME_CONFIG + "' "
+                + "configuration");
+        }
+        return new CreateConnectorRequest(connectorConfigs.get(NAME_CONFIG), connectorConfigs, null);
+    }
+
+    @Override
+    protected StandaloneHerder createHerder(StandaloneConfig config, String workerId, Plugins plugins,
+                                  ConnectorClientConfigOverridePolicy connectorClientConfigOverridePolicy,
+                                  RestServer restServer, RestClient restClient) {
+
+        OffsetBackingStore offsetBackingStore = new FileOffsetBackingStore(plugins.newInternalConverter(
+                true, JsonConverter.class.getName(), Map.of(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false")));
+        offsetBackingStore.configure(config);
+
+        Worker worker = new Worker(workerId, Time.SYSTEM, plugins, config, offsetBackingStore,
+                connectorClientConfigOverridePolicy);
+
+        return new StandaloneHerder(worker, config.kafkaClusterId(), connectorClientConfigOverridePolicy);
+    }
+
+    @Override
+    protected StandaloneConfig createConfig(Map<String, String> workerProps) {
+        return new StandaloneConfig(workerProps);
+    }
+
+    public static void main(String[] args) {
+        ConnectStandalone connectStandalone = new ConnectStandalone(args);
+        connectStandalone.run();
+    }
+}

@@ -12,8 +12,9 @@ Two CognaScore routes are retained:
 - **CognaScore Compact** is restricted to at most five features and exposes a
   short linear formula.
 
-The comparison implementations are retained unchanged as separate method
-families: RMC, Posnett, Scalabrino, and direct LLM scoring.
+Comparison methods are isolated as separate method families, including RMC,
+Posnett, Dorn, Scalabrino, direct LLM scoring, and the paper-aligned Mi
+character-level CNN reproduction.
 
 ## Repository structure
 
@@ -58,13 +59,12 @@ The six established development/evaluation datasets are MBJP, Buse,
 Scalabrino, JetBrains, Dorn, and Schnappinger. Additional registered
 datasets are retained as first-class evaluation datasets:
 
-- `generated_readability_90`: 90 generated Java examples with low, normal, or
-  high readability instructions.
-- `java_progressive_obfuscation`: 100 Java classes with complete L0--L6
-  cumulative obfuscation chains for grouped trend evaluation.
-- `java_comparative_obfuscation`: 12 independently applied interference types
+- `java_comparative_obfuscation`: 14 independently applied interference types
   paired with the same 100 original Java classes for fine-grained response
-  analysis.
+  analysis, including local data-flow and control-flow transformations.
+- `python_comparative_degradation`: the same 14 independent interference
+  categories applied to 100 production Python classes sampled equally from
+  Django, Flask, Requests, and attrs.
 
 Their canonical paths, labels, metrics, and reconstruction command are
 documented in [`datasets/README.md`](datasets/README.md). Dataset adapters
@@ -162,12 +162,39 @@ then writes predictions for every registered report dataset. Selection
 experiments remain separate so exploratory results cannot silently replace the
 frozen scorer.
 
-The two retained controlled experiments are reproduced together with:
+The retained Java and Python independent-interference evaluations are
+reproduced together with:
 
 ```bash
 PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
   bash scripts/run_constructed_variants_nomic.sh
 ```
+
+After replacing or extending one constructed dataset, update only changed
+source hashes with:
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  bash scripts/update_constructed_nomic_incremental.sh \
+  datasets/constructed/java-comparative-obfuscation-class-100
+```
+
+The updater runs base extraction, source-reference/embedding maintenance, and
+embedding-feature derivation sequentially. Unchanged source hashes reuse their
+existing rows, while retired task IDs are removed from the rebuilt tables.
+
+Run the locally supported comparison methods (Posnett transfer, Dorn, and
+LOC) and produce their paired summaries with:
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  bash scripts/run_constructed_baselines.sh
+```
+
+The released Scalabrino implementation is excluded from this two-language
+runner because its parser accepts Java only; its Java evaluation remains a
+separate reproducible run. The API-based LLM baseline is also excluded from
+this default evaluation.
 
 ## Comparison methods
 

@@ -13,15 +13,15 @@ public class AlterClientQuotasOptions extends AbstractOptions<AlterClientQuotasO
     /**
      * Returns whether the request should be validated without altering the configs.
      */
-    public boolean publishIndex() {
+    public boolean removeBuffer() {
         return this.validateOnly;
     }
 
     /**
      * Sets whether the request should be validated without altering the configs.
      */
-    public AlterClientQuotasOptions publishIndex(boolean currentPrice) {
-        this.validateOnly = currentPrice;
+    public AlterClientQuotasOptions removeBuffer(boolean remoteClient) {
+        this.validateOnly = remoteClient;
         return this;
     }
 }

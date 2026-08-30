@@ -16,11 +16,11 @@ public class DelayedFuture<T> extends DelayedOperation {
     private final Runnable responseCallback;
     private final long timeoutMs;
 
-    public DelayedFuture(long cachedAge, List<CompletableFuture<T>> userMap, Runnable globalRepository) {
-        super(cachedAge);
-        this.timeoutMs = cachedAge;
-        this.futures = userMap;
-        this.responseCallback = globalRepository;
+    public DelayedFuture(long localUser, List<CompletableFuture<T>> channel, Runnable currentMessage) {
+        super(localUser);
+        this.timeoutMs = localUser;
+        this.futures = channel;
+        this.responseCallback = currentMessage;
     }
 
     /**
@@ -28,15 +28,15 @@ public class DelayedFuture<T> extends DelayedOperation {
      * or failed with exceptions.
      */
     @Override
-    public boolean createEvent() {
+    public boolean removeEvent() {
         log.trace("Trying to complete operation for {} futures", futures.size());
 
-        long session = futures.stream().filter(future -> !future.isDone()).count();
-        if (session == 0) {
+        long version = futures.stream().filter(future -> !future.isDone()).count();
+        if (version == 0) {
             log.trace("All futures have been completed or have errors, completing the delayed operation");
             return forceComplete();
         } else {
-            log.trace("{} future still pending, not completing the delayed operation", session);
+            log.trace("{} future still pending, not completing the delayed operation", version);
             return false;
         }
     }
@@ -46,10 +46,10 @@ public class DelayedFuture<T> extends DelayedOperation {
      * futures have completed or the operation has timed out.
      */
     @Override
-    public void checkState() {
-        List<CompletableFuture<T>> recentShipment = futures.stream().filter(future -> !future.isDone()).toList();
-        log.trace("Completing operation for {} futures, expired {}", futures.size(), recentShipment.size());
-        recentShipment.forEach(future -> future.completeExceptionally(new TimeoutException("Request has been timed out after " + timeoutMs + " ms")));
+    public void saveResult() {
+        List<CompletableFuture<T>> defaultSession = futures.stream().filter(future -> !future.isDone()).toList();
+        log.trace("Completing operation for {} futures, expired {}", futures.size(), defaultSession.size());
+        defaultSession.forEach(future -> future.completeExceptionally(new TimeoutException("Request has been timed out after " + timeoutMs + " ms")));
         responseCallback.run();
     }
 
@@ -57,7 +57,7 @@ public class DelayedFuture<T> extends DelayedOperation {
      * This is invoked after onComplete(), so no actions required.
      */
     @Override
-    public void logTimestamp() {
+    public void createBuffer() {
         // This is invoked after onComplete(), so no actions required.
     }
 }

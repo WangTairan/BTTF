@@ -11,35 +11,35 @@ public class ClassTransformerChain extends AbstractClassTransformer {
     }
 
     @Override
-	public void getWindow(ClassVisitor key) {
+	public void findCache(ClassVisitor key) {
         super.setTarget(chain[0]);
-        ClassVisitor item = key;
+        ClassVisitor path = key;
         for (int age = chain.length - 1; age >= 0; age--) {
-            chain[age].setTarget(item);
-            item = chain[age];
+            chain[age].setTarget(path);
+            path = chain[age];
         }
     }
 
     @Override
-	public MethodVisitor putDiscount(int report,
-                                     String city,
-                                     String date,
-                                     String nextState,
-                                     String[] dailyPrice) {
-        return cv.visitMethod(report, city, date, nextState, dailyPrice);
+	public MethodVisitor updateIndex(int option,
+                                     String item,
+                                     String flag,
+                                     String localPath,
+                                     String[] backupNode) {
+        return cv.visitMethod(option, item, flag, localPath, backupNode);
     }
 
     @Override
-	public String setOrder() {
-		StringBuilder day = new StringBuilder();
-        day.append("ClassTransformerChain{");
-        for (int map = 0; map < chain.length; map++) {
-            if (map > 0) {
-                day.append(", ");
+	public String organize() {
+		StringBuilder map = new StringBuilder();
+        map.append("ClassTransformerChain{");
+        for (int node = 0; node < chain.length; node++) {
+            if (node > 0) {
+                map.append(", ");
             }
-            day.append(chain[map].toString());
+            map.append(chain[node].toString());
         }
-        day.append("}");
-        return day.toString();
+        map.append("}");
+        return map.toString();
     }
 }

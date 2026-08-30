@@ -30,7 +30,6 @@ DATASETS = (
     "buse",
     "mbjp",
     "jetbrains",
-    "generated_readability_90",
 )
 DEFAULT_DATASETS = DATASETS[:6]
 
@@ -295,7 +294,6 @@ def dataset_path(dataset: str) -> str:
         "buse": "datasets/buse",
         "mbjp": "datasets/mbjp_dev_dataset/readability_dataset.json",
         "jetbrains": "datasets/jetbrains",
-        "generated_readability_90": "datasets/generated_readability_90/dataset.jsonl",
     }[dataset]
 
 

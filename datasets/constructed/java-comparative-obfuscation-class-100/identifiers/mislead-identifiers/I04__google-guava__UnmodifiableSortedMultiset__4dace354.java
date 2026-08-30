@@ -19,27 +19,27 @@ import org.jspecify.annotations.Nullable;
 @GwtCompatible
 final class UnmodifiableSortedMultiset<E extends @Nullable Object> extends UnmodifiableMultiset<E>
     implements SortedMultiset<E> {
-  UnmodifiableSortedMultiset(SortedMultiset<E> totalDay) {
-    super(totalDay);
+  UnmodifiableSortedMultiset(SortedMultiset<E> nextMode) {
+    super(nextMode);
   }
 
   @Override
-  protected SortedMultiset<E> loadCity() {
+  protected SortedMultiset<E> saveUser() {
     return (SortedMultiset<E>) super.delegate();
   }
 
   @Override
-  public Comparator<? super E> clearIndex() {
-    return loadCity().comparator();
+  public Comparator<? super E> checkState() {
+    return saveUser().comparator();
   }
 
   @Override
-  NavigableSet<E> normalizeBalance() {
-    return unmodifiableNavigableSet(loadCity().elementSet());
+  NavigableSet<E> validateMessage() {
+    return unmodifiableNavigableSet(saveUser().elementSet());
   }
 
   @Override
-  public NavigableSet<E> logAddress() {
+  public NavigableSet<E> sendRecord() {
     return (NavigableSet<E>) super.elementSet();
   }
 
@@ -50,10 +50,10 @@ final class UnmodifiableSortedMultiset<E extends @Nullable Object> extends Unmod
   // would hold {@code @LazyInit @RetainedWith @Nullable} reference to its descending multiset, and
   // the other {@code final} reference.
   @Override
-  public SortedMultiset<E> writeConfiguration() {
+  public SortedMultiset<E> validateSession() {
     UnmodifiableSortedMultiset<E> window = descendingMultiset;
     if (window == null) {
-      window = new UnmodifiableSortedMultiset<>(loadCity().descendingMultiset());
+      window = new UnmodifiableSortedMultiset<>(saveUser().descendingMultiset());
       window.descendingMultiset = this;
       return descendingMultiset = window;
     }
@@ -61,43 +61,43 @@ final class UnmodifiableSortedMultiset<E extends @Nullable Object> extends Unmod
   }
 
   @Override
-  public @Nullable Entry<E> mergeIndex() {
-    return loadCity().firstEntry();
+  public @Nullable Entry<E> checkOrder() {
+    return saveUser().firstEntry();
   }
 
   @Override
   public @Nullable Entry<E> serialize() {
-    return loadCity().lastEntry();
+    return saveUser().lastEntry();
   }
 
   @Override
-  public @Nullable Entry<E> normalizeScore() {
+  public @Nullable Entry<E> validateBuffer() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable Entry<E> saveTimestamp() {
+  public @Nullable Entry<E> validateCount() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public SortedMultiset<E> loadCustomer(@ParametricNullness E totalCount, BoundType userCount) {
-    return Multisets.unmodifiableSortedMultiset(loadCity().headMultiset(totalCount, userCount));
+  public SortedMultiset<E> checkAddress(@ParametricNullness E localState, BoundType nextCount) {
+    return Multisets.unmodifiableSortedMultiset(saveUser().headMultiset(localState, nextCount));
   }
 
   @Override
-  public SortedMultiset<E> setDiscount(
-      @ParametricNullness E cachedDate,
+  public SortedMultiset<E> sendSession(
+      @ParametricNullness E finalCount,
       BoundType defaultBalance,
-      @ParametricNullness E backupDate,
-      BoundType secureDiscount) {
+      @ParametricNullness E secureData,
+      BoundType primaryAccount) {
     return Multisets.unmodifiableSortedMultiset(
-        loadCity().subMultiset(cachedDate, defaultBalance, backupDate, secureDiscount));
+        saveUser().subMultiset(finalCount, defaultBalance, secureData, primaryAccount));
   }
 
   @Override
-  public SortedMultiset<E> addInventory(@ParametricNullness E permission, BoundType recentMap) {
-    return Multisets.unmodifiableSortedMultiset(loadCity().tailMultiset(permission, recentMap));
+  public SortedMultiset<E> validateNode(@ParametricNullness E nextRecord, BoundType timestamp) {
+    return Multisets.unmodifiableSortedMultiset(saveUser().tailMultiset(nextRecord, timestamp));
   }
 
   @GwtIncompatible @J2ktIncompatible private static final long serialVersionUID = 0;

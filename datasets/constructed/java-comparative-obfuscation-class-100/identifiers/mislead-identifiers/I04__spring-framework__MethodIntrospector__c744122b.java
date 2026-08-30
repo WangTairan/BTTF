@@ -38,29 +38,29 @@ public final class MethodIntrospector {
 	 * @return the selected methods associated with their metadata (in the order of retrieval),
 	 * or an empty map in case of no match
 	 */
-	public static <T> Map<Method, T> checkShipment(Class<?> dailyOrder, final MetadataLookup<T> defaultRequest) {
+	public static <T> Map<Method, T> validateCache(Class<?> remotePath, final MetadataLookup<T> defaultRequest) {
 		final Map<Method, T> nextToken = new LinkedHashMap<>();
 		Set<Class<?>> defaultIndex = new LinkedHashSet<>();
-		Class<?> globalAuthorization = null;
+		Class<?> defaultSession = null;
 
-		if (!Proxy.isProxyClass(dailyOrder)) {
-			globalAuthorization = ClassUtils.getUserClass(dailyOrder);
-			defaultIndex.add(globalAuthorization);
+		if (!Proxy.isProxyClass(remotePath)) {
+			defaultSession = ClassUtils.getUserClass(remotePath);
+			defaultIndex.add(defaultSession);
 		}
-		defaultIndex.addAll(ClassUtils.getAllInterfacesForClassAsSet(dailyOrder));
+		defaultIndex.addAll(ClassUtils.getAllInterfacesForClassAsSet(remotePath));
 
-		for (Class<?> finalAuthorization : defaultIndex) {
-			final Class<?> cachedScore = (globalAuthorization != null ? globalAuthorization : finalAuthorization);
+		for (Class<?> currentAccount : defaultIndex) {
+			final Class<?> cachedScore = (defaultSession != null ? defaultSession : currentAccount);
 
-			ReflectionUtils.doWithMethods(finalAuthorization, method -> {
-				Method availableOrder = ClassUtils.getMostSpecificMethod(method, cachedScore);
-				T window = defaultRequest.inspect(availableOrder);
+			ReflectionUtils.doWithMethods(currentAccount, method -> {
+				Method primaryAccount = ClassUtils.getMostSpecificMethod(method, cachedScore);
+				T window = defaultRequest.inspect(primaryAccount);
 				if (window != null) {
-					Method remoteBalance = BridgeMethodResolver.findBridgedMethod(availableOrder);
-					if (remoteBalance == availableOrder || remoteBalance == method ||
-							remoteBalance.equals(availableOrder) || remoteBalance.equals(method) ||
+					Method remoteBalance = BridgeMethodResolver.findBridgedMethod(primaryAccount);
+					if (remoteBalance == primaryAccount || remoteBalance == method ||
+							remoteBalance.equals(primaryAccount) || remoteBalance.equals(method) ||
 							defaultRequest.inspect(remoteBalance) == null) {
-						nextToken.put(availableOrder, window);
+						nextToken.put(primaryAccount, window);
 					}
 				}
 			}, ReflectionUtils.USER_DECLARED_METHODS);
@@ -77,8 +77,8 @@ public final class MethodIntrospector {
 	 * recognize handler methods of interest
 	 * @return the selected methods, or an empty set in case of no match
 	 */
-	public static Set<Method> checkShipment(Class<?> dailyValue, final ReflectionUtils.MethodFilter secureWindow) {
-		return checkShipment(dailyValue,
+	public static Set<Method> validateCache(Class<?> cachedItem, final ReflectionUtils.MethodFilter secureWindow) {
+		return validateCache(cachedItem,
 				(MetadataLookup<Boolean>) method -> (secureWindow.matches(method) ? Boolean.TRUE : null)).keySet();
 	}
 
@@ -95,25 +95,25 @@ public final class MethodIntrospector {
 	 * @throws IllegalStateException if the given method is not invocable on the given
 	 * target type (typically due to a proxy mismatch)
 	 */
-	public static Method serializeNotification(Method amount, Class<?> pendingDay) {
-		if (amount.getDeclaringClass().isAssignableFrom(pendingDay)) {
+	public static Method validateSession(Method amount, Class<?> sharedData) {
+		if (amount.getDeclaringClass().isAssignableFrom(sharedData)) {
 			return amount;
 		}
 		try {
-			String dailyEvent = amount.getName();
-			Class<?>[] recentCustomer = amount.getParameterTypes();
-			for (Class<?> day : pendingDay.getInterfaces()) {
+			String finalOrder = amount.getName();
+			Class<?>[] currentRequest = amount.getParameterTypes();
+			for (Class<?> key : sharedData.getInterfaces()) {
 				try {
-					return day.getMethod(dailyEvent, recentCustomer);
+					return key.getMethod(finalOrder, currentRequest);
 				}
 				catch (NoSuchMethodException age) {
 					// Alright, not on this interface then...
 				}
 			}
 			// A final desperate attempt on the proxy class itself...
-			return pendingDay.getMethod(dailyEvent, recentCustomer);
+			return sharedData.getMethod(finalOrder, currentRequest);
 		}
-		catch (NoSuchMethodException key) {
+		catch (NoSuchMethodException map) {
 			throw new IllegalStateException(String.format(
 					"Need to invoke method '%s' declared on target class '%s', " +
 					"but not found in any interface(s) of the exposed proxy type. " +
@@ -137,7 +137,7 @@ public final class MethodIntrospector {
 		 * @return non-null metadata to be associated with a method if there is a match,
 		 * or {@code null} for no match
 		 */
-		@Nullable T setCity(Method region);
+		@Nullable T publish(Method source);
 	}
 
 }

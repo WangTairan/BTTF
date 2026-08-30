@@ -1,14 +1,16 @@
-"""Evaluate frozen CognaScore on independently constructed Java variants."""
+"""Evaluate frozen CognaScore on paired, independently transformed variants."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
 import pandas as pd
+import joblib
 
 from src.datasets import load_code_dataset
 from src.experiments.registry import DATASETS
@@ -21,13 +23,39 @@ from src.methods.cognascore.paths import (
 from src.methods.cognascore.results import model_slug
 from src.methods.cognascore.runners.supervised_ridge import load_combined_features
 
-from .evaluate_progressive_obfuscation import load_frozen_model
-
-
-DATASET_KEYS = ("java_comparative_obfuscation",)
+DATASET_KEYS = (
+    "java_comparative_obfuscation",
+    "python_comparative_degradation",
+)
 MODEL_NAME = "consensus18_6dataset_sampled_margin_nomic"
 DEFAULT_EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
 TOLERANCE = 1e-12
+
+
+def load_frozen_model(artifact_dir: Path) -> tuple[dict[str, Any], Any]:
+    """Load a frozen pipeline only after verifying its recorded SHA-256."""
+    manifest_path = artifact_dir / "model.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"Missing frozen-model manifest: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    model_path = artifact_dir / str(manifest["serialized_model"])
+    if not model_path.is_file():
+        raise FileNotFoundError(f"Missing frozen model: {model_path}")
+    actual_hash = sha256_file(model_path)
+    expected_hash = str(manifest["serialized_model_sha256"])
+    if actual_hash != expected_hash:
+        raise ValueError(
+            f"Frozen-model hash mismatch: expected {expected_hash}, got {actual_hash}"
+        )
+    return manifest, joblib.load(model_path)
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def parse_args() -> argparse.Namespace:

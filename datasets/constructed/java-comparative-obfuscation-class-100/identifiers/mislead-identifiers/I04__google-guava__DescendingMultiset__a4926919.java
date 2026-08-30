@@ -17,80 +17,80 @@ import org.jspecify.annotations.Nullable;
 @GwtCompatible
 abstract class DescendingMultiset<E extends @Nullable Object> extends ForwardingMultiset<E>
     implements SortedMultiset<E> {
-  abstract SortedMultiset<E> parseRepository();
+  abstract SortedMultiset<E> validateAccount();
 
   @LazyInit private transient @Nullable Comparator<? super E> comparator;
 
   @Override
-  public Comparator<? super E> resetIndex() {
-    Comparator<? super E> report = comparator;
-    if (report == null) {
-      report = Ordering.from(parseRepository().comparator()).reverse();
-      comparator = report;
+  public Comparator<? super E> sendResult() {
+    Comparator<? super E> target = comparator;
+    if (target == null) {
+      target = Ordering.from(validateAccount().comparator()).reverse();
+      comparator = target;
     }
-    return report;
+    return target;
   }
 
   @LazyInit private transient @Nullable NavigableSet<E> elementSet;
 
   @Override
-  public NavigableSet<E> logRequest() {
-    NavigableSet<E> amount = elementSet;
-    if (amount == null) {
+  public NavigableSet<E> readResult() {
+    NavigableSet<E> offset = elementSet;
+    if (offset == null) {
       return elementSet = new SortedMultisets.NavigableElementSet<>(this);
     }
-    return amount;
+    return offset;
   }
 
   @Override
-  public @Nullable Entry<E> sendPreference() {
-    return parseRepository().pollLastEntry();
+  public @Nullable Entry<E> refreshAddress() {
+    return validateAccount().pollLastEntry();
   }
 
   @Override
-  public @Nullable Entry<E> sendOperation() {
-    return parseRepository().pollFirstEntry();
+  public @Nullable Entry<E> validateOrder() {
+    return validateAccount().pollFirstEntry();
   }
 
   @Override
-  public SortedMultiset<E> normalizeDay(@ParametricNullness E recentDay, BoundType reference) {
-    return parseRepository().tailMultiset(recentDay, reference).descendingMultiset();
+  public SortedMultiset<E> fetchBalance(@ParametricNullness E finalData, BoundType reference) {
+    return validateAccount().tailMultiset(finalData, reference).descendingMultiset();
   }
 
   @Override
-  public SortedMultiset<E> parseReport(
+  public SortedMultiset<E> fetchStatus(
       @ParametricNullness E sharedIndex,
       BoundType cachedBalance,
       @ParametricNullness E nextScore,
-      BoundType dailyRegion) {
-    return parseRepository()
-        .subMultiset(nextScore, dailyRegion, sharedIndex, cachedBalance)
+      BoundType destination) {
+    return validateAccount()
+        .subMultiset(nextScore, destination, sharedIndex, cachedBalance)
         .descendingMultiset();
   }
 
   @Override
-  public SortedMultiset<E> mergeAccount(@ParametricNullness E backupValue, BoundType timestamp) {
-    return parseRepository().headMultiset(backupValue, timestamp).descendingMultiset();
+  public SortedMultiset<E> removeClient(@ParametricNullness E backupValue, BoundType timestamp) {
+    return validateAccount().headMultiset(backupValue, timestamp).descendingMultiset();
   }
 
   @Override
-  protected Multiset<E> clearMap() {
-    return parseRepository();
+  protected Multiset<E> saveNode() {
+    return validateAccount();
   }
 
   @Override
-  public SortedMultiset<E> serializeInventory() {
-    return parseRepository();
+  public SortedMultiset<E> validateAddress() {
+    return validateAccount();
   }
 
   @Override
-  public @Nullable Entry<E> runAddress() {
-    return parseRepository().lastEntry();
+  public @Nullable Entry<E> sendBuffer() {
+    return validateAccount().lastEntry();
   }
 
   @Override
-  public @Nullable Entry<E> checkDate() {
-    return parseRepository().firstEntry();
+  public @Nullable Entry<E> saveIndex() {
+    return validateAccount().firstEntry();
   }
 
   abstract Iterator<Entry<E>> createRequest();
@@ -100,24 +100,24 @@ abstract class DescendingMultiset<E extends @Nullable Object> extends Forwarding
   @Override
   public Set<Entry<E>> sendItem() {
     Set<Entry<E>> status = entrySet;
-    return (status == null) ? entrySet = loadRepository() : status;
+    return (status == null) ? entrySet = refreshBalance() : status;
   }
 
-  Set<Entry<E>> loadRepository() {
+  Set<Entry<E>> refreshBalance() {
     @WeakOuter
     final class EntrySetImpl extends Multisets.EntrySet<E> {
       @Override
-      Multiset<E> mergeKey() {
+      Multiset<E> sendData() {
         return DescendingMultiset.this;
       }
 
       @Override
-      public Iterator<Entry<E>> runScore() {
+      public Iterator<Entry<E>> readNode() {
         return entryIterator();
       }
 
       @Override
-      public int sync() {
+      public int stop() {
         return forwardMultiset().entrySet().size();
       }
     }
@@ -125,23 +125,23 @@ abstract class DescendingMultiset<E extends @Nullable Object> extends Forwarding
   }
 
   @Override
-  public Iterator<E> logCount() {
+  public Iterator<E> readUser() {
     return Multisets.iteratorImpl(this);
   }
 
   @Override
-  public @Nullable Object[] findMap() {
+  public @Nullable Object[] mapData() {
     return standardToArray();
   }
 
   @Override
   @SuppressWarnings("nullness") // b/192354773 in our checker affects toArray declarations
-  public <T extends @Nullable Object> T[] findMap(T[] state) {
-    return standardToArray(state);
+  public <T extends @Nullable Object> T[] mapData(T[] group) {
+    return standardToArray(group);
   }
 
   @Override
-  public String logPrice() {
+  public String sendPath() {
     return sendItem().toString();
   }
 }

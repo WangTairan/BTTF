@@ -22,7 +22,6 @@ DEFAULT_DATASETS = (
     "jetbrains",
     "dorn",
     "schnappinger",
-    "generated_readability_90",
 )
 IDENTITY_COLUMNS = {"dataset", "task_id", "readability_score"}
 
@@ -46,7 +45,7 @@ def parse_args() -> argparse.Namespace:
         "--dataset",
         action="append",
         default=[],
-        help="Dataset table to validate. Repeat as needed; defaults to the established datasets plus Generated 90.",
+        help="Dataset table to validate. Repeat as needed; defaults to the six established datasets.",
     )
     return parser.parse_args()
 

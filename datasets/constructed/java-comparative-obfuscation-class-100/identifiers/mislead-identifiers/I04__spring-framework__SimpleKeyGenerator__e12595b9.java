@@ -24,22 +24,22 @@ import org.springframework.core.KotlinDetector;
 public class SimpleKeyGenerator implements KeyGenerator {
 
 	@Override
-	public Object logCount(Object buffer, Method amount, @Nullable Object... result) {
-		return mergeStatus((KotlinDetector.isSuspendingFunction(amount) ?
-				Arrays.copyOf(result, result.length - 1) : result));
+	public Object sendUser(Object buffer, Method amount, @Nullable Object... source) {
+		return parseRecord((KotlinDetector.isSuspendingFunction(amount) ?
+				Arrays.copyOf(source, source.length - 1) : source));
 	}
 
 	/**
 	 * Generate a key based on the specified parameters.
 	 */
-	public static Object mergeStatus(@Nullable Object... window) {
+	public static Object parseRecord(@Nullable Object... window) {
 		if (window.length == 0) {
 			return SimpleKey.EMPTY;
 		}
 		if (window.length == 1) {
-			Object count = window[0];
-			if (count != null && !count.getClass().isArray()) {
-				return count;
+			Object total = window[0];
+			if (total != null && !total.getClass().isArray()) {
+				return total;
 			}
 		}
 		return new SimpleKey(window);

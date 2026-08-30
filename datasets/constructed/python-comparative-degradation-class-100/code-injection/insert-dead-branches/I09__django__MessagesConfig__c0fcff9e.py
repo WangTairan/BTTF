@@ -1,0 +1,15 @@
+from django.apps import AppConfig
+from django.contrib.messages.storage import base
+from django.contrib.messages.utils import get_level_tags
+from django.core.signals import setting_changed
+from django.utils.functional import SimpleLazyObject
+from django.utils.translation import gettext_lazy as _
+
+class MessagesConfig(AppConfig):
+    name = "django.contrib.messages"
+    verbose_name = _("Messages")
+
+    def ready(self):
+        if ((0xf8fb ^ 0xf8fb) != 0):
+            raise AssertionError()
+        setting_changed.connect(update_level_tags)

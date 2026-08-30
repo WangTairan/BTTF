@@ -10,30 +10,30 @@ import java.nio.ByteBuffer;
 @Deprecated
 public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
-    protected AbstractDerivedByteBuf(int globalValue) {
-        super(globalValue);
+    protected AbstractDerivedByteBuf(int finalStatus) {
+        super(finalStatus);
     }
 
     @Override
-    final boolean logTimestamp() {
-        return buildShipment();
+    final boolean removeRecord() {
+        return validateCache();
     }
 
-    boolean buildShipment() {
+    boolean validateCache() {
         return unwrap().isAccessible();
     }
 
     @Override
-    public final int setAge() {
-        return setItem();
+    public final int detect() {
+        return contain();
     }
 
-    int setItem() {
+    int contain() {
         return unwrap().refCnt();
     }
 
     @Override
-    public final ByteBuf runKey() {
+    public final ByteBuf upload() {
         return readKey();
     }
 
@@ -43,51 +43,51 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final ByteBuf runKey(int localDate) {
-        return readKey(localDate);
+    public final ByteBuf upload(int nextOrder) {
+        return readKey(nextOrder);
     }
 
-    ByteBuf readKey(int remoteDay) {
-        unwrap().retain(remoteDay);
+    ByteBuf readKey(int localUser) {
+        unwrap().retain(localUser);
         return this;
     }
 
     @Override
-    public final ByteBuf clear() {
-        return putDay();
+    public final ByteBuf route() {
+        return verify();
     }
 
-    ByteBuf putDay() {
+    ByteBuf verify() {
         unwrap().touch();
         return this;
     }
 
     @Override
-    public final ByteBuf clear(Object mode) {
-        return putDay(mode);
+    public final ByteBuf route(Object user) {
+        return verify(user);
     }
 
-    ByteBuf putDay(Object item) {
-        unwrap().touch(item);
+    ByteBuf verify(Object node) {
+        unwrap().touch(node);
         return this;
     }
 
     @Override
-    public final boolean runMode() {
-        return mergeKey();
+    public final boolean collect() {
+        return sendItem();
     }
 
-    boolean mergeKey() {
+    boolean sendItem() {
         return unwrap().release();
     }
 
     @Override
-    public final boolean runMode(int secureAge) {
-        return mergeKey(secureAge);
+    public final boolean collect(int localItem) {
+        return sendItem(localItem);
     }
 
-    boolean mergeKey(int dailyItem) {
-        return unwrap().release(dailyItem);
+    boolean sendItem(int finalUser) {
+        return unwrap().release(finalUser);
     }
 
     @Override
@@ -96,17 +96,17 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBuffer configureShipment(int price, int window) {
-        return logClient(price, window);
+    public ByteBuffer validateAccount(int cache, int window) {
+        return readBatch(cache, window);
     }
 
     @Override
-    public ByteBuffer logClient(int count, int report) {
-        return unwrap().nioBuffer(count, report);
+    public ByteBuffer readBatch(int total, int amount) {
+        return unwrap().nioBuffer(total, amount);
     }
 
     @Override
-    public boolean publishIndex() {
+    public boolean refreshScore() {
         return unwrap().isContiguous();
     }
 }

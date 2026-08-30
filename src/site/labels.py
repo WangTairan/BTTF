@@ -2,6 +2,8 @@ METHOD_LABELS = {
     "loc_baseline": "LOC",
     "posnett": "Posnett",
     "scalabrino": "Scalabrino",
+    "dorn": "Dorn (retrained)",
+    "dorn_retrained": "Dorn (retrained)",
     "cognascore_ml_consensus18_6dataset_sampled_margin": "CognaScore ML",
     "cognascore_compact": "CognaScore Compact",
     "llm": "LLM prompt",
@@ -15,13 +17,15 @@ DATASET_LABELS = {
     "jetbrains": "JetBrains",
     "dorn": "Dorn",
     "schnappinger": "Schnappinger",
-    "generated_readability_90": "Generated 90",
-    "java_progressive_obfuscation": "Progressive Obfuscation",
+    "java_comparative_obfuscation": "Java Independent Interferences",
+    "python_comparative_degradation": "Python Independent Interferences",
 }
 
 METHOD_ORDER = (
     "posnett",
     "scalabrino",
+    "dorn",
+    "dorn_retrained",
     "cognascore_ml_consensus18_6dataset_sampled_margin",
     "cognascore_compact",
     "llm_prompt",
@@ -36,8 +40,8 @@ DATASET_ORDER = (
     "jetbrains",
     "dorn",
     "schnappinger",
-    "generated_readability_90",
-    "java_progressive_obfuscation",
+    "java_comparative_obfuscation",
+    "python_comparative_degradation",
 )
 
 MODEL_LABELS = {

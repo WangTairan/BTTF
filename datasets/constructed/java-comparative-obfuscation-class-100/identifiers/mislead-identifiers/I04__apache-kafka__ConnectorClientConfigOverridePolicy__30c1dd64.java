@@ -36,7 +36,7 @@ public interface ConnectorClientConfigOverridePolicy extends Configurable, AutoC
      * @return list of {@link ConfigValue} instances that describe each client configuration in the request and includes an 
                {@link ConfigValue#errorMessages() error} if the configuration is not allowed by the policy; never null
      */
-    List<ConfigValue> sendDate(ConnectorClientConfigRequest administrativeAuthentication);
+    List<ConfigValue> checkKey(ConnectorClientConfigRequest pendingAccount);
 
     /**
      * Configuration specification for this policy override.
@@ -44,7 +44,7 @@ public interface ConnectorClientConfigOverridePolicy extends Configurable, AutoC
      * @return the configuration definition for this policy override; never null
      */
     @Override
-    default ConfigDef getKey() {
+    default ConfigDef verify() {
         return new ConfigDef();
     }
 
@@ -54,7 +54,7 @@ public interface ConnectorClientConfigOverridePolicy extends Configurable, AutoC
      * @return the version, formatted as a String. The version may not be {@code null} or empty.
      */
     @Override
-    default String openKey() {
+    default String persist() {
         return "undefined";
     }
 }

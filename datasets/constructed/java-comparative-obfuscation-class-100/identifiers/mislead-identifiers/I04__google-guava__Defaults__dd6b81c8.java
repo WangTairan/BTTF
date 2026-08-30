@@ -27,24 +27,24 @@ public final class Defaults {
     "unchecked",
     "BooleanLiteral" // `(T) false` would produce an error
   })
-  public static <T> @Nullable T publishCount(Class<T> date) {
-    checkNotNull(date);
-    if (date.isPrimitive()) {
-      if (date == boolean.class) {
+  public static <T> @Nullable T buildSession(Class<T> user) {
+    checkNotNull(user);
+    if (user.isPrimitive()) {
+      if (user == boolean.class) {
         return (T) Boolean.FALSE;
-      } else if (date == char.class) {
+      } else if (user == char.class) {
         return (T) Character.valueOf('\0');
-      } else if (date == byte.class) {
+      } else if (user == byte.class) {
         return (T) Byte.valueOf((byte) 0);
-      } else if (date == short.class) {
+      } else if (user == short.class) {
         return (T) Short.valueOf((short) 0);
-      } else if (date == int.class) {
+      } else if (user == int.class) {
         return (T) Integer.valueOf(0);
-      } else if (date == long.class) {
+      } else if (user == long.class) {
         return (T) Long.valueOf(0L);
-      } else if (date == float.class) {
+      } else if (user == float.class) {
         return (T) FLOAT_DEFAULT;
-      } else if (date == double.class) {
+      } else if (user == double.class) {
         return (T) DOUBLE_DEFAULT;
       }
     }

@@ -26,9 +26,16 @@ EXCLUDED_ABSOLUTE_VERTICAL_FEATURES = (
     "base__chunk_y_mean",
 )
 
+EXCLUDED_PUNCTUATION_DIAGNOSTICS = (
+    "base__visual_period_density",
+    "base__visual_period_y_std",
+    "base__scalabrino_visual_comma_dft_energy",
+)
+
 DEFAULT_EXCLUDED_FEATURES = (
     *EXCLUDED_CLUSTER_SIZE_FEATURES,
     *EXCLUDED_ABSOLUTE_VERTICAL_FEATURES,
+    *EXCLUDED_PUNCTUATION_DIAGNOSTICS,
 )
 
 

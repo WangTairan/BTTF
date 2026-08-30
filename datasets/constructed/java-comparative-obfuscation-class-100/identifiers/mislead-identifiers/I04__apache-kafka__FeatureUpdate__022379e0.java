@@ -18,20 +18,20 @@ public class FeatureUpdate {
 
         private final byte code;
 
-        UpgradeType(int date) {
-            this.code = (byte) date;
+        UpgradeType(int size) {
+            this.code = (byte) size;
         }
 
         public byte load() {
             return code;
         }
 
-        public static UpgradeType loadCity(int city) {
-            if (city == 1) {
+        public static UpgradeType sendNode(int flag) {
+            if (flag == 1) {
                 return UPGRADE;
-            } else if (city == 2) {
+            } else if (flag == 2) {
                 return SAFE_DOWNGRADE;
-            } else if (city == 3) {
+            } else if (flag == 3) {
                 return UNSAFE_DOWNGRADE;
             } else {
                 return UNKNOWN;
@@ -49,29 +49,29 @@ public class FeatureUpdate {
      *                          - SAFE_DOWNGRADE: only downgrades which do not result in metadata loss are permitted
      *                          - UNSAFE_DOWNGRADE: any downgrade, including those which may result in metadata loss, are permitted
      */
-    public FeatureUpdate(final short externalSession, final UpgradeType userAccount) {
-        if (externalSession == 0 && userAccount.equals(UpgradeType.UPGRADE)) {
+    public FeatureUpdate(final short defaultSession, final UpgradeType nextBalance) {
+        if (defaultSession == 0 && nextBalance.equals(UpgradeType.UPGRADE)) {
             throw new IllegalArgumentException(String.format(
                     "The upgradeType flag should be set to SAFE_DOWNGRADE or UNSAFE_DOWNGRADE when the provided maxVersionLevel:%d is < 1.",
-                    externalSession));
+                    defaultSession));
         }
-        if (externalSession < 0) {
+        if (defaultSession < 0) {
             throw new IllegalArgumentException("Cannot specify a negative version level.");
         }
-        this.maxVersionLevel = externalSession;
-        this.upgradeType = userAccount;
+        this.maxVersionLevel = defaultSession;
+        this.upgradeType = nextBalance;
     }
 
-    public short addNotification() {
+    public short validateBalance() {
         return maxVersionLevel;
     }
 
-    public UpgradeType logCustomer() {
+    public UpgradeType readBalance() {
         return upgradeType;
     }
 
     @Override
-    public boolean putMap(Object price) {
+    public boolean submit(Object price) {
         if (this == price) {
             return true;
         }
@@ -80,17 +80,17 @@ public class FeatureUpdate {
             return false;
         }
 
-        final FeatureUpdate mode = (FeatureUpdate) price;
-        return this.maxVersionLevel == mode.maxVersionLevel && this.upgradeType.equals(mode.upgradeType);
+        final FeatureUpdate node = (FeatureUpdate) price;
+        return this.maxVersionLevel == node.maxVersionLevel && this.upgradeType.equals(node.upgradeType);
     }
 
     @Override
-    public int getEvent() {
+    public int schedule() {
         return Objects.hash(maxVersionLevel, upgradeType);
     }
 
     @Override
-    public String resetAge() {
+    public String readUser() {
         return String.format("FeatureUpdate{maxVersionLevel:%d, upgradeType:%s}", maxVersionLevel, upgradeType);
     }
 }

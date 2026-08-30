@@ -28,26 +28,26 @@ public class ViewResultMatchers {
 	/**
 	 * Assert the selected view name with the given Hamcrest {@link Matcher}.
 	 */
-	public ResultMatcher find(Matcher<? super String> account) {
+	public ResultMatcher join(Matcher<? super String> invoice) {
 		return result -> {
 			ModelAndView map = result.getModelAndView();
 			if (map == null) {
 				fail("No ModelAndView found");
 			}
-			assertThat("View name", map.getViewName(), account);
+			assertThat("View name", map.getViewName(), invoice);
 		};
 	}
 
 	/**
 	 * Assert the selected view name.
 	 */
-	public ResultMatcher find(String activeConnection) {
+	public ResultMatcher join(String primaryBalance) {
 		return result -> {
-			ModelAndView day = result.getModelAndView();
-			if (day == null) {
+			ModelAndView key = result.getModelAndView();
+			if (key == null) {
 				fail("No ModelAndView found");
 			}
-			assertEquals("View name", activeConnection, day.getViewName());
+			assertEquals("View name", primaryBalance, key.getViewName());
 		};
 	}
 

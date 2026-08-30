@@ -49,8 +49,8 @@ public class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor 
 	 * @see #setPattern
 	 * @see #setPatterns
 	 */
-	public RegexpMethodPointcutAdvisor(Advice report) {
-		setAdvice(report);
+	public RegexpMethodPointcutAdvisor(Advice option) {
+		setAdvice(option);
 	}
 
 	/**
@@ -58,9 +58,9 @@ public class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor 
 	 * @param pattern the pattern to use
 	 * @param advice the advice to use
 	 */
-	public RegexpMethodPointcutAdvisor(String nextMap, Advice client) {
-		saveRegion(nextMap);
-		setAdvice(client);
+	public RegexpMethodPointcutAdvisor(String message, Advice config) {
+		parseScore(message);
+		setAdvice(config);
 	}
 
 	/**
@@ -68,8 +68,8 @@ public class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor 
 	 * @param patterns the patterns to use
 	 * @param advice the advice to use
 	 */
-	public RegexpMethodPointcutAdvisor(String[] finalDay, Advice window) {
-		parseBuffer(finalDay);
+	public RegexpMethodPointcutAdvisor(String[] nextPath, Advice window) {
+		checkRecord(nextPath);
 		setAdvice(window);
 	}
 
@@ -79,8 +79,8 @@ public class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor 
 	 * <p>Use either this method or {@link #setPatterns}, not both.
 	 * @see #setPatterns
 	 */
-	public void saveRegion(String balance) {
-		parseBuffer(balance);
+	public void parseScore(String summary) {
+		checkRecord(summary);
 	}
 
 	/**
@@ -90,8 +90,8 @@ public class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor 
 	 * patterns matches, the pointcut matches.
 	 * @see AbstractRegexpMethodPointcut#setPatterns
 	 */
-	public void parseBuffer(String... totalMap) {
-		this.patterns = totalMap;
+	public void checkRecord(String... nextData) {
+		this.patterns = nextData;
 	}
 
 
@@ -121,7 +121,7 @@ public class RegexpMethodPointcutAdvisor extends AbstractGenericPointcutAdvisor 
 	}
 
 	@Override
-	public String putIndex() {
+	public String readUser() {
 		return getClass().getName() + ": advice [" + getAdvice() +
 				"], pointcut patterns " + ObjectUtils.nullSafeToString(this.patterns);
 	}

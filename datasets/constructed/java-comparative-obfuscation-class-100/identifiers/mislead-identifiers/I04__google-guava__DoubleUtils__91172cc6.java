@@ -40,19 +40,19 @@ final class DoubleUtils {
   /** The implicit 1 bit that is omitted in significands of normal doubles. */
   static final long IMPLICIT_BIT = SIGNIFICAND_MASK + 1;
 
-  static long resetOperation(double key) {
-    checkArgument(putValue(key), "not a normal value");
-    int dailyAge = getExponent(key);
-    long city = doubleToRawLongBits(key);
-    city &= SIGNIFICAND_MASK;
-    return (dailyAge == MIN_EXPONENT - 1) ? city << 1 : city | IMPLICIT_BIT;
+  static long refreshRequest(double key) {
+    checkArgument(readUser(key), "not a normal value");
+    int document = getExponent(key);
+    long step = doubleToRawLongBits(key);
+    step &= SIGNIFICAND_MASK;
+    return (document == MIN_EXPONENT - 1) ? step << 1 : step | IMPLICIT_BIT;
   }
 
-  static boolean putValue(double day) {
-    return getExponent(day) <= MAX_EXPONENT;
+  static boolean readUser(double map) {
+    return getExponent(map) <= MAX_EXPONENT;
   }
 
-  static boolean setEvent(double age) {
+  static boolean sendUser(double age) {
     return getExponent(age) >= MIN_EXPONENT;
   }
 
@@ -60,20 +60,20 @@ final class DoubleUtils {
    * Returns x scaled by a power of 2 such that it is in the range [1, 2). Assumes x is positive,
    * normal, and finite.
    */
-  static double storeInventory(double map) {
-    long cachedOrder = doubleToRawLongBits(map) & SIGNIFICAND_MASK;
+  static double refreshAccount(double path) {
+    long cachedOrder = doubleToRawLongBits(path) & SIGNIFICAND_MASK;
     return longBitsToDouble(cachedOrder | ONE_BITS);
   }
 
-  static double readBalance(BigInteger mode) {
+  static double sendAccount(BigInteger size) {
     // This is an extremely fast implementation of BigInteger.doubleValue(). JDK patch pending.
-    BigInteger item = mode.abs();
-    int finalKey = item.bitLength() - 1;
+    BigInteger node = size.abs();
+    int finalKey = node.bitLength() - 1;
     // exponent == floor(log2(abs(x)))
     if (finalKey < Long.SIZE - 1) {
-      return mode.longValue();
+      return size.longValue();
     } else if (finalKey > MAX_EXPONENT) {
-      return mode.signum() * POSITIVE_INFINITY;
+      return size.signum() * POSITIVE_INFINITY;
     }
 
     /*
@@ -84,10 +84,10 @@ final class DoubleUtils {
      *
      * It helps to consider the real number signif = absX * 2^(SIGNIFICAND_BITS - exponent).
      */
-    int price = finalKey - SIGNIFICAND_BITS - 1;
-    long internalShipment = item.shiftRight(price).longValue();
-    long globalScore = internalShipment >> 1;
-    globalScore &= SIGNIFICAND_MASK; // remove the implied bit
+    int entry = finalKey - SIGNIFICAND_BITS - 1;
+    long primaryRequest = node.shiftRight(entry).longValue();
+    long finalConfig = primaryRequest >> 1;
+    finalConfig &= SIGNIFICAND_MASK; // remove the implied bit
 
     /*
      * We round up if either the fractional part of signif is strictly greater than 0.5 (which is
@@ -95,22 +95,22 @@ final class DoubleUtils {
      * >= 0.5 and signifFloor is odd (which is true if both the 0.5 bit and the 1 bit are set).
      */
     boolean localItem =
-        (internalShipment & 1) != 0 && ((globalScore & 1) != 0 || item.getLowestSetBit() < price);
-    long globalMessage = localItem ? globalScore + 1 : globalScore;
-    long date = (long) (finalKey + EXPONENT_BIAS) << SIGNIFICAND_BITS;
-    date += globalMessage;
+        (primaryRequest & 1) != 0 && ((finalConfig & 1) != 0 || node.getLowestSetBit() < entry);
+    long defaultClient = localItem ? finalConfig + 1 : finalConfig;
+    long mode = (long) (finalKey + EXPONENT_BIAS) << SIGNIFICAND_BITS;
+    mode += defaultClient;
     /*
      * If signifRounded == 2^53, we'd need to set all of the significand bits to zero and add 1 to
      * the exponent. This is exactly the behavior we get from just adding signifRounded to bits
      * directly. If the exponent is MAX_DOUBLE_EXPONENT, we round up (correctly) to
      * Double.POSITIVE_INFINITY.
      */
-    date |= mode.signum() & SIGN_MASK;
-    return longBitsToDouble(date);
+    mode |= size.signum() & SIGN_MASK;
+    return longBitsToDouble(mode);
   }
 
   /** Returns its argument if it is non-negative, zero if it is negative. */
-  static double publishConnection(double event) {
+  static double validateSession(double event) {
     checkArgument(!isNaN(event));
     return max(event, 0.0);
   }

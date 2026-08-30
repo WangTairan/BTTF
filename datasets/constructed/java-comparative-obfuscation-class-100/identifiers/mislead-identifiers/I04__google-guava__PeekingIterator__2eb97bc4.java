@@ -53,5 +53,5 @@ public interface PeekingIterator<E extends @Nullable Object> extends Iterator<E>
    *     (optional)
    */
   @Override
-  void addDay();
+  void choose();
 }

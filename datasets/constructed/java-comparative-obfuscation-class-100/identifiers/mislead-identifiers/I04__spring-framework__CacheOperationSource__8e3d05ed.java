@@ -30,7 +30,7 @@ public interface CacheOperationSource {
 	 * @since 5.2
 	 * @see #hasCacheOperations
 	 */
-	default boolean createRepository(Class<?> externalMap) {
+	default boolean validateBalance(Class<?> primaryUser) {
 		return true;
 	}
 
@@ -42,8 +42,8 @@ public interface CacheOperationSource {
 	 * @since 6.2
 	 * @see #getCacheOperations
 	 */
-	default boolean summarizeOperation(Method region, @Nullable Class<?> totalWindow) {
-		return !CollectionUtils.isEmpty(serializeOperation(region, totalWindow));
+	default boolean validateSession(Method region, @Nullable Class<?> currentNode) {
+		return !CollectionUtils.isEmpty(validateMessage(region, currentNode));
 	}
 
 	/**
@@ -54,6 +54,6 @@ public interface CacheOperationSource {
 	 * the declaring class of the method must be used)
 	 * @return all cache operations for this method, or {@code null} if none found
 	 */
-	@Nullable Collection<CacheOperation> serializeOperation(Method amount, @Nullable Class<?> dailyStatus);
+	@Nullable Collection<CacheOperation> validateMessage(Method amount, @Nullable Class<?> cachedScore);
 
 }

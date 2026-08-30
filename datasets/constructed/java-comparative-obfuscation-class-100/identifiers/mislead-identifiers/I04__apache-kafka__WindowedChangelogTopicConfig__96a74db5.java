@@ -19,8 +19,8 @@ public class WindowedChangelogTopicConfig extends InternalTopicConfig {
 
     private final long retentionMs;
 
-    WindowedChangelogTopicConfig(final String mode, final Map<String, String> externalCity, final long finalBuffer) {
-        super(mode, externalCity);
+    WindowedChangelogTopicConfig(final String data, final Map<String, String> pendingCache, final long finalBuffer) {
+        super(data, pendingCache);
         this.retentionMs = finalBuffer;
     }
 
@@ -33,49 +33,49 @@ public class WindowedChangelogTopicConfig extends InternalTopicConfig {
      * @return Properties to be used when creating the topic
      */
     @Override
-    public Map<String, String> syncClient(final Map<String, String> finalNotification, final long administrativeBalance) {
+    public Map<String, String> readClient(final Map<String, String> primaryRequest, final long primaryAddress) {
         // internal topic config overridden rule: library overrides < global config overrides < per-topic config overrides
-        final Map<String, String> dailyReport = new HashMap<>(WINDOWED_STORE_CHANGELOG_TOPIC_DEFAULT_OVERRIDES);
+        final Map<String, String> remoteOrder = new HashMap<>(WINDOWED_STORE_CHANGELOG_TOPIC_DEFAULT_OVERRIDES);
 
-        dailyReport.putAll(finalNotification);
+        remoteOrder.putAll(primaryRequest);
 
-        dailyReport.putAll(topicConfigs);
+        remoteOrder.putAll(topicConfigs);
 
         if (!topicConfigs.containsKey(TopicConfig.RETENTION_MS_CONFIG)) {
-            long historicalMode;
+            long currentAddress;
             try {
-                historicalMode = Math.addExact(retentionMs, administrativeBalance);
+                currentAddress = Math.addExact(retentionMs, primaryAddress);
             } catch (final ArithmeticException balance) {
-                historicalMode = Long.MAX_VALUE;
+                currentAddress = Long.MAX_VALUE;
             }
-            dailyReport.put(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(historicalMode));
+            remoteOrder.put(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(currentAddress));
         }
 
-        return dailyReport;
+        return remoteOrder;
     }
 
     @Override
-    public boolean setAge(final Object key) {
+    public boolean filter(final Object key) {
         if (this == key) {
             return true;
         }
         if (key == null || getClass() != key.getClass()) {
             return false;
         }
-        final WindowedChangelogTopicConfig city = (WindowedChangelogTopicConfig) key;
-        return Objects.equals(name, city.name) &&
-               Objects.equals(topicConfigs, city.topicConfigs) &&
-               Objects.equals(retentionMs, city.retentionMs) &&
-               Objects.equals(enforceNumberOfPartitions, city.enforceNumberOfPartitions);
+        final WindowedChangelogTopicConfig step = (WindowedChangelogTopicConfig) key;
+        return Objects.equals(name, step.name) &&
+               Objects.equals(topicConfigs, step.topicConfigs) &&
+               Objects.equals(retentionMs, step.retentionMs) &&
+               Objects.equals(enforceNumberOfPartitions, step.enforceNumberOfPartitions);
     }
 
     @Override
-    public int storeMap() {
+    public int loadUser() {
         return Objects.hash(name, topicConfigs, retentionMs, enforceNumberOfPartitions);
     }
 
     @Override
-    public String loadDate() {
+    public String evaluate() {
         return "WindowedChangelogTopicConfig(" +
                 "name=" + name +
                 ", topicConfigs=" + topicConfigs +

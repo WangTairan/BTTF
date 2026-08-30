@@ -27,7 +27,7 @@ public final class LinkedHashMultiset<E extends @Nullable Object>
     extends AbstractMapBasedMultiset<E> {
 
   /** Creates a new, empty {@code LinkedHashMultiset} using the default initial capacity. */
-  public static <E extends @Nullable Object> LinkedHashMultiset<E> setMap() {
+  public static <E extends @Nullable Object> LinkedHashMultiset<E> verify() {
     return new LinkedHashMultiset<>();
   }
 
@@ -38,8 +38,8 @@ public final class LinkedHashMultiset<E extends @Nullable Object>
    * @param distinctElements the expected number of distinct elements
    * @throws IllegalArgumentException if {@code distinctElements} is negative
    */
-  public static <E extends @Nullable Object> LinkedHashMultiset<E> setMap(int temporaryBalance) {
-    return new LinkedHashMultiset<>(temporaryBalance);
+  public static <E extends @Nullable Object> LinkedHashMultiset<E> verify(int primaryBalance) {
+    return new LinkedHashMultiset<>(primaryBalance);
   }
 
   /**
@@ -49,19 +49,19 @@ public final class LinkedHashMultiset<E extends @Nullable Object>
    *
    * @param elements the elements that the multiset should contain
    */
-  public static <E extends @Nullable Object> LinkedHashMultiset<E> setMap(
-      Iterable<? extends E> nextCity) {
-    LinkedHashMultiset<E> location = setMap(Multisets.inferDistinctElements(nextCity));
-    Iterables.addAll(location, nextCity);
-    return location;
+  public static <E extends @Nullable Object> LinkedHashMultiset<E> verify(
+      Iterable<? extends E> response) {
+    LinkedHashMultiset<E> nextData = verify(Multisets.inferDistinctElements(response));
+    Iterables.addAll(nextData, response);
+    return nextData;
   }
 
   private LinkedHashMultiset() {
     super(new LinkedHashMap<E, Count>());
   }
 
-  private LinkedHashMultiset(int externalDiscount) {
-    super(Maps.newLinkedHashMapWithExpectedSize(externalDiscount));
+  private LinkedHashMultiset(int primarySession) {
+    super(Maps.newLinkedHashMapWithExpectedSize(primarySession));
   }
 
   /**
@@ -70,18 +70,18 @@ public final class LinkedHashMultiset<E extends @Nullable Object>
    */
   @GwtIncompatible
   @J2ktIncompatible
-    private void mergeResult(ObjectOutputStream window) throws IOException {
+    private void removeCount(ObjectOutputStream window) throws IOException {
     window.defaultWriteObject();
     Serialization.writeMultiset(this, window);
   }
 
   @GwtIncompatible
   @J2ktIncompatible
-    private void setMessage(ObjectInputStream buffer) throws IOException, ClassNotFoundException {
+    private void updateMode(ObjectInputStream buffer) throws IOException, ClassNotFoundException {
     buffer.defaultReadObject();
-    int activeRepository = buffer.readInt();
+    int defaultSession = buffer.readInt();
     setBackingMap(new LinkedHashMap<E, Count>());
-    Serialization.populateMultiset(this, buffer, activeRepository);
+    Serialization.populateMultiset(this, buffer, defaultSession);
   }
 
   @GwtIncompatible @J2ktIncompatible private static final long serialVersionUID = 0;

@@ -7,6 +7,7 @@ from typing import Any, Callable, Iterable
 
 from src.datasets import DatasetItem, load_code_dataset
 from src.experiments.registry import (
+    dataset_key_for_path,
     is_method_dataset_supported,
     method_choices,
     method_history_policy,
@@ -15,9 +16,10 @@ from src.experiments.registry import (
 from src.experiments.paths import dataset_name_for_path, result_dir, safe_path_part
 from src.experiments.progress import DatasetProgress, batch_progress
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
+from src.methods.cognascore.dataset_io import item_source_sha256
 
 
-MethodFn = Callable[[str], dict[str, Any]]
+MethodFn = Callable[[DatasetItem], dict[str, Any]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,6 +49,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--limit", type=int, help="Run at most this many items.")
     parser.add_argument("--skip-existing", action="store_true")
+    parser.add_argument(
+        "--prune-retired",
+        action="store_true",
+        help=(
+            "Delete per-item JSON results whose task IDs are no longer present in "
+            "the selected dataset. Summary and batch-state files are preserved."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -67,24 +77,37 @@ def main() -> None:
         print(f"Wrote {summary_path}", flush=True)
         return
 
+    reusable_by_task, reusable_by_hash = load_reusable_results(run_dir)
     rows = []
     progress = DatasetProgress(len(items))
     for index, item in enumerate(items, start=1):
         output_path = run_dir / f"{safe_path_part(item.task_id)}.json"
-        if args.skip_existing and output_path.exists():
-            row = json.loads(output_path.read_text(encoding="utf-8"))
+        source_hash = item_source_sha256(item)
+        row = None
+        if args.skip_existing:
+            exact = reusable_by_task.get(item.task_id)
+            if exact is not None and result_source_sha256(exact) == source_hash:
+                row = clone_result_identity(exact, item, source_hash)
+            elif source_hash in reusable_by_hash:
+                row = clone_result_identity(reusable_by_hash[source_hash], item, source_hash)
+        if row is not None:
+            output_path.write_text(
+                json.dumps(row, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
             rows.append(row)
             progress.skipping(index, item.task_id)
             continue
 
         progress.running(index, item.task_id)
         try:
-            result = method(item.content)
+            result = method(item)
             score = normalize_score(result.get("score"))
             row = {
                 "task_id": item.task_id,
                 "readability_score": item.readability_score,
                 "method": args.method,
+                "source_sha256": source_hash,
                 "score": score,
                 "result": result,
                 "metadata": item.metadata,
@@ -94,13 +117,19 @@ def main() -> None:
                 "task_id": item.task_id,
                 "readability_score": item.readability_score,
                 "method": args.method,
+                "source_sha256": source_hash,
                 "score": None,
                 "error": repr(exc),
                 "metadata": item.metadata,
             }
         output_path.write_text(json.dumps(row, indent=2, ensure_ascii=False), encoding="utf-8")
         rows.append(row)
+        if row.get("score") is not None:
+            reusable_by_task[item.task_id] = row
+            reusable_by_hash[source_hash] = row
 
+    if args.prune_retired:
+        prune_retired_results(run_dir, items)
     summary_path = write_summary(run_dir, args, rows)
     print(f"Wrote {summary_path}", flush=True)
 
@@ -111,10 +140,22 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
     rows_by_task: dict[str, dict[str, Any]] = {}
     pending: list[tuple[int, DatasetItem, Path]] = []
     progress = DatasetProgress(len(items))
+    reusable_by_task, reusable_by_hash = load_reusable_results(result_dir)
     for index, item in enumerate(items, start=1):
         output_path = result_dir / f"{safe_path_part(item.task_id)}.json"
-        if args.skip_existing and output_path.exists():
-            row = json.loads(output_path.read_text(encoding="utf-8"))
+        source_hash = item_source_sha256(item)
+        row = None
+        if args.skip_existing:
+            exact = reusable_by_task.get(item.task_id)
+            if exact is not None and result_source_sha256(exact) == source_hash:
+                row = clone_result_identity(exact, item, source_hash)
+            elif source_hash in reusable_by_hash:
+                row = clone_result_identity(reusable_by_hash[source_hash], item, source_hash)
+        if row is not None:
+            output_path.write_text(
+                json.dumps(row, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
             rows_by_task[item.task_id] = row
             progress.skipping(index, item.task_id)
         else:
@@ -132,12 +173,14 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
         )
         for (index, item, output_path), result in zip(pending, results):
             progress.writing(index, item.task_id)
+            source_hash = item_source_sha256(item)
             try:
                 score = normalize_score(result.get("score"))
                 row = {
                     "task_id": item.task_id,
                     "readability_score": item.readability_score,
                     "method": args.method,
+                    "source_sha256": source_hash,
                     "score": score,
                     "result": result,
                     "metadata": item.metadata,
@@ -147,6 +190,7 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
                     "task_id": item.task_id,
                     "readability_score": item.readability_score,
                     "method": args.method,
+                    "source_sha256": source_hash,
                     "score": None,
                     "error": repr(exc),
                     "metadata": item.metadata,
@@ -155,11 +199,70 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
             rows_by_task[item.task_id] = row
 
     rows = [rows_by_task[item.task_id] for item in items if item.task_id in rows_by_task]
+    if args.prune_retired:
+        prune_retired_results(result_dir, items)
     return write_summary(result_dir, args, rows)
 
 
 def load_items(path: Path) -> Iterable[DatasetItem]:
     return load_code_dataset(path)
+
+
+def load_reusable_results(run_dir: Path) -> tuple[dict[str, dict], dict[str, dict]]:
+    """Index successful per-item results by task identity and source content."""
+    by_task: dict[str, dict] = {}
+    by_hash: dict[str, dict] = {}
+    for path in sorted(run_dir.glob("*.json")):
+        if path.name in {"summary.json", "paired_summary.json"}:
+            continue
+        try:
+            row = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Cannot load existing method result {path}: {exc}") from exc
+        if row.get("score") is None or row.get("error") is not None:
+            continue
+        task_id = str(row.get("task_id") or "")
+        source_hash = result_source_sha256(row)
+        if task_id:
+            by_task[task_id] = row
+        if source_hash:
+            by_hash.setdefault(source_hash, row)
+    return by_task, by_hash
+
+
+def result_source_sha256(row: dict) -> str | None:
+    value = row.get("source_sha256") or row.get("metadata", {}).get("content_sha256")
+    return str(value) if value else None
+
+
+def clone_result_identity(row: dict, item: DatasetItem, source_hash: str) -> dict:
+    cloned = dict(row)
+    cloned["task_id"] = item.task_id
+    cloned["readability_score"] = item.readability_score
+    cloned["source_sha256"] = source_hash
+    cloned["metadata"] = item.metadata
+    return cloned
+
+
+def prune_retired_results(run_dir: Path, items: list[DatasetItem]) -> None:
+    current_paths = {
+        run_dir / f"{safe_path_part(item.task_id)}.json"
+        for item in items
+    }
+    preserved = {
+        run_dir / "summary.json",
+        run_dir / "paired_summary.json",
+        run_dir / ".batch_state.json",
+    }
+    retired = [
+        path
+        for path in run_dir.glob("*.json")
+        if path not in current_paths and path not in preserved
+    ]
+    for path in retired:
+        path.unlink()
+    if retired:
+        print(f"Pruned {len(retired)} retired per-item results from {run_dir}", flush=True)
 
 
 def validate_method_dataset(args: argparse.Namespace) -> None:
@@ -171,21 +274,46 @@ def build_method(args: argparse.Namespace) -> MethodFn:
     if args.method == "posnett":
         from src.methods.posnett import posnett_model
 
-        return lambda code: posnett_model(code).__dict__
+        return lambda item: posnett_model(
+            item.content,
+            language=str(item.metadata.get("language", "java")),
+        ).__dict__
     if args.method == "scalabrino":
         from src.methods.scalabrino import scalabrino_model
 
-        return lambda code: scalabrino_model(code).__dict__
+        return lambda item: scalabrino_model(item.content).__dict__
+    if args.method == "dorn":
+        from src.methods.dorn import dorn_model
+
+        return lambda item: dorn_model(
+            item.content,
+            language=str(item.metadata.get("language", "java")),
+        ).__dict__
+    if args.method == "mi_convnet_cr":
+        from src.methods.mi_convnet_cr import mi_convnet_cr_model
+
+        return lambda item: mi_convnet_cr_model(item.content).__dict__
     if args.method == "llm":
         from src.methods.llm_prompt import llm_prompt_engineering_score
 
-        return lambda code: llm_prompt_engineering_score(code, model_name=args.model)
+        return lambda item: llm_prompt_engineering_score(
+            item.content, model_name=args.model
+        )
     raise ValueError(f"Unknown method: {args.method}")
 
 
 def method_config_name(args: argparse.Namespace) -> str | None:
+    if (
+        args.method == "posnett"
+        and dataset_key_for_path(args.dataset) == "python_comparative_degradation"
+    ):
+        return "fixed_coefficients_python_tokenizer_transfer"
     if args.method == "llm":
         return args.model
+    if args.method == "dorn":
+        return "dorn_retrained_7feature"
+    if args.method == "mi_convnet_cr":
+        return "mi_2018_convnet_cr_independent_reproduction"
     return None
 
 

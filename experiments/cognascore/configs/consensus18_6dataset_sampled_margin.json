@@ -1,25 +1,24 @@
 {
   "name": "consensus18_6dataset_sampled_margin",
   "status": "frozen",
-  "frozen_at": "2026-08-28",
+  "frozen_at": "2026-08-30",
   "selection_note": "The frozen 18-feature model with the handcrafted short-identifier context gate replaced by a reproducible mathematical-versus-application margin estimated from pinned open-source anchor snippets. Raw margin and raw distance variants are excluded; the normalized distance variant remains an ablation only.",
   "model_artifact": "frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/nomic-ai-nomic-embed-text-v1.5",
-  "serialized_model_sha256": "f9ea152f3af310688269858f2015eb2c4f0ea62f0a892abc024facd3e21eeb4d",
-  "progressive_evaluation_protocol": "experiments/cognascore/configs/progressive_pairwise_evaluation.json",
+  "serialized_model_sha256": "51d66d893627207f731b85190b322156f9fd9e341c8d5643a2bc4ed30c53a7bc",
   "selection_evidence": {
     "protocol": "five-model L1 stability consensus",
     "embedding_models": 5,
     "datasets": 6,
     "rows": 1100,
     "candidate_features_per_model": 181,
-    "pre_exclusion_candidate_features_per_model": 194,
+    "pre_exclusion_candidate_features_per_model": 197,
     "stability_rounds": 200,
     "stability_sample_fraction": 0.7,
     "correlation_threshold": 0.9,
     "all_selected_active_model_count": 5,
     "ranking_artifact": "experiments/cognascore/configs/evidence/consensus18_5model_full_ranking.csv",
     "selected_rank_artifact": "experiments/cognascore/configs/evidence/consensus18_selected_ranks.csv",
-    "selected_consensus_ranks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21],
+    "selected_consensus_ranks": [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 16, 18, 19, 21, 24],
     "theory_driven_exclusions": {
       "cluster_size_variability": {
         "reason": "Excluded because these view/algorithm combinations produced unstable or redundant cluster-size variability signals.",
@@ -43,13 +42,21 @@
           "base__scalabrino_visual_number_y_mean",
           "base__chunk_y_mean"
         ]
+      },
+      "punctuation_diagnostics": {
+        "reason": "Retained for diagnostic and ablation analyses but excluded from formal selection because they depend on language-specific punctuation conventions.",
+        "features": [
+          "base__visual_period_density",
+          "base__visual_period_y_std",
+          "base__scalabrino_visual_comma_dft_energy"
+        ]
       }
     }
   },
   "selected_features": [
     "base__operator_density",
     "base__byte_entropy",
-    "base__type_literal_ratio",
+    "base__literal_expression_log_balance",
     "base__max_line_length",
     "embedding__structural_core__auto_kmeans_selected_k",
     "embedding__only_identifier__embedding_first_pc_explained_variance",

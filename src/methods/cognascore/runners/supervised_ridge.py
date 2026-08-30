@@ -41,10 +41,9 @@ ALL_DATASETS = (
     "buse",
     "mbjp",
     "jetbrains",
-    "generated_readability_90",
 )
 TRAIN_DATASETS = ("mbjp", "buse", "dorn", "scalabrino", "schnappinger", "jetbrains")
-EXTERNAL_DATASETS = ("generated_readability_90",)
+EXTERNAL_DATASETS: tuple[str, ...] = ()
 SCORE_MODEL_NAME = "consensus18_6dataset_sampled_margin_nomic"
 METHOD_KEY = "cognascore_ml_consensus18_6dataset_sampled_margin"
 TRAINING_DROP_MIDDLE = 0.0
@@ -52,7 +51,7 @@ TRAINING_DROP_MIDDLE = 0.0
 SELECTED_FEATURES = [
     "base__operator_density",
     "base__byte_entropy",
-    "base__type_literal_ratio",
+    "base__literal_expression_log_balance",
     "base__max_line_length",
     "embedding__structural_core__auto_kmeans_selected_k",
     "embedding__only_identifier__embedding_first_pc_explained_variance",
@@ -121,7 +120,7 @@ def main() -> None:
         "--report-dataset",
         action="append",
         default=[],
-        help="Dataset to materialize predictions for. Can be repeated. Defaults to the six development datasets and Generated 90.",
+        help="Dataset to materialize predictions for. Can be repeated. Defaults to the six development datasets.",
     )
     args = parser.parse_args()
     requested_artifact_dir = (
@@ -495,8 +494,8 @@ def write_summary(
             "standardized_coefficients": coefficients,
             "frozen_model_artifact": str(model_artifact),
             "limitations": (
-                "The feature list and final Ridge fit use the six-dataset development pool; "
-                "Generated 90 remains a transfer evaluation."
+                "The feature list and final Ridge fit use the same six-dataset "
+                "development pool."
             ),
         },
     }
@@ -814,10 +813,6 @@ def dataset_path(dataset: str) -> str:
         "buse": "datasets/buse",
         "mbjp": "datasets/mbjp_dev_dataset/readability_dataset.json",
         "jetbrains": "datasets/jetbrains",
-        "generated_readability_90": "datasets/generated_readability_90/dataset.jsonl",
-        "java_progressive_obfuscation": (
-            "datasets/constructed/java-progressive-obfuscation-class-100"
-        ),
     }.get(dataset, dataset)
 
 

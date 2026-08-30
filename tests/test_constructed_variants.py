@@ -15,25 +15,30 @@ def test_comparative_obfuscation_dataset() -> None:
     items = load_code_dataset(path)
 
     assert dataset_name_for_path(path) == "java_comparative_obfuscation"
-    assert len(items) == 1300
+    assert len(items) == 1500
     assert len({item.metadata["group_id"] for item in items}) == 100
-    assert {item.metadata["order"] for item in items} == set(range(13))
+    assert {item.metadata["order"] for item in items} == set(range(15))
     assert sum(item.metadata["is_baseline_variant"] for item in items) == 100
     assert all(item.readability_score is None for item in items)
+    inline_items = [
+        item
+        for item in items
+        if item.metadata.get("interference") == "inline-intermediate-variables"
+    ]
+    assert len(inline_items) == 100
+    assert {item.metadata["category"] for item in inline_items} == {"data-flow"}
 
-
-def test_original_progressive_dataset_remains_ordinal() -> None:
-    path = CONSTRUCTED_ROOT / "java-progressive-obfuscation-class-100"
+def test_python_comparative_degradation_dataset() -> None:
+    path = CONSTRUCTED_ROOT / "python-comparative-degradation-class-100"
     items = load_code_dataset(path)
 
-    assert dataset_name_for_path(path) == "java_progressive_obfuscation"
-    assert len(items) == 700
-    scores = sorted({item.readability_score for item in items})
-    assert len(scores) == 7
-    assert all(
-        math.isclose(actual, expected)
-        for actual, expected in zip(scores, (index / 6.0 for index in range(7)))
-    )
+    assert dataset_name_for_path(path) == "python_comparative_degradation"
+    assert len(items) == 1500
+    assert len({item.metadata["group_id"] for item in items}) == 100
+    assert {item.metadata["order"] for item in items} == set(range(15))
+    assert sum(item.metadata["is_baseline_variant"] for item in items) == 100
+    assert {item.metadata["language"] for item in items} == {"python"}
+    assert all(item.readability_score is None for item in items)
 
 
 def test_paired_summary_does_not_treat_interference_order_as_severity() -> None:

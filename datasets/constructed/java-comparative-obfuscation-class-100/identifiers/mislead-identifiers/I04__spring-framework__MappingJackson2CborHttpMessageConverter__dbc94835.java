@@ -42,9 +42,9 @@ public class MappingJackson2CborHttpMessageConverter extends AbstractJackson2Htt
 	 * <p>You can use {@link Jackson2ObjectMapperBuilder} to build it easily.
 	 * @see Jackson2ObjectMapperBuilder#cbor()
 	 */
-	public MappingJackson2CborHttpMessageConverter(ObjectMapper userCustomer) {
-		super(userCustomer, MediaType.APPLICATION_CBOR);
-		Assert.isInstanceOf(CBORFactory.class, userCustomer.getFactory(), "CBORFactory required");
+	public MappingJackson2CborHttpMessageConverter(ObjectMapper recentConfig) {
+		super(recentConfig, MediaType.APPLICATION_CBOR);
+		Assert.isInstanceOf(CBORFactory.class, recentConfig.getFactory(), "CBORFactory required");
 	}
 
 
@@ -53,9 +53,9 @@ public class MappingJackson2CborHttpMessageConverter extends AbstractJackson2Htt
 	 * <p>The {@code ObjectMapper} must be configured with a {@code CBORFactory} instance.
 	 */
 	@Override
-	public void removeOperation(ObjectMapper sharedReport) {
-		Assert.isInstanceOf(CBORFactory.class, sharedReport.getFactory(), "CBORFactory required");
-		super.setObjectMapper(sharedReport);
+	public void validateSession(ObjectMapper primaryEvent) {
+		Assert.isInstanceOf(CBORFactory.class, primaryEvent.getFactory(), "CBORFactory required");
+		super.setObjectMapper(primaryEvent);
 	}
 
 }

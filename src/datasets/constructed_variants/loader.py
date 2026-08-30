@@ -12,8 +12,13 @@ MANIFEST_NAME = "manifest.jsonl"
 PROVENANCE_NAME = "provenance.json"
 
 DATASET_KEYS_BY_MODULE = {
-    "source-degradation": "java_progressive_obfuscation",
     "source-interference": "java_comparative_obfuscation",
+    "python-source-interference": "python_comparative_degradation",
+}
+
+LANGUAGES_BY_MODULE = {
+    "source-interference": "java",
+    "python-source-interference": "python",
 }
 
 
@@ -21,7 +26,13 @@ def load_dataset(path: Path) -> list[DatasetItem]:
     dataset_dir = normalize_dataset_dir(path)
     provenance = load_provenance(dataset_dir)
     dataset_key = dataset_key_from_provenance(provenance)
-    application_mode = str(provenance.get("application_mode") or "cumulative")
+    language = language_from_provenance(provenance)
+    application_mode = str(provenance.get("application_mode") or "")
+    if application_mode != "independent-interference":
+        raise ValueError(
+            "Constructed datasets must use independent-interference mode; "
+            f"got {application_mode!r}"
+        )
     manifest_path = dataset_dir / MANIFEST_NAME
     if not manifest_path.is_file():
         raise ValueError(f"Missing constructed-variant manifest: {manifest_path}")
@@ -41,7 +52,7 @@ def load_dataset(path: Path) -> list[DatasetItem]:
                 raise ValueError(f"Duplicate variant_id at manifest row {line_number}: {variant_id}")
             seen_variant_ids.add(variant_id)
 
-            group_id = str(row["group_id"])
+            group_id = row_group_id(row, line_number)
             position = row_position(row)
             positions = group_positions.setdefault(group_id, set())
             if position in positions:
@@ -54,16 +65,13 @@ def load_dataset(path: Path) -> list[DatasetItem]:
             content = source_path.read_text(encoding="utf-8")
             verify_content_hash(content, row, line_number)
 
-            score, label_provenance = label_for_row(
-                row,
-                application_mode=application_mode,
-                provenance=provenance,
-            )
+            score, label_provenance = label_for_mode(application_mode)
             metadata = dict(row)
             metadata.update(
                 {
+                    "group_id": group_id,
                     "raw_dataset": dataset_key,
-                    "language": "java",
+                    "language": language,
                     "manifest_row": line_number,
                     "constructed_application_mode": application_mode,
                     "is_baseline_variant": position == 0,
@@ -129,11 +137,25 @@ def dataset_key_from_provenance(provenance: dict[str, Any]) -> str:
         raise ValueError(f"Unsupported constructed dataset module: {module!r}") from exc
 
 
+def language_from_provenance(provenance: dict[str, Any]) -> str:
+    module = str(provenance.get("module") or "")
+    try:
+        expected = LANGUAGES_BY_MODULE[module]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported constructed dataset module: {module!r}") from exc
+    declared = str(provenance.get("language") or expected).strip().lower()
+    if declared != expected:
+        raise ValueError(
+            f"Constructed dataset module {module!r} declares language "
+            f"{declared!r}; expected {expected!r}"
+        )
+    return expected
+
+
 def validate_row(row: Any, line_number: int) -> None:
     required = {
         "variant_id",
-        "group_id",
-        "level",
+        "order",
         "stage",
         "local_path",
         "content_sha256",
@@ -144,20 +166,28 @@ def validate_row(row: Any, line_number: int) -> None:
     missing = sorted(required - set(row))
     if missing:
         raise ValueError(f"Manifest row {line_number} is missing fields: {missing}")
-    if int(row["level"]) < 0:
-        raise ValueError(f"Manifest row {line_number} has a negative level")
+    row_group_id(row, line_number)
+    if int(row["order"]) < 0:
+        raise ValueError(f"Manifest row {line_number} has a negative order")
+
+
+def row_group_id(row: dict[str, Any], line_number: int) -> str:
+    value = row.get("group_id") or row.get("base_sample_id")
+    if value is None or not str(value).strip():
+        raise ValueError(
+            f"Manifest row {line_number} has neither group_id nor base_sample_id"
+        )
+    return str(value)
 
 
 def row_position(row: dict[str, Any]) -> int:
-    return int(row.get("order", row["level"]))
+    return int(row["order"])
 
 
 def expected_group_positions(provenance: dict[str, Any]) -> set[int]:
-    if "counts_by_level" in provenance:
-        return {int(level) for level in provenance["counts_by_level"]}
     if "interference_count" in provenance:
         return set(range(int(provenance["interference_count"]) + 1))
-    raise ValueError("Constructed provenance does not declare levels or interferences")
+    raise ValueError("Constructed provenance does not declare an interference count")
 
 
 def validate_complete_groups(
@@ -200,20 +230,8 @@ def verify_content_hash(content: str, row: dict[str, Any], line_number: int) -> 
         )
 
 
-def label_for_row(
-    row: dict[str, Any],
-    *,
-    application_mode: str,
-    provenance: dict[str, Any],
-) -> tuple[float | None, str]:
-    if application_mode == "cumulative":
-        positions = expected_group_positions(provenance)
-        maximum = max(positions)
-        if maximum <= 0:
-            raise ValueError("Cumulative constructed dataset needs at least one degraded level")
-        return 1.0 - float(row_position(row)) / float(maximum), "cumulative_obfuscation_stage"
-
-    if application_mode in {"independent", "independent-interference"}:
+def label_for_mode(application_mode: str) -> tuple[float | None, str]:
+    if application_mode == "independent-interference":
         # Independent transformations have no justified total severity order.  Their
         # expected direction is retained in metadata for paired evaluation instead.
         return None, "paired_expected_readability_direction"

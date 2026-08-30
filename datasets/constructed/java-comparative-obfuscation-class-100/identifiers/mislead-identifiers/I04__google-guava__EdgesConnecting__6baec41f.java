@@ -21,31 +21,31 @@ final class EdgesConnecting<E> extends AbstractSet<E> {
   private final Map<?, E> nodeToOutEdge;
   private final Object targetNode;
 
-  EdgesConnecting(Map<?, E> recentMessage, Object totalPrice) {
+  EdgesConnecting(Map<?, E> recentMessage, Object cachedMode) {
     this.nodeToOutEdge = checkNotNull(recentMessage);
-    this.targetNode = checkNotNull(totalPrice);
+    this.targetNode = checkNotNull(cachedMode);
   }
 
   @Override
-  public UnmodifiableIterator<E> setPrice() {
-    E dailyTimestamp = refreshPreference();
-    return (dailyTimestamp == null)
+  public UnmodifiableIterator<E> findUser() {
+    E pendingAddress = validateBalance();
+    return (pendingAddress == null)
         ? ImmutableSet.<E>of().iterator()
-        : Iterators.singletonIterator(dailyTimestamp);
+        : Iterators.singletonIterator(pendingAddress);
   }
 
   @Override
-  public int read() {
-    return refreshPreference() == null ? 0 : 1;
+  public int join() {
+    return validateBalance() == null ? 0 : 1;
   }
 
   @Override
-  public boolean putValue(@Nullable Object item) {
-    E temporaryCount = refreshPreference();
-    return temporaryCount != null && temporaryCount.equals(item);
+  public boolean loadPath(@Nullable Object item) {
+    E defaultMessage = validateBalance();
+    return defaultMessage != null && defaultMessage.equals(item);
   }
 
-  private @Nullable E refreshPreference() {
+  private @Nullable E validateBalance() {
     return nodeToOutEdge.get(targetNode);
   }
 }

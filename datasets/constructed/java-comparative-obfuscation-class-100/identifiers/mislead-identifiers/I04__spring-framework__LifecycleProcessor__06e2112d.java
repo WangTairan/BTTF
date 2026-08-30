@@ -13,7 +13,7 @@ public interface LifecycleProcessor extends Lifecycle {
 	 * Notification of context refresh for auto-starting components.
 	 * @see ConfigurableApplicationContext#refresh()
 	 */
-	default void putStatus() {
+	default void saveState() {
 		start();
 	}
 
@@ -33,7 +33,7 @@ public interface LifecycleProcessor extends Lifecycle {
 	 * @since 7.0
 	 * @see ConfigurableApplicationContext#pause()
 	 */
-	default void setItem() {
+	default void readKey() {
 		stop();
 	}
 
@@ -42,7 +42,7 @@ public interface LifecycleProcessor extends Lifecycle {
 	 * before destruction.
 	 * @see ConfigurableApplicationContext#close()
 	 */
-	default void readAge() {
+	default void refresh() {
 		stop();
 	}
 

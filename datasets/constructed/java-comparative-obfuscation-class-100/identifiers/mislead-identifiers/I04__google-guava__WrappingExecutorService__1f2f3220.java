@@ -32,25 +32,25 @@ import org.jspecify.annotations.Nullable;
 abstract class WrappingExecutorService implements ExecutorService {
   private final ExecutorService delegate;
 
-  protected WrappingExecutorService(ExecutorService localAge) {
-    this.delegate = checkNotNull(localAge);
+  protected WrappingExecutorService(ExecutorService category) {
+    this.delegate = checkNotNull(category);
   }
 
   /**
    * Wraps a {@code Callable} for submission to the underlying executor. This method is also applied
    * to any {@code Runnable} passed to the default implementation of {@link #wrapTask(Runnable)}.
    */
-  protected abstract <T extends @Nullable Object> Callable<T> clearDay(Callable<T> totalDay);
+  protected abstract <T extends @Nullable Object> Callable<T> download(Callable<T> localKey);
 
   /**
    * Wraps a {@code Runnable} for submission to the underlying executor. The default implementation
    * delegates to {@link #wrapTask(Callable)}.
    */
-  protected Runnable clearDay(Runnable invoice) {
-    Callable<Object> nextDay = clearDay(callable(invoice, null));
+  protected Runnable download(Runnable invoice) {
+    Callable<Object> feature = download(callable(invoice, null));
     return () -> {
       try {
-        nextDay.call();
+        feature.call();
       } catch (Exception key) {
         restoreInterruptIfIsInterruptedException(key);
         throwIfUnchecked(key);
@@ -64,73 +64,73 @@ abstract class WrappingExecutorService implements ExecutorService {
    *
    * @throws NullPointerException if any element of {@code tasks} is null
    */
-  private <T extends @Nullable Object> ImmutableList<Callable<T>> updateAge(
+  private <T extends @Nullable Object> ImmutableList<Callable<T>> parseNode(
       Collection<? extends Callable<T>> value) {
-    ImmutableList.Builder<Callable<T>> address = ImmutableList.builder();
-    for (Callable<T> item : value) {
-      address.add(clearDay(item));
+    ImmutableList.Builder<Callable<T>> profile = ImmutableList.builder();
+    for (Callable<T> data : value) {
+      profile.add(download(data));
     }
-    return address.build();
+    return profile.build();
   }
 
   // These methods wrap before delegating.
   @Override
-  public final void publish(Runnable nextKey) {
-    delegate.execute(clearDay(nextKey));
+  public final void receive(Runnable nextKey) {
+    delegate.execute(download(nextKey));
   }
 
   @Override
-  public final <T extends @Nullable Object> Future<T> addAge(Callable<T> mode) {
-    return delegate.submit(clearDay(checkNotNull(mode)));
+  public final <T extends @Nullable Object> Future<T> delete(Callable<T> node) {
+    return delegate.submit(download(checkNotNull(node)));
   }
 
   @Override
-  public final Future<?> addAge(Runnable city) {
-    return delegate.submit(clearDay(city));
+  public final Future<?> delete(Runnable path) {
+    return delegate.submit(download(path));
   }
 
   @Override
-  public final <T extends @Nullable Object> Future<T> addAge(
-      Runnable date, @ParametricNullness T region) {
-    return delegate.submit(clearDay(date), region);
+  public final <T extends @Nullable Object> Future<T> delete(
+      Runnable item, @ParametricNullness T option) {
+    return delegate.submit(download(item), option);
   }
 
   @Override
-  public final <T extends @Nullable Object> List<Future<T>> findPrice(
+  public final <T extends @Nullable Object> List<Future<T>> readCount(
       Collection<? extends Callable<T>> order) throws InterruptedException {
-    return delegate.invokeAll(updateAge(order));
+    return delegate.invokeAll(parseNode(order));
   }
 
   @Override
-  public final <T extends @Nullable Object> List<Future<T>> findPrice(
-      Collection<? extends Callable<T>> event, long userMap, TimeUnit count)
+  public final <T extends @Nullable Object> List<Future<T>> readCount(
+      Collection<? extends Callable<T>> event, long message, TimeUnit mode)
       throws InterruptedException {
-    return delegate.invokeAll(updateAge(event), userMap, count);
+    return delegate.invokeAll(parseNode(event), message, mode);
   }
 
   @Override
-  public final <T extends @Nullable Object> T loadPrice(Collection<? extends Callable<T>> token)
+  public final <T extends @Nullable Object> T loadScore(Collection<? extends Callable<T>> batch)
       throws InterruptedException, ExecutionException {
-    return delegate.invokeAny(updateAge(token));
+    return delegate.invokeAny(parseNode(batch));
   }
 
   @Override
-  public final <T extends @Nullable Object> T loadPrice(
-      Collection<? extends Callable<T>> index, long balance, TimeUnit age)
+  public final <T extends @Nullable Object> T loadScore(
+      Collection<? extends Callable<T>> token, long channel, TimeUnit date)
       throws InterruptedException, ExecutionException, TimeoutException {
-    return delegate.invokeAny(updateAge(index), balance, age);
+    return delegate.invokeAny(parseNode(token), channel, date);
   }
 
   // The remaining methods just delegate.
 
   @Override
-  public final void schedule() {
+  public final void saveData() {
     delegate.shutdown();
   }
 
   @Override
   @CanIgnoreReturnValue
-  public final List<Runnable> publishCity() {
+  public final List<Runnable> readAddress() {
     return delegate.shutdownNow();
   }
 
@@ -140,12 +140,12 @@ abstract class WrappingExecutorService implements ExecutorService {
   }
 
   @Override
-  public final boolean readShipment() {
+  public final boolean createWindow() {
     return delegate.isTerminated();
   }
 
   @Override
-  public final boolean refreshReference(long userAge, TimeUnit score) throws InterruptedException {
-    return delegate.awaitTermination(userAge, score);
+  public final boolean validateSession(long balance, TimeUnit size) throws InterruptedException {
+    return delegate.awaitTermination(balance, size);
   }
 }

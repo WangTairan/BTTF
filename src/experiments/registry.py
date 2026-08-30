@@ -79,23 +79,16 @@ DATASETS: dict[str, DatasetSpec] = {
         label_type="continuous",
         primary_metric="spearman",
     ),
-    "generated_readability_90": DatasetSpec(
-        key="generated_readability_90",
-        path=Path("datasets/generated_readability_90/dataset.jsonl"),
-        modality="code",
-        label_type="ordinal",
-        primary_metric="spearman",
-    ),
-    "java_progressive_obfuscation": DatasetSpec(
-        key="java_progressive_obfuscation",
-        path=Path("datasets/constructed/java-progressive-obfuscation-class-100"),
-        modality="code",
-        label_type="grouped_ordinal",
-        primary_metric="spearman",
-    ),
     "java_comparative_obfuscation": DatasetSpec(
         key="java_comparative_obfuscation",
         path=Path("datasets/constructed/java-comparative-obfuscation-class-100"),
+        modality="code",
+        label_type="paired_direction",
+        primary_metric="paired_direction_accuracy",
+    ),
+    "python_comparative_degradation": DatasetSpec(
+        key="python_comparative_degradation",
+        path=Path("datasets/constructed/python-comparative-degradation-class-100"),
         modality="code",
         label_type="paired_direction",
         primary_metric="paired_direction_accuracy",
@@ -115,6 +108,18 @@ METHODS: dict[str, MethodSpec] = {
         output_policy=OUTPUT_POLICY_OVERWRITE,
         deterministic=True,
     ),
+    "dorn": MethodSpec(
+        key="dorn",
+        output_key="dorn_retrained",
+        output_policy=OUTPUT_POLICY_OVERWRITE,
+        deterministic=True,
+    ),
+    "mi_convnet_cr": MethodSpec(
+        key="mi_convnet_cr",
+        output_key="mi_convnet_cr_reproduction",
+        output_policy=OUTPUT_POLICY_OVERWRITE,
+        deterministic=True,
+    ),
     "llm": MethodSpec(
         key="llm",
         output_key="llm_prompt",
@@ -129,7 +134,10 @@ METHODS: dict[str, MethodSpec] = {
     ),
 }
 
-UNSUPPORTED_METHOD_DATASETS = set()
+UNSUPPORTED_METHOD_DATASETS = {
+    # The released Scalabrino classifier invokes a Java-only parser.
+    ("scalabrino", "python_comparative_degradation"),
+}
 
 
 def method_choices() -> tuple[str, ...]:

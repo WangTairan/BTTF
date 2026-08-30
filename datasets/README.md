@@ -8,39 +8,23 @@ evaluation metrics are registered in `src/experiments/registry.py`.
 | `mbjp` | `mbjp_dev_dataset/readability_dataset.json` | continuous | Spearman |
 | `buse` | `buse/` | continuous | Spearman |
 | `scalabrino` | `scalabrino/dataset/` | continuous | Spearman |
-| `jetbrains` | `jetbrains/` | binary | MCC |
+| `jetbrains` | `jetbrains/` | continuous vote fraction | Spearman |
 | `dorn` | `dorn/dataset/` | continuous | Spearman |
 | `schnappinger` | `schnappinger/` | continuous | Spearman |
-| `generated_readability_90` | `generated_readability_90/dataset.jsonl` | ordinal | Spearman |
-| `java_progressive_obfuscation` | `constructed/java-progressive-obfuscation-class-100/` | grouped ordinal | Spearman + within-chain trend |
 | `java_comparative_obfuscation` | `constructed/java-comparative-obfuscation-class-100/` | paired direction | paired response rate |
+| `python_comparative_degradation` | `constructed/python-comparative-degradation-class-100/` | paired direction | paired response rate |
 
-## Generated Readability 90
+## Independent interference datasets
 
-`generated_readability_90/dataset.jsonl` contains 90 Java examples generated under three
-readability instructions: `low`, `normal`, and `high`. Each row preserves the
-source dataset identifier, source item identifier, generator model, language,
-instruction label, and code. The adapter maps the ordered labels to `0.0`,
-`0.5`, and `1.0` for rank-based evaluation.
+The Java and Python constructed datasets each contain 100 original production
+classes and 14 interference types applied independently to every original.
+Their 1,500 rows comprise 100 originals and 1,400 attempted transformations.
+Manifest order is an identifier, not a scalar severity label. Evaluation
+compares every source-changing transformation directly with its matched
+original and excludes inapplicable, unchanged pairs from changed-only rates.
 
-This generated dataset is retained as a formal additional evaluation dataset.
-It is distinct from the six established datasets used in the current
-feature-selection study.
-
-## Java Progressive Obfuscation
-
-`constructed/java-progressive-obfuscation-class-100/` contains 100 complete
-Java classes, each represented by an original version (L0) and six cumulative
-obfuscation stages (L1--L6). The adapter maps a stage to the ordinal target
-`1 - level / 6`; this target records construction order rather than an
-independent human readability judgment. Evaluation reports both pooled
-Spearman and within-class chain-direction measurements. Transitions that leave
-a particular class unchanged are identified separately.
-
-## Comparative Obfuscation
-
-`constructed/java-comparative-obfuscation-class-100/` contains 12 interference
-types independently applied to 100 original Java classes. Because the
-transformations are independent, manifest order is not treated as a scalar
-severity label; evaluation compares every transformed class directly with its
-matched original.
+The interferences cover comments, identifiers, expressions, code injection,
+layout, data flow, and control flow. The Java sources are balanced across
+Apache Kafka, Google Guava, Netty, and Spring Framework; the Python sources are
+balanced across Django, Flask, Requests, and attrs. Every manifest records
+content hashes and construction provenance for incremental recomputation.

@@ -11,9 +11,9 @@ import io.netty.util.internal.ObjectUtil;
 public final class SocksInitResponse extends SocksResponse {
     private final SocksAuthScheme authScheme;
 
-    public SocksInitResponse(SocksAuthScheme userWindow) {
+    public SocksInitResponse(SocksAuthScheme localBatch) {
         super(SocksResponseType.INIT);
-        this.authScheme = ObjectUtil.checkNotNull(userWindow, "authScheme");
+        this.authScheme = ObjectUtil.checkNotNull(localBatch, "authScheme");
     }
 
     /**
@@ -21,13 +21,13 @@ public final class SocksInitResponse extends SocksResponse {
      *
      * @return The {@link SocksAuthScheme} of this {@link SocksInitResponse}
      */
-    public SocksAuthScheme syncReport() {
+    public SocksAuthScheme fetchIndex() {
         return authScheme;
     }
 
     @Override
-    public void configureReport(ByteBuf nextDay) {
-        nextDay.writeByte(protocolVersion().byteValue());
-        nextDay.writeByte(authScheme.byteValue());
+    public void validateMessage(ByteBuf channel) {
+        channel.writeByte(protocolVersion().byteValue());
+        channel.writeByte(authScheme.byteValue());
     }
 }

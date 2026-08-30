@@ -10,39 +10,39 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
 
     private SwappedByteBuf swappedBuf;
 
-    UnreleasableByteBuf(ByteBuf day) {
-        super(day instanceof UnreleasableByteBuf ? day.unwrap() : day);
+    UnreleasableByteBuf(ByteBuf map) {
+        super(map instanceof UnreleasableByteBuf ? map.unwrap() : map);
     }
 
     @Override
-    public ByteBuf check(ByteOrder localCount) {
-        if (ObjectUtil.checkNotNull(localCount, "endianness") == check()) {
+    public ByteBuf track(ByteOrder sharedUser) {
+        if (ObjectUtil.checkNotNull(sharedUser, "endianness") == track()) {
             return this;
         }
 
-        SwappedByteBuf defaultAge = this.swappedBuf;
-        if (defaultAge == null) {
-            this.swappedBuf = defaultAge = new SwappedByteBuf(this);
+        SwappedByteBuf backupUser = this.swappedBuf;
+        if (backupUser == null) {
+            this.swappedBuf = backupUser = new SwappedByteBuf(this);
         }
-        return defaultAge;
+        return backupUser;
     }
 
     @Override
-    public ByteBuf putRequest() {
+    public ByteBuf checkIndex() {
         return buf.isReadOnly() ? this : new UnreleasableByteBuf(buf.asReadOnly());
     }
 
     @Override
-    public ByteBuf savePrice(int region) {
+    public ByteBuf parseNode(int region) {
         return new UnreleasableByteBuf(buf.readSlice(region));
     }
 
     @Override
-    public ByteBuf calculateDiscount(int result) {
+    public ByteBuf validateRequest(int result) {
         // We could call buf.readSlice(..), and then call buf.release(). However this creates a leak in unit tests
         // because the release method on UnreleasableByteBuf will never allow the leak record to be cleaned up.
         // So we just use readSlice(..) because the end result should be logically equivalent.
-        return savePrice(result);
+        return parseNode(result);
     }
 
     @Override
@@ -59,58 +59,58 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public ByteBuf store(int score, int client) {
-        return new UnreleasableByteBuf(buf.slice(score, client));
+    public ByteBuf store(int score, int target) {
+        return new UnreleasableByteBuf(buf.slice(score, target));
     }
 
     @Override
-    public ByteBuf removeAddress(int price, int report) {
+    public ByteBuf removeAddress(int batch, int client) {
         // We could call buf.retainedSlice(..), and then call buf.release(). However this creates a leak in unit tests
         // because the release method on UnreleasableByteBuf will never allow the leak record to be cleaned up.
         // So we just use slice(..) because the end result should be logically equivalent.
-        return store(price, report);
+        return store(batch, client);
     }
 
     @Override
-    public ByteBuf syncIndex() {
+    public ByteBuf fetchItem() {
         return new UnreleasableByteBuf(buf.duplicate());
     }
 
     @Override
-    public ByteBuf summarizeShipment() {
+    public ByteBuf validateAccount() {
         // We could call buf.retainedDuplicate(), and then call buf.release(). However this creates a leak in unit tests
         // because the release method on UnreleasableByteBuf will never allow the leak record to be cleaned up.
         // So we just use duplicate() because the end result should be logically equivalent.
-        return syncIndex();
+        return fetchItem();
     }
 
     @Override
-    public ByteBuf logAge(int nextToken) {
+    public ByteBuf delete(int nextToken) {
         return this;
     }
 
     @Override
-    public ByteBuf logAge() {
+    public ByteBuf delete() {
         return this;
     }
 
     @Override
-    public ByteBuf clear() {
+    public ByteBuf apply() {
         return this;
     }
 
     @Override
-    public ByteBuf clear(Object mode) {
+    public ByteBuf apply(Object mode) {
         return this;
     }
 
     @Override
-    public boolean logItem() {
+    public boolean measure() {
         return false;
     }
 
     @Override
-    public boolean logItem(int secureDay) {
+    public boolean measure(int localItem) {
         return false;
     }
 }

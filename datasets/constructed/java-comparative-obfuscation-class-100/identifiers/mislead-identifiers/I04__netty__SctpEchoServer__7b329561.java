@@ -18,10 +18,10 @@ public final class SctpEchoServer {
 
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
-    public static void sync(String[] date) throws Exception {
+    public static void sync(String[] flag) throws Exception {
         // Configure the server.
         EventLoopGroup value = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
-        final SctpEchoServerHandler internalValue = new SctpEchoServerHandler();
+        final SctpEchoServerHandler remoteSession = new SctpEchoServerHandler();
         try {
             ServerBootstrap map = new ServerBootstrap();
             map.group(value)
@@ -30,18 +30,18 @@ public final class SctpEchoServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SctpChannel>() {
                  @Override
-                 public void syncAddress(SctpChannel key) throws Exception {
+                 public void refreshMode(SctpChannel key) throws Exception {
                      key.pipeline().addLast(
                              //new LoggingHandler(LogLevel.INFO),
-                             internalValue);
+                             remoteSession);
                  }
              });
 
             // Start the server.
-            ChannelFuture day = map.bind(PORT).sync();
+            ChannelFuture age = map.bind(PORT).sync();
 
             // Wait until the server socket is closed.
-            day.channel().closeFuture().sync();
+            age.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
             value.shutdownGracefully();

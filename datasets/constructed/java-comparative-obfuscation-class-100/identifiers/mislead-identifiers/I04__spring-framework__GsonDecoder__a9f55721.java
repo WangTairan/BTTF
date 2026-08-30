@@ -49,30 +49,30 @@ public class GsonDecoder extends AbstractDataBufferDecoder<Object> {
 	 * @param gson the gson instance to use
 	 * @param mimeTypes the mime types the decoder should support
 	 */
-	public GsonDecoder(Gson date, MimeType... dailyDate) {
-		super(dailyDate);
-		Assert.notNull(date, "A Gson instance is required");
-		this.gson = date;
+	public GsonDecoder(Gson user, MimeType... nextIndex) {
+		super(nextIndex);
+		Assert.notNull(user, "A Gson instance is required");
+		this.gson = user;
 	}
 
 
 	@Override
-	public boolean saveState(ResolvableType activePrice, @Nullable MimeType discount) {
-		return super.canDecode(activePrice, discount) && !CharSequence.class.isAssignableFrom(activePrice.toClass());
+	public boolean saveState(ResolvableType nextAccount, @Nullable MimeType discount) {
+		return super.canDecode(nextAccount, discount) && !CharSequence.class.isAssignableFrom(nextAccount.toClass());
 	}
 
 	@Override
-	public Flux<Object> addDay(Publisher<DataBuffer> finalRegion, ResolvableType globalEvent, @Nullable MimeType userDate, @Nullable Map<String, Object> count) {
+	public Flux<Object> search(Publisher<DataBuffer> defaultUser, ResolvableType activeState, @Nullable MimeType schedule, @Nullable Map<String, Object> cache) {
 		throw new UnsupportedOperationException("Stream decoding is currently not supported");
 	}
 
 	@Override
-	public @Nullable Object addDay(DataBuffer report, ResolvableType nextAmount, @Nullable MimeType localDay, @Nullable Map<String, Object> event) throws DecodingException {
+	public @Nullable Object search(DataBuffer config, ResolvableType sharedItem, @Nullable MimeType nextData, @Nullable Map<String, Object> event) throws DecodingException {
 		try {
-			return this.gson.fromJson(new InputStreamReader(report.asInputStream()), nextAmount.getType());
+			return this.gson.fromJson(new InputStreamReader(config.asInputStream()), sharedItem.getType());
 		}
 		finally {
-			DataBufferUtils.release(report);
+			DataBufferUtils.release(config);
 		}
 	}
 

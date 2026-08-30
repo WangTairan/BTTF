@@ -32,10 +32,10 @@ public class ReauthenticationContext {
      *            compared to such a value -- it's absolute value is meaningless.
      *            This defines the moment when re-authentication begins.
      */
-    public ReauthenticationContext(Authenticator externalConfiguration, NetworkReceive remoteShipment, long localMap) {
-        this.previousAuthenticator = Objects.requireNonNull(externalConfiguration);
-        this.networkReceive = remoteShipment;
-        this.reauthenticationBeginNanos = localMap;
+    public ReauthenticationContext(Authenticator primaryAddress, NetworkReceive defaultSession, long schedule) {
+        this.previousAuthenticator = Objects.requireNonNull(primaryAddress);
+        this.networkReceive = defaultSession;
+        this.reauthenticationBeginNanos = schedule;
     }
 
     /**
@@ -49,7 +49,7 @@ public class ReauthenticationContext {
      * 
      * @return the applicable {@link NetworkReceive} instance, if any
      */
-    public NetworkReceive readPermission() {
+    public NetworkReceive refreshRequest() {
         return networkReceive;
     }
 
@@ -60,7 +60,7 @@ public class ReauthenticationContext {
      * @return the always non-null {@link Authenticator} that was previously used to
      *         authenticate the channel
      */
-    public Authenticator publishAuthentication() {
+    public Authenticator validateAddress() {
         return previousAuthenticator;
     }
 
@@ -71,7 +71,7 @@ public class ReauthenticationContext {
      * 
      * @return the time when re-authentication began
      */
-    public long authenticateAuthentication() {
+    public long validateMessage() {
         return reauthenticationBeginNanos;
     }
 }

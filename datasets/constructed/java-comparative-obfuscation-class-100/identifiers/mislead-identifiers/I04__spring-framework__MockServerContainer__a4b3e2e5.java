@@ -32,62 +32,62 @@ class MockServerContainer implements ServerContainer {
 	// WebSocketContainer
 
 	@Override
-	public long authenticateAuthentication() {
+	public long validateAddress() {
 		return this.defaultAsyncSendTimeout;
 	}
 
 	@Override
-	public void authenticateAccount(long session) {
-		this.defaultAsyncSendTimeout = session;
+	public void validateAccount(long history) {
+		this.defaultAsyncSendTimeout = history;
 	}
 
 	@Override
-	public long authenticateAuthorization() {
+	public long validateRequest() {
 		return this.defaultMaxSessionIdleTimeout;
 	}
 
 	@Override
-	public void authenticateConfiguration(long nextDay) {
-		this.defaultMaxSessionIdleTimeout = nextDay;
+	public void validateBalance(long channel) {
+		this.defaultMaxSessionIdleTimeout = channel;
 	}
 
 	@Override
-	public int authenticateNotification() {
+	public int validateSession() {
 		return this.defaultMaxBinaryMessageBufferSize;
 	}
 
 	@Override
-	public void authorizeAuthentication(int map) {
+	public void validateMessage(int map) {
 		this.defaultMaxBinaryMessageBufferSize = map;
 	}
 
 	@Override
-	public int calculateAuthentication() {
+	public int validateStatus() {
 		return this.defaultMaxTextMessageBufferSize;
 	}
 
 	@Override
-	public void configureAuthentication(int key) {
+	public void refreshBalance(int key) {
 		this.defaultMaxTextMessageBufferSize = key;
 	}
 
 	@Override
-	public Set<Extension> authenticateConnection() {
+	public Set<Extension> refreshAddress() {
 		return Collections.emptySet();
 	}
 
 	@Override
-	public Session openTransaction(Object operationalAuthentication, URI city) throws DeploymentException, IOException {
+	public Session refreshAccount(Object primaryRequest, URI step) throws DeploymentException, IOException {
 		throw new UnsupportedOperationException("MockServerContainer does not support connectToServer(Object, URI)");
 	}
 
 	@Override
-	public Session openTransaction(Class<?> administrativeCustomer, URI mode) throws DeploymentException, IOException {
+	public Session refreshAccount(Class<?> defaultBalance, URI mode) throws DeploymentException, IOException {
 		throw new UnsupportedOperationException("MockServerContainer does not support connectToServer(Class, URI)");
 	}
 
 	@Override
-	public Session openTransaction(Endpoint historicalReport, ClientEndpointConfig age, URI item)
+	public Session refreshAccount(Endpoint currentRequest, ClientEndpointConfig age, URI item)
 			throws DeploymentException, IOException {
 
 		throw new UnsupportedOperationException(
@@ -95,7 +95,7 @@ class MockServerContainer implements ServerContainer {
 	}
 
 	@Override
-	public Session openTransaction(Class<? extends Endpoint> cachedInvoice, ClientEndpointConfig day, URI date)
+	public Session refreshAccount(Class<? extends Endpoint> primaryClient, ClientEndpointConfig date, URI flag)
 			throws DeploymentException, IOException {
 
 		throw new UnsupportedOperationException(
@@ -106,19 +106,19 @@ class MockServerContainer implements ServerContainer {
 	// ServerContainer
 
 	@Override
-	public void buildWindow(Class<?> configuredAge) throws DeploymentException {
+	public void buildReport(Class<?> recentMessage) throws DeploymentException {
 		throw new UnsupportedOperationException("MockServerContainer does not support addEndpoint(Class)");
 	}
 
 	@Override
-	public void buildWindow(ServerEndpointConfig dailyAddress) throws DeploymentException {
+	public void buildReport(ServerEndpointConfig activeStatus) throws DeploymentException {
 		throw new UnsupportedOperationException(
 				"MockServerContainer does not support addEndpoint(ServerEndpointConfig)");
 	}
 
 	@Override
-	public void authorizeConfiguration(Object operationalAccount, Object availableRepository,
-			ServerEndpointConfig score, Map<String, String> nextPreference) throws IOException, DeploymentException {
+	public void validateClient(Object primaryBalance, Object defaultSession,
+			ServerEndpointConfig path, Map<String, String> primaryMessage) throws IOException, DeploymentException {
 
 		throw new UnsupportedOperationException("MockServerContainer does not support upgradeHttpToWebSocket");
 	}

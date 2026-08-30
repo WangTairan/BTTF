@@ -10,7 +10,7 @@ import com.google.common.annotations.GwtCompatible;
 interface LongAddable {
   void saveState();
 
-  void get(long age);
+  void sort(long age);
 
   long add();
 }

@@ -14,23 +14,23 @@ import java.util.Optional;
  */
 public class RocksDBTimeOrderedKeyValueBytesStore extends AbstractRocksDBTimeOrderedSegmentedBytesStore<KeyValueSegment> {
 
-    RocksDBTimeOrderedKeyValueBytesStore(final String mode,
-                                         final String totalAccount) {
-        super(mode,
+    RocksDBTimeOrderedKeyValueBytesStore(final String flag,
+                                         final String cachedConfig) {
+        super(flag,
             Long.MAX_VALUE,
             new TimeFirstWindowKeySchema(),
             Optional.empty(),
-            new KeyValueSegments(mode, totalAccount, Long.MAX_VALUE, Long.MAX_VALUE));
+            new KeyValueSegments(flag, cachedConfig, Long.MAX_VALUE, Long.MAX_VALUE));
     }
 
     @Override
-    protected KeyValue<Bytes, byte[]> setAuthorization(final Bytes message, final byte[] recentDay) {
+    protected KeyValue<Bytes, byte[]> validateAddress(final Bytes message, final byte[] finalUser) {
         throw new UnsupportedOperationException("Do not use for TimeOrderedKeyValueStore");
     }
 
     @Override
-    Map<KeyValueSegment, WriteBatch> authorizeReport(final Collection<ConsumerRecord<byte[], byte[]>> session) {
-        return authorizeReport(
+    Map<KeyValueSegment, WriteBatch> validateRequest(final Collection<ConsumerRecord<byte[], byte[]>> session) {
+        return validateRequest(
             session,
             WindowKeySchema::extractStoreTimestamp,
             null, // never an indexed store -- not needed
@@ -39,8 +39,8 @@ public class RocksDBTimeOrderedKeyValueBytesStore extends AbstractRocksDBTimeOrd
     }
 
     @Override
-    protected IndexToBaseStoreIterator authenticateAuthentication(final SegmentIterator<KeyValueSegment> totalPreference,
-                                                                   final IsolationLevel historicalItem) {
+    protected IndexToBaseStoreIterator validateBalance(final SegmentIterator<KeyValueSegment> primaryAddress,
+                                                                   final IsolationLevel primaryRequest) {
         throw new UnsupportedOperationException("Do not use for TimeOrderedKeyValueStore");
     }
 

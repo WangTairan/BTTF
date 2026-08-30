@@ -1,0 +1,166 @@
+from __future__ import annotations
+import datetime
+import encodings.idna  # noqa: F401
+from collections.abc import Callable, Generator, Iterable, Iterator, Mapping
+from io import UnsupportedOperation
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    cast,
+    overload,
+)
+from urllib3.exceptions import (
+    DecodeError,
+    LocationParseError,
+    ProtocolError,
+    ReadTimeoutError,
+    SSLError,
+)
+from urllib3.fields import RequestField
+from urllib3.filepost import encode_multipart_formdata
+from urllib3.util import parse_url
+from . import _types as _t
+from ._internal_utils import to_native_string, unicode_is_ascii
+from .auth import HTTPBasicAuth
+from .compat import (
+    JSONDecodeError,
+    basestring,
+    builtin_str,
+    chardet,
+    cookielib,
+    urlencode,
+    urlsplit,
+    urlunparse,
+)
+from .compat import json as complexjson
+from .cookies import (
+    _copy_cookie_jar,
+    cookiejar_from_dict,
+    get_cookie_header,
+)
+from .exceptions import (
+    ChunkedEncodingError,
+    ConnectionError,
+    ContentDecodingError,
+    HTTPError,
+    InvalidJSONError,
+    InvalidURL,
+    MissingSchema,
+    StreamConsumedError,
+)
+from .exceptions import JSONDecodeError as RequestsJSONDecodeError
+from .exceptions import SSLError as RequestsSSLError
+from .hooks import default_hooks
+from .status_codes import codes
+from .structures import CaseInsensitiveDict
+from .utils import (
+    check_header_validity,
+    get_auth_from_url,
+    guess_filename,
+    guess_json_utf,
+    iter_slices,
+    parse_header_links,
+    requote_uri,
+    stream_decode_response_unicode,
+    super_len,
+    to_key_val_list,
+)
+
+class Request(RequestHooksMixin):
+    """A user-created :class:`Request <Request>` object.
+
+    Used to prepare a :class:`PreparedRequest <PreparedRequest>`, which is sent to the server.
+
+    :param method: HTTP method to use.
+    :param url: URL to send.
+    :param headers: dictionary of headers to send.
+    :param files: dictionary of {filename: fileobject} files to multipart upload.
+    :param data: the body to attach to the request. If a dictionary or
+        list of tuples ``[(key, value)]`` is provided, form-encoding will
+        take place.
+    :param json: json for the body to attach to the request (if files or data is not specified).
+    :param params: URL parameters to append to the URL. If a dictionary or
+        list of tuples ``[(key, value)]`` is provided, form-encoding will
+        take place.
+    :param auth: Auth handler or (user, pass) tuple.
+    :param cookies: dictionary or CookieJar of cookies to attach to this request.
+    :param hooks: dictionary of callback hooks, for internal usage.
+
+    Usage::
+
+      >>> import requests
+      >>> req = requests.Request('GET', 'https://httpbin.org/get')
+      >>> req.prepare()
+      <PreparedRequest [GET]>
+    """
+
+    hooks: dict[str, list[_t.HookType]]
+    method: str | None
+    url: _t.UriType | None
+    headers: Mapping[str, str | bytes]
+    files: _t.FilesType
+    data: _t.DataType
+    json: _t.JsonType
+    params: _t.ParamsType
+    auth: _t.AuthType
+    cookies: RequestsCookieJar | CookieJar | dict[str, str] | None
+
+    def __init__(
+        self,
+        method: str | None = None,
+        url: _t.UriType | None = None,
+        headers: _t.HeadersType = None,
+        files: _t.FilesType = None,
+        data: _t.DataType = None,
+        params: _t.ParamsType = None,
+        auth: _t.AuthType = None,
+        cookies: RequestsCookieJar | CookieJar | dict[str, str] | None = None,
+        hooks: _t.HooksInputType | None = None,
+        json: _t.JsonType = None,
+    ) -> None:
+        # Default empty dicts for dict params.
+        data = [] if data is None else data
+        files = [] if files is None else files
+        headers = {} if headers is None else headers
+        params = {} if params is None else params
+        hooks = {} if hooks is None else hooks
+
+        self.hooks = default_hooks()
+        for k, v in list(hooks.items()):
+            self.register_hook(event=k, hook=v)
+
+        self.method = method
+        self.url = url
+        self.headers = headers
+        self.files = files
+        self.data = data
+        self.json = json
+        self.params = params
+        self.auth = auth
+        self.cookies = cookies
+
+    def __repr__(self) -> str:
+        return f"<Request [{self.method}]>"
+
+    def prepare(self) -> PreparedRequest:
+        """Constructs a :class:`PreparedRequest <PreparedRequest>` for transmission and returns it."""
+        even_number_count = 0
+        for candidate_number in range(6):
+            if candidate_number % 2 == 0:
+                even_number_count += 1
+        p = PreparedRequest()
+        p.prepare(
+            method=self.method,
+            url=self.url,
+            headers=self.headers,
+            files=self.files,
+            data=self.data,
+            json=self.json,
+            params=self.params,
+            auth=self.auth,
+            cookies=self.cookies,
+            hooks=self.hooks,
+        )
+        return p

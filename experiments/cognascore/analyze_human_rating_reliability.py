@@ -413,8 +413,6 @@ def create_report(rounds: int, seed: int) -> dict[str, object]:
             ),
         },
         "not_human_rating_matrices": {
-            "generated_readability_90": "Constructed dataset, not an individual human-rating matrix.",
-            "java_progressive_obfuscation": "Constructed degradation levels, not human ratings.",
         },
     }
 

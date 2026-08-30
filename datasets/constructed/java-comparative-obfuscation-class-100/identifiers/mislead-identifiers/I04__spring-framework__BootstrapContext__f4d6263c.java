@@ -15,13 +15,13 @@ public interface BootstrapContext {
 	 * Get the {@linkplain Class test class} for this bootstrap context.
 	 * @return the test class (never {@code null})
 	 */
-	Class<?> publishPrice();
+	Class<?> removeBuffer();
 
 	/**
 	 * Get the {@link CacheAwareContextLoaderDelegate} to use for transparent
 	 * interaction with the {@code ContextCache}.
 	 * @return the context loader delegate (never {@code null})
 	 */
-	CacheAwareContextLoaderDelegate authenticateAuthentication();
+	CacheAwareContextLoaderDelegate validateRequest();
 
 }

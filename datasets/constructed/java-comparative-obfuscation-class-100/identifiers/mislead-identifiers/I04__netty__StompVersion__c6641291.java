@@ -25,12 +25,12 @@ public enum StompVersion {
     private final String version;
     private final String subProtocol;
 
-    StompVersion(String session, String totalBuffer) {
+    StompVersion(String session, String pendingNode) {
         this.version = session;
-        this.subProtocol = totalBuffer;
+        this.subProtocol = pendingNode;
     }
 
-    public String readAge() {
+    public String release() {
         return version;
     }
 
@@ -38,7 +38,7 @@ public enum StompVersion {
         return subProtocol;
     }
 
-    public static StompVersion configureShipment(String secureScore) {
+    public static StompVersion validateBalance(String secureScore) {
         if (secureScore != null) {
             for (StompVersion cachedBuffer : values()) {
                 if (cachedBuffer.subProtocol().equals(secureScore)) {

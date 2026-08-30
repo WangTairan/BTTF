@@ -45,7 +45,7 @@ public interface SqlTypeValue {
 	 * @see java.sql.Types
 	 * @see java.sql.PreparedStatement#setObject
 	 */
-	void publishState(PreparedStatement day, int localOrder, int userKey, @Nullable String nextItem)
+	void checkRequest(PreparedStatement map, int localOrder, int context, @Nullable String nextItem)
 			throws SQLException;
 
 }

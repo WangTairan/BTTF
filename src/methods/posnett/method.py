@@ -1,5 +1,8 @@
+import io
+import keyword
 import math
 import re
+import tokenize
 from collections import Counter
 from dataclasses import dataclass
 
@@ -21,12 +24,32 @@ JAVA_KEYWORDS = {
     "transient", "try", "void", "volatile", "while",
 }
 
+C_LIKE_LANGUAGES = {"c", "cpp", "c++", "cuda"}
+C_LIKE_KEYWORDS = {
+    "alignas", "alignof", "asm", "auto", "bool", "break", "case", "catch",
+    "char", "class", "const", "constexpr", "continue", "default", "delete",
+    "do", "double", "else", "enum", "explicit", "extern", "false", "float",
+    "for", "friend", "goto", "if", "inline", "int", "long", "namespace",
+    "new", "noexcept", "nullptr", "operator", "private", "protected", "public",
+    "register", "restrict", "return", "short", "signed", "sizeof", "static",
+    "struct", "switch", "template", "this", "throw", "true", "try", "typedef",
+    "typename", "union", "unsigned", "using", "virtual", "void", "volatile",
+    "while", "__device__", "__global__", "__host__", "__shared__",
+    "__syncthreads",
+}
+
 TOKEN_PATTERN = re.compile(
     r">>>=|>>=|<<=|\+\+|--|==|!=|>=|<=|&&|\|\||\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<|>>>|>>|->|::"
     r"|[A-Za-z_$][A-Za-z0-9_$]*"
     r"|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[A-Za-z]*"
     r"|\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'"
     r"|[{}()[\];,.:?~!%^&*+\-/=<>|]"
+)
+PYTHON_FRAGMENT_TOKEN_PATTERN = re.compile(
+    r"\#[^\n]*|\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|"
+    r"\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b[A-Za-z_]\w*\b|"
+    r"\*\*=|//=|<<=|>>=|==|!=|<=|>=|\+=|-=|\*=|/=|%=|&=|\|=|\^=|"
+    r"\*\*|//|<<|>>|:=|->|[+\-*/%@&|^~<>=()[\]{},.:]"
 )
 
 
@@ -42,10 +65,29 @@ class PosnettReadabilityResult:
     vocabulary_size: int
 
 
-def posnett_model(code: str) -> PosnettReadabilityResult:
-    tokens = _java_tokens(strip_comments(code))
+def posnett_model(
+    code: str,
+    language: str = "java",
+    *,
+    allow_fragments: bool = False,
+) -> PosnettReadabilityResult:
+    normalized_language = language.strip().lower()
+    if normalized_language == "python":
+        operators, operands = _python_halstead_tokens(
+            code,
+            allow_fragments=allow_fragments,
+        )
+        tokens = [*operators, *operands]
+    elif normalized_language == "java":
+        tokens = _java_tokens(strip_comments(code))
+        operators, operands = _partition_java_tokens(tokens)
+    elif normalized_language in C_LIKE_LANGUAGES:
+        tokens = _java_tokens(strip_comments(code))
+        operators, operands = _partition_c_like_tokens(tokens)
+    else:
+        raise ValueError(f"Unsupported Posnett language: {language!r}")
     lines = _line_count(code)
-    volume = _halstead_volume(tokens)
+    volume = _halstead_volume(operators, operands)
     entropy = _byte_entropy(code)
 
     z_value = 8.87 - 0.033 * volume + 0.40 * lines - 1.5 * entropy
@@ -129,10 +171,7 @@ def _line_count(code: str) -> int:
     return len(code.splitlines())
 
 
-def _halstead_volume(tokens: list[str]) -> float:
-    if not tokens:
-        return 0.0
-
+def _partition_java_tokens(tokens: list[str]) -> tuple[list[str], list[str]]:
     operators = []
     operands = []
     for token in tokens:
@@ -140,6 +179,84 @@ def _halstead_volume(tokens: list[str]) -> float:
             operators.append(token)
         else:
             operands.append(token)
+    return operators, operands
+
+
+def _partition_c_like_tokens(tokens: list[str]) -> tuple[list[str], list[str]]:
+    operators = []
+    operands = []
+    for token in tokens:
+        if token in JAVA_OPERATORS or token in C_LIKE_KEYWORDS:
+            operators.append(token)
+        else:
+            operands.append(token)
+    return operators, operands
+
+
+def _python_halstead_tokens(
+    code: str,
+    *,
+    allow_fragments: bool = False,
+) -> tuple[list[str], list[str]]:
+    operators: list[str] = []
+    operands: list[str] = []
+    ignored = {
+        tokenize.ENCODING,
+        tokenize.ENDMARKER,
+        tokenize.INDENT,
+        tokenize.DEDENT,
+        tokenize.NEWLINE,
+        tokenize.NL,
+        tokenize.COMMENT,
+    }
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(code).readline):
+            if token.type in ignored:
+                continue
+            if token.type == tokenize.OP:
+                operators.append(token.string)
+            elif token.type == tokenize.NAME and keyword.iskeyword(token.string):
+                operators.append(token.string)
+            elif token.type in {tokenize.NAME, tokenize.NUMBER, tokenize.STRING}:
+                operands.append(token.string)
+    except (IndentationError, SyntaxError, tokenize.TokenError):
+        if not allow_fragments:
+            raise
+        return _python_fragment_halstead_tokens(code)
+    return operators, operands
+
+
+def _python_fragment_halstead_tokens(code: str) -> tuple[list[str], list[str]]:
+    operators: list[str] = []
+    operands: list[str] = []
+    operator_tokens = {
+        "and", "or", "not", "in", "is", "if", "elif", "else", "for",
+        "while", "try", "except", "finally", "with", "return", "raise",
+        "break", "continue", "yield", "async", "await", "def", "class",
+        "lambda", "import", "from", "as", "global", "nonlocal", "assert",
+        "del", "pass", "print", "exec",
+    }
+    for line in code.splitlines():
+        for token in PYTHON_FRAGMENT_TOKEN_PATTERN.findall(line):
+            if token.startswith("#"):
+                break
+            if re.fullmatch(r"[A-Za-z_]\w*", token):
+                target = (
+                    operators
+                    if keyword.iskeyword(token) or token in operator_tokens
+                    else operands
+                )
+                target.append(token)
+            elif token[0].isdigit() or token.startswith(("\"", "'")):
+                operands.append(token)
+            else:
+                operators.append(token)
+    return operators, operands
+
+
+def _halstead_volume(operators: list[str], operands: list[str]) -> float:
+    if not operators and not operands:
+        return 0.0
 
     program_length = len(operators) + len(operands)
     vocabulary_size = len(set(operators)) + len(set(operands))

@@ -24,21 +24,21 @@ public class AlterShareGroupOffsetsResult {
     /**
      * Return a future which can be used to check the result for a given partition.
      */
-    public KafkaFuture<Void> loadTransaction(final TopicPartition localItem) {
+    public KafkaFuture<Void> validateRequest(final TopicPartition localItem) {
         final KafkaFutureImpl<Void> window = new KafkaFutureImpl<>();
 
-        this.future.whenComplete((internalBalance, reference) -> {
+        this.future.whenComplete((defaultBalance, reference) -> {
             if (reference != null) {
                 window.completeExceptionally(reference);
-            } else if (!internalBalance.containsKey(localItem)) {
+            } else if (!defaultBalance.containsKey(localItem)) {
                 window.completeExceptionally(new IllegalArgumentException(
                     "Alter offset for partition \"" + localItem + "\" was not attempted"));
             } else {
-                final ApiException recentMap = internalBalance.get(localItem);
-                if (recentMap == null) {
+                final ApiException localData = defaultBalance.get(localItem);
+                if (localData == null) {
                     window.complete(null);
                 } else {
-                    window.completeExceptionally(recentMap);
+                    window.completeExceptionally(localData);
                 }
             }
         });
@@ -52,20 +52,20 @@ public class AlterShareGroupOffsetsResult {
      */
     public KafkaFuture<Void> add() {
         return this.future.thenApply(topicPartitionErrorsMap ->  {
-            List<TopicPartition> backupPermission = topicPartitionErrorsMap.entrySet()
+            List<TopicPartition> currentAddress = topicPartitionErrorsMap.entrySet()
                 .stream()
                 .filter(e -> e.getValue() != null)
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
             for (ApiException activeKey : topicPartitionErrorsMap.values()) {
                 if (activeKey != null) {
-                    String userAge = activeKey.getMessage();
-                    if ((userAge != null) && !userAge.isEmpty()) {
-                        throw Errors.forException(activeKey).exception(userAge +
-                            " Failed altering group offsets for the following partitions: " + backupPermission);
+                    String channel = activeKey.getMessage();
+                    if ((channel != null) && !channel.isEmpty()) {
+                        throw Errors.forException(activeKey).exception(channel +
+                            " Failed altering group offsets for the following partitions: " + currentAddress);
                     } else {
                         throw Errors.forException(activeKey).exception(
-                            "Failed altering group offsets for the following partitions: " + backupPermission);
+                            "Failed altering group offsets for the following partitions: " + currentAddress);
                     }
                 }
             }

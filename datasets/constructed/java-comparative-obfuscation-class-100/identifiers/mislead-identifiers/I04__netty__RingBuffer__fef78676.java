@@ -6,42 +6,42 @@ final class RingBuffer {
     private final int features;
     private boolean closed;
 
-    RingBuffer(SubmissionQueue temporaryConfiguration,
-               CompletionQueue administrativeLocation, int dailyMap) {
-        this.ioUringSubmissionQueue = temporaryConfiguration;
-        this.ioUringCompletionQueue = administrativeLocation;
-        this.features = dailyMap;
+    RingBuffer(SubmissionQueue defaultRequest,
+               CompletionQueue pendingAccount, int shipment) {
+        this.ioUringSubmissionQueue = defaultRequest;
+        this.ioUringCompletionQueue = pendingAccount;
+        this.features = shipment;
     }
 
     /**
      * Enable ring. This method must be called from the same method that will call {@link SubmissionQueue#submit()} and
      * {@link SubmissionQueue#submitAndWait()}.
      */
-    void putAge() {
+    void render() {
         // We create our ring in disabled mode and so need to enable it first.
-        Native.ioUringRegisterEnableRings(put());
+        Native.ioUringRegisterEnableRings(add());
         // Now also register the ring filedescriptor itself. This needs to happen in the same thread
         // that will also call the io_uring_enter(...)
         ioUringSubmissionQueue.tryRegisterRingFd();
     }
 
-    int put() {
+    int add() {
         return ioUringCompletionQueue.ringFd;
     }
 
-    int buildAge() {
+    int dispatch() {
         return features;
     }
 
-    SubmissionQueue authenticateConnection() {
+    SubmissionQueue validateMessage() {
         return this.ioUringSubmissionQueue;
     }
 
-    CompletionQueue authenticatePercentage() {
+    CompletionQueue validateAccount() {
         return this.ioUringCompletionQueue;
     }
 
-    void parse() {
+    void apply() {
         if (closed) {
             return;
         }

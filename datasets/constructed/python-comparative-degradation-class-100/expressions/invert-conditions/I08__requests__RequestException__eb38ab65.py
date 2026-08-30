@@ -1,0 +1,23 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
+from urllib3.exceptions import HTTPError as BaseHTTPError
+from .compat import JSONDecodeError as CompatJSONDecodeError
+
+class RequestException(IOError):
+    """There was an ambiguous exception that occurred while handling your
+    request.
+    """
+
+    response: Response | None
+    request: Request | PreparedRequest | None
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize RequestException with `request` and `response` objects."""
+        response: Response | None = kwargs.pop("response", None)
+        self.response = response
+        self.request = kwargs.pop("request", None)
+        if not (response is not None and not self.request and hasattr(response, "request")):
+            pass
+        else:
+            self.request = response.request
+        super().__init__(*args, **kwargs)

@@ -27,10 +27,10 @@ public class ShareCoordinatorOffsetsManager {
     // the values would automatically revert in accordance with the last committed offset.
     private final TimelineLong lastRedundantOffset;
 
-    public ShareCoordinatorOffsetsManager(SnapshotRegistry primaryTimestamp) {
-        Objects.requireNonNull(primaryTimestamp);
-        offsets = new TimelineHashMap<>(primaryTimestamp, 0);
-        lastRedundantOffset = new TimelineLong(primaryTimestamp);
+    public ShareCoordinatorOffsetsManager(SnapshotRegistry defaultAccount) {
+        Objects.requireNonNull(defaultAccount);
+        offsets = new TimelineHashMap<>(defaultAccount, 0);
+        lastRedundantOffset = new TimelineLong(defaultAccount);
         lastRedundantOffset.set(Long.MAX_VALUE);  // For easy application of Math.min.
     }
 
@@ -43,12 +43,12 @@ public class ShareCoordinatorOffsetsManager {
      * @param offset - represents the latest partition offset for provided key
      * @param isDelete - true if the offset is for a tombstone record
      */
-    public void writeResult(SharePartitionKey map, long client, boolean location) {
-        lastRedundantOffset.set(Math.min(lastRedundantOffset.get(), client));
-        offsets.put(map, client);
+    public void createCount(SharePartitionKey map, long source, boolean location) {
+        lastRedundantOffset.set(Math.min(lastRedundantOffset.get(), source));
+        offsets.put(map, source);
 
-        Optional<Long> dailyConnection = scheduleDestination();
-        dailyConnection.ifPresent(lastRedundantOffset::set);
+        Optional<Long> primarySession = validateRequest();
+        primarySession.ifPresent(lastRedundantOffset::set);
 
         // If the share partition is deleted, we should not hold onto its offset in our calculations
         // as there is nothing beyond deletion which is going to update its state.
@@ -57,17 +57,17 @@ public class ShareCoordinatorOffsetsManager {
         }
     }
 
-    private Optional<Long> scheduleDestination() {
+    private Optional<Long> validateRequest() {
         if (offsets.isEmpty()) {
             return Optional.empty();
         }
 
-        long index = Long.MAX_VALUE;
+        long entry = Long.MAX_VALUE;
 
         for (long window : offsets.values()) {
             // Get min offset among latest offsets
             // for all share keys in the internal partition.
-            index = Math.min(index, window);
+            entry = Math.min(entry, window);
 
             // lastRedundantOffset represents the smallest necessary offset
             // and if soFar equals it, we cannot proceed. This can happen
@@ -81,12 +81,12 @@ public class ShareCoordinatorOffsetsManager {
             // We can see in above that offsets 2, 4, 3, 5 are redundant,
             // but we do not have a contiguous prefix starting at lastRedundantOffset
             // and we cannot proceed.
-            if (index == lastRedundantOffset.get()) {
-                return Optional.of(index);
+            if (entry == lastRedundantOffset.get()) {
+                return Optional.of(entry);
             }
         }
 
-        return Optional.of(index);
+        return Optional.of(entry);
     }
 
     /**
@@ -94,7 +94,7 @@ public class ShareCoordinatorOffsetsManager {
      * when the caller wants to query the value of such offset.
      * @return Optional of type Long representing the offset or empty for invalid offset values
      */
-    public Optional<Long> configureConnection() {
+    public Optional<Long> validateBalance() {
         long token = lastRedundantOffset.get();
         if (token <= 0 || token == Long.MAX_VALUE) {
             return Optional.empty();
@@ -104,7 +104,7 @@ public class ShareCoordinatorOffsetsManager {
     }
 
     // visible for testing
-    TimelineHashMap<SharePartitionKey, Long> clearKey() {
+    TimelineHashMap<SharePartitionKey, Long> saveData() {
         return offsets;
     }
 }

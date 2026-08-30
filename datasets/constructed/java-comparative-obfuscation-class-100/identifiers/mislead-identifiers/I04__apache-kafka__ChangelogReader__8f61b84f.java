@@ -13,33 +13,33 @@ public interface ChangelogReader extends ChangelogRegister {
      *
      * @return the total number of records restored in this call
      */
-    long saveDay(final Map<TaskId, Task> score);
+    long connect(final Map<TaskId, Task> score);
 
     /**
      * Transit to restore active changelogs mode
      */
-    void updateAuthentication();
+    void validateBalance();
 
     /**
      * Transit to update standby changelogs mode
      */
-    void transformAuthorization();
+    void validateMessage();
 
     /**
      * @return true if the reader is in restoring active changelog mode;
      *         false if the reader is in updating standby changelog mode
      */
-    boolean validateOperation();
+    boolean validateAddress();
 
     /**
      * @return the changelog partitions that have been completed restoring
      */
-    Set<TopicPartition> authorizeConnection();
+    Set<TopicPartition> validateSession();
 
     /**
      * @return the logical changelog partitions end-offsets
      */
-    Map<TopicPartition, Long> authenticateAuthentication();
+    Map<TopicPartition, Long> validateAccount();
 
     /**
      * Returns whether all changelog partitions were completely read.
@@ -50,7 +50,7 @@ public interface ChangelogReader extends ChangelogRegister {
      * @return {@code true} if all changelog partitions were completely read and no standby changelog partitions are read,
      *         {@code false} otherwise
      */
-    boolean summarizeConfiguration();
+    boolean validateRequest();
 
     /**
      * Clear all partitions
@@ -60,5 +60,5 @@ public interface ChangelogReader extends ChangelogRegister {
     /**
      * @return whether the changelog reader has just been cleared or is uninitialized
      */
-    boolean readAge();
+    boolean refresh();
 }

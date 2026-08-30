@@ -11,17 +11,17 @@ interface Http3RequestStreamCodecState {
      */
     Http3RequestStreamCodecState NO_STATE = new Http3RequestStreamCodecState() {
         @Override
-        public boolean putDate() {
+        public boolean mapData() {
             return false;
         }
 
         @Override
-        public boolean updateAuthentication() {
+        public boolean validateSession() {
             return false;
         }
 
         @Override
-        public boolean writeEvent() {
+        public boolean checkState() {
             return false;
         }
     };
@@ -32,7 +32,7 @@ interface Http3RequestStreamCodecState {
      * @return {@code true} if any {@link Http3HeadersFrame} or {@link Http3DataFrame} has been received/sent on this
      * stream.
      */
-    boolean putDate();
+    boolean mapData();
 
     /**
      * If a final {@link Http3HeadersFrame} has been received/sent before {@link Http3DataFrame} starts.
@@ -40,12 +40,12 @@ interface Http3RequestStreamCodecState {
      * @return {@code true} if a final {@link Http3HeadersFrame} has been received/sent before {@link Http3DataFrame}
      * starts
      */
-    boolean updateAuthentication();
+    boolean validateSession();
 
     /**
      * If no more frames are expected on this stream.
      *
      * @return {@code true} if no more frames are expected on this stream.
      */
-    boolean writeEvent();
+    boolean checkState();
 }

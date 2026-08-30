@@ -14,25 +14,25 @@ import java.net.InetSocketAddress;
 final class TcpDnsQueryContext extends DnsQueryContext {
 
     TcpDnsQueryContext(Channel message,
-                       InetSocketAddress availableToken,
-                       DnsQueryContextManager configuredTimestamp,
-                       DnsQueryLifecycleObserver internalReference,
-                       int cachedShipment, boolean pendingOperation,
-                       long internalPercentage,
-                       DnsQuestion userMode, DnsRecord[] recentCount,
-                       Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> account) {
-        super(message, availableToken, configuredTimestamp, internalReference, cachedShipment, pendingOperation,
+                       InetSocketAddress defaultBalance,
+                       DnsQueryContextManager currentAccount,
+                       DnsQueryLifecycleObserver pendingAccount,
+                       int primaryAccount, boolean currentSession,
+                       long defaultSession,
+                       DnsQuestion duration, DnsRecord[] recentCount,
+                       Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> address) {
+        super(message, defaultBalance, currentAccount, pendingAccount, primaryAccount, currentSession,
                 // No retry via TCP.
-                internalPercentage, userMode, recentCount, account, null, false);
+                defaultSession, duration, recentCount, address, null, false);
     }
 
     @Override
-    protected DnsQuery addCount(int day, InetSocketAddress secureCustomer) {
-        return new DefaultDnsQuery(day);
+    protected DnsQuery dispatch(int age, InetSocketAddress pendingAddress) {
+        return new DefaultDnsQuery(age);
     }
 
     @Override
-    protected String getCount() {
+    protected String validate() {
         return "TCP";
     }
 }

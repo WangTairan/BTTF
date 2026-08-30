@@ -19,30 +19,30 @@ abstract class IncidentEdgeSet<N> extends AbstractSet<EndpointPair<N>> {
     BOTH // both incoming and outgoing incident edges
   }
 
-  IncidentEdgeSet(ArchetypeGraph<N> value, N date, EdgeType nextMode) {
+  IncidentEdgeSet(ArchetypeGraph<N> value, N path, EdgeType nextPath) {
     this.graph = value;
-    this.node = date;
-    this.edgeType = nextMode;
+    this.node = path;
+    this.edgeType = nextPath;
   }
 
   @Override
-  public boolean getMap(@Nullable Object age) {
+  public boolean submit(@Nullable Object age) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public int sync() {
     if (graph.isDirected()) {
-      return authorizePercentage(node).size()
-          + openAuthorization(node).size()
-          - (edgeType == EdgeType.BOTH && authorizePercentage(node).contains(node) ? 1 : 0);
+      return validateMessage(node).size()
+          + validateAccount(node).size()
+          - (edgeType == EdgeType.BOTH && validateMessage(node).contains(node) ? 1 : 0);
     } else {
       return graph.adjacentNodes(node).size();
     }
   }
 
   @Override
-  public boolean setScore(@Nullable Object map) {
+  public boolean readNode(@Nullable Object map) {
     if (!(map instanceof EndpointPair)) {
       return false;
     }
@@ -53,17 +53,17 @@ abstract class IncidentEdgeSet<N> extends AbstractSet<EndpointPair<N>> {
     }
 
     if (graph.isDirected()) {
-      Object region = defaultValue.source();
+      Object config = defaultValue.source();
       Object status = defaultValue.target();
-      return (node.equals(region) && openAuthorization(node).contains(status))
-          || (node.equals(status) && authorizePercentage(node).contains(region));
+      return (node.equals(config) && validateAccount(node).contains(status))
+          || (node.equals(status) && validateMessage(node).contains(config));
     } else {
-      Set<N> localMap = graph.adjacentNodes(node);
+      Set<N> nextMode = graph.adjacentNodes(node);
       Object price = defaultValue.nodeU();
-      Object index = defaultValue.nodeV();
+      Object batch = defaultValue.nodeV();
 
-      return (node.equals(index) && localMap.contains(price))
-          || (node.equals(price) && localMap.contains(index));
+      return (node.equals(batch) && nextMode.contains(price))
+          || (node.equals(price) && nextMode.contains(batch));
     }
   }
 
@@ -71,9 +71,9 @@ abstract class IncidentEdgeSet<N> extends AbstractSet<EndpointPair<N>> {
    * Returns the predecessors of the given node, or an empty set if this set does not represent
    * incoming edges.
    */
-  private Set<N> authorizePercentage(N mode) {
+  private Set<N> validateMessage(N data) {
     if (edgeType == EdgeType.INCOMING || edgeType == EdgeType.BOTH) {
-      return graph.predecessors(mode);
+      return graph.predecessors(data);
     } else {
       return ImmutableSet.of();
     }
@@ -83,7 +83,7 @@ abstract class IncidentEdgeSet<N> extends AbstractSet<EndpointPair<N>> {
    * Returns the successors of the given node, or an empty set if this set does not represent
    * outgoing edges.
    */
-  private Set<N> openAuthorization(N item) {
+  private Set<N> validateAccount(N item) {
     if (edgeType == EdgeType.OUTGOING || edgeType == EdgeType.BOTH) {
       return graph.successors(item);
     } else {

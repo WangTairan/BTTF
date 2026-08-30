@@ -1,0 +1,240 @@
+{
+  "application_mode": "independent-interference",
+  "base_class_count": 100,
+  "base_counts_by_source": {
+    "attrs": 25,
+    "django": 25,
+    "flask": 25,
+    "requests": 25
+  },
+  "comment_replacement_corpora": {
+    "attrs": {
+      "comments_extracted": 135,
+      "maximum_length": 1786,
+      "median_length": 54,
+      "minimum_length": 5,
+      "p90_length": 107,
+      "p95_length": 260,
+      "unique_comment_texts": 124
+    },
+    "django": {
+      "comments_extracted": 740,
+      "maximum_length": 1228,
+      "median_length": 58,
+      "minimum_length": 1,
+      "p90_length": 121,
+      "p95_length": 240,
+      "unique_comment_texts": 722
+    },
+    "flask": {
+      "comments_extracted": 396,
+      "maximum_length": 4032,
+      "median_length": 59,
+      "minimum_length": 1,
+      "p90_length": 484,
+      "p95_length": 768,
+      "unique_comment_texts": 308
+    },
+    "requests": {
+      "comments_extracted": 439,
+      "maximum_length": 2151,
+      "median_length": 52,
+      "minimum_length": 5,
+      "p90_length": 198,
+      "p95_length": 396,
+      "unique_comment_texts": 411
+    }
+  },
+  "counts_by_interference": {
+    "encode-boolean-literals": 100,
+    "encode-integer-literals": 100,
+    "garble-identifiers": 100,
+    "inject-low-readability-unrelated-code": 100,
+    "inject-readable-unrelated-code": 100,
+    "inline-intermediate-variables": 100,
+    "insert-dead-branches": 100,
+    "invert-conditions": 100,
+    "lower-for-to-while": 100,
+    "mislead-identifiers": 100,
+    "partially-compact-layout": 100,
+    "remove-comments": 100,
+    "replace-comments-with-nonsense": 100,
+    "shorten-identifiers": 100
+  },
+  "created_at": "2026-08-30T06:09:58.566315+00:00",
+  "granularity": "class",
+  "interference_count": 14,
+  "interferences": [
+    {
+      "application": "original-source",
+      "category": "comments",
+      "description": "Remove comments and docstrings",
+      "implementation": "readability_data.python_degradation.interferences.comments.plugins.RemoveComments",
+      "order": 1,
+      "slug": "remove-comments",
+      "target_policy": "all-comments-and-documentation",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "comments",
+      "description": "Replace existing comments and docstrings with unrelated project comments",
+      "implementation": "readability_data.python_degradation.interferences.comments.plugins.ReplaceCommentsWithNonsense",
+      "order": 2,
+      "slug": "replace-comments-with-nonsense",
+      "target_policy": "same-project-other-class-length-matched",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "identifiers",
+      "description": "Shorten method, parameter, and local names without collisions",
+      "implementation": "readability_data.python_degradation.interferences.identifiers.plugins.RenameIdentifiers",
+      "order": 3,
+      "slug": "shorten-identifiers",
+      "target_policy": "all-eligible-bindings",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "identifiers",
+      "description": "Replace names with length-matched meaningful but unrelated identifiers",
+      "implementation": "readability_data.python_degradation.interferences.identifiers.plugins.RenameIdentifiers",
+      "order": 4,
+      "slug": "mislead-identifiers",
+      "target_policy": "all-eligible-bindings",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "identifiers",
+      "description": "Replace names with deterministic minifier-style shortest identifiers",
+      "implementation": "readability_data.python_degradation.interferences.identifiers.plugins.RenameIdentifiers",
+      "order": 5,
+      "slug": "garble-identifiers",
+      "target_policy": "all-eligible-bindings",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "expressions",
+      "description": "Replace eligible integer literals with equivalent complex expressions",
+      "implementation": "readability_data.python_degradation.interferences.expressions.literals.EncodeLiterals",
+      "order": 6,
+      "slug": "encode-integer-literals",
+      "target_policy": "all-eligible-decimal-integers",
+      "template_count": 10
+    },
+    {
+      "application": "original-source",
+      "category": "expressions",
+      "description": "Replace eligible boolean literals with equivalent complex expressions",
+      "implementation": "readability_data.python_degradation.interferences.expressions.literals.EncodeLiterals",
+      "order": 7,
+      "slug": "encode-boolean-literals",
+      "target_policy": "all-eligible-booleans",
+      "template_count": 10
+    },
+    {
+      "application": "original-source",
+      "category": "expressions",
+      "description": "Invert eligible conditions and exchange their branches",
+      "implementation": "readability_data.python_degradation.interferences.expressions.conditions.InvertConditions",
+      "order": 8,
+      "slug": "invert-conditions",
+      "target_policy": "all-safe-outer-conditions",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "code-injection",
+      "description": "Insert deterministic runtime-dead branches into callable bodies",
+      "implementation": "readability_data.python_degradation.interferences.code_injection.injectors.InsertDeadBranches",
+      "order": 9,
+      "slug": "insert-dead-branches",
+      "target_policy": "every-callable",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "code-injection",
+      "description": "Select one of ten high-readability unrelated code templates per class",
+      "implementation": "readability_data.python_degradation.interferences.code_injection.injectors.InjectReadableCode",
+      "order": 10,
+      "slug": "inject-readable-unrelated-code",
+      "target_policy": "one-callable-per-class",
+      "template_count": 10
+    },
+    {
+      "application": "original-source",
+      "category": "code-injection",
+      "description": "Select one of ten low-readability unrelated code templates per class",
+      "implementation": "readability_data.python_degradation.interferences.code_injection.injectors.InjectLowReadabilityCode",
+      "order": 11,
+      "slug": "inject-low-readability-unrelated-code",
+      "target_policy": "one-callable-per-class",
+      "template_count": 10
+    },
+    {
+      "application": "original-source",
+      "category": "layout",
+      "description": "Deterministically remove some optional blank lines and bracketed line breaks",
+      "implementation": "readability_data.python_degradation.interferences.layout.plugins.PartiallyCompactLayout",
+      "order": 12,
+      "slug": "partially-compact-layout",
+      "target_policy": "fixed-40-percent-retain-two",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "data-flow",
+      "description": "Inline all eligible single-use intermediate local variables",
+      "implementation": "readability_data.python_degradation.interferences.data_flow.plugins.InlineIntermediateVariables",
+      "order": 13,
+      "slug": "inline-intermediate-variables",
+      "target_policy": "all-eligible-single-use",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "control-flow",
+      "description": "Lower every eligible synchronous for loop to a while loop",
+      "implementation": "readability_data.python_degradation.interferences.control_flow.plugins.LowerForToWhile",
+      "order": 14,
+      "slug": "lower-for-to-while",
+      "target_policy": "all-eligible-for-loops",
+      "template_count": 0
+    }
+  ],
+  "language": "Python",
+  "module": "python-source-interference",
+  "sampling": {
+    "classes_per_project": 25,
+    "policy": "complete top-level production classes; method-bearing classes prioritized; tests, docs, examples, and migrations excluded",
+    "projects": [
+      "django",
+      "flask",
+      "requests",
+      "attrs"
+    ],
+    "source_commits": {
+      "attrs": "764bf92a1c96abe4615b59f3e5a7b738b0340a94",
+      "django": "3b767c5f6ab6a4421ea3892ac6afacd8aa1345d6",
+      "flask": "d318b683471101618febed18996405ad26462110",
+      "requests": "5460f467b02e49471c0fd6cfc9ca0adab6351f98"
+    },
+    "source_repositories": {
+      "attrs": "https://github.com/python-attrs/attrs.git",
+      "django": "https://github.com/django/django.git",
+      "flask": "https://github.com/pallets/flask.git",
+      "requests": "https://github.com/psf/requests.git"
+    }
+  },
+  "seed": 20260823,
+  "validation": {
+    "parser": "Python stdlib ast.parse",
+    "policy": "every extracted class and every generated variant must be UTF-8 and syntactically valid",
+    "semantic_scope": "transformations are source-local; project-level execution and strict semantic equivalence are not claimed"
+  },
+  "variant_count_including_originals": 1500
+}

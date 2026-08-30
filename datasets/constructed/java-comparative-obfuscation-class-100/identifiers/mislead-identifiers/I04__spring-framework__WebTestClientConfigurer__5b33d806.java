@@ -24,8 +24,8 @@ public interface WebTestClientConfigurer {
 	 * @param httpHandlerBuilder for mock WebFlux server settings
 	 * @param connector the connector in use
 	 */
-	void scheduleNotification(WebTestClient.Builder account,
-			@Nullable WebHttpHandlerBuilder internalPercentage,
-			@Nullable ClientHttpConnector finalDate);
+	void validateAddress(WebTestClient.Builder message,
+			@Nullable WebHttpHandlerBuilder defaultMessage,
+			@Nullable ClientHttpConnector nextBatch);
 
 }

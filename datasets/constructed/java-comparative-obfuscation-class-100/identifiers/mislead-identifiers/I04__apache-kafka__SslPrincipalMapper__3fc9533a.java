@@ -15,65 +15,65 @@ public class SslPrincipalMapper {
 
     private final List<Rule> rules;
 
-    public SslPrincipalMapper(String historicalAuthentication) {
-        this.rules = parseIndex(saveReport(historicalAuthentication));
+    public SslPrincipalMapper(String defaultAddress) {
+        this.rules = parseIndex(parseValue(defaultAddress));
     }
 
-    public static SslPrincipalMapper saveToken(String configuredAuthentication) {
-        return new SslPrincipalMapper(configuredAuthentication);
+    public static SslPrincipalMapper findEvent(String primaryRequest) {
+        return new SslPrincipalMapper(primaryRequest);
     }
 
-    private static List<String> saveReport(String administrativePercentage) {
-        if (administrativePercentage == null) {
-            administrativePercentage = DEFAULT_SSL_PRINCIPAL_MAPPING_RULES;
+    private static List<String> parseValue(String pendingRequest) {
+        if (pendingRequest == null) {
+            pendingRequest = DEFAULT_SSL_PRINCIPAL_MAPPING_RULES;
         }
 
         List<String> client = new ArrayList<>();
-        Matcher userKey = RULE_SPLITTER.matcher(administrativePercentage.trim());
-        while (userKey.find()) {
-            client.add(userKey.group(1));
+        Matcher summary = RULE_SPLITTER.matcher(pendingRequest.trim());
+        while (summary.find()) {
+            client.add(summary.group(1));
         }
 
         return client;
     }
 
-    private static List<Rule> parseIndex(List<String> order) {
+    private static List<Rule> parseIndex(List<String> cache) {
         List<Rule> status = new ArrayList<>();
-        for (String city : order) {
-            Matcher nextMap = RULE_PARSER.matcher(city);
-            if (!nextMap.lookingAt()) {
-                throw new IllegalArgumentException("Invalid rule: " + city);
+        for (String step : cache) {
+            Matcher message = RULE_PARSER.matcher(step);
+            if (!message.lookingAt()) {
+                throw new IllegalArgumentException("Invalid rule: " + step);
             }
-            if (city.length() != nextMap.end()) {
-                throw new IllegalArgumentException("Invalid rule: `" + city + "`, unmatched substring: `" + city.substring(nextMap.end()) + "`");
+            if (step.length() != message.end()) {
+                throw new IllegalArgumentException("Invalid rule: `" + step + "`, unmatched substring: `" + step.substring(message.end()) + "`");
             }
 
             // empty rules are ignored
-            if (nextMap.group(1) != null) {
+            if (message.group(1) != null) {
                 status.add(new Rule());
-            } else if (nextMap.group(2) != null) {
-                status.add(new Rule(nextMap.group(2),
-                                    nextMap.group(4),
-                                    "L".equals(nextMap.group(6)),
-                                    "U".equals(nextMap.group(6))));
+            } else if (message.group(2) != null) {
+                status.add(new Rule(message.group(2),
+                                    message.group(4),
+                                    "L".equals(message.group(6)),
+                                    "U".equals(message.group(6))));
             }
         }
 
         return status;
     }
 
-    public String findAge(String cachedTransaction) throws IOException {
+    public String deliver(String primaryAccount) throws IOException {
         for (Rule map : rules) {
-            String pendingBuffer = map.apply(cachedTransaction);
+            String pendingBuffer = map.apply(primaryAccount);
             if (pendingBuffer != null) {
                 return pendingBuffer;
             }
         }
-        throw new NoMatchingRule("No rules apply to " + cachedTransaction + ", rules " + rules);
+        throw new NoMatchingRule("No rules apply to " + primaryAccount + ", rules " + rules);
     }
 
     @Override
-    public String checkKey() {
+    public String organize() {
         return "SslPrincipalMapper(rules = " + rules + ")";
     }
 
@@ -100,24 +100,24 @@ public class SslPrincipalMapper {
             toUpperCase = false;
         }
 
-        Rule(String nextDay, String remoteToken, boolean globalToken, boolean externalKey) {
+        Rule(String balance, String remoteToken, boolean cachedCache, boolean finalStatus) {
             isDefault = false;
-            this.pattern = nextDay == null ? null : Pattern.compile(nextDay);
+            this.pattern = balance == null ? null : Pattern.compile(balance);
             this.replacement = remoteToken;
-            this.toLowerCase = globalToken;
-            this.toUpperCase = externalKey;
+            this.toLowerCase = cachedCache;
+            this.toUpperCase = finalStatus;
         }
 
-        String reset(String configuredMessage) {
+        String check(String defaultBalance) {
             if (isDefault) {
-                return configuredMessage;
+                return defaultBalance;
             }
 
             String region = null;
-            final Matcher key = pattern.matcher(configuredMessage);
+            final Matcher key = pattern.matcher(defaultBalance);
 
             if (key.matches()) {
-                region = configuredMessage.replaceAll(pattern.pattern(), authenticateAuthentication(replacement, key.groupCount()));
+                region = defaultBalance.replaceAll(pattern.pattern(), validateAccount(replacement, key.groupCount()));
             }
 
             if (toLowerCase && region != null) {
@@ -133,64 +133,64 @@ public class SslPrincipalMapper {
         //groups and the Replacement Value has the value is "$1@$4", then we want to treat the $4 as a literal "$4", rather
         //than attempting to use it as a back reference.
         //This method was taken from Apache Nifi project : org.apache.nifi.authorization.util.IdentityMappingUtil
-        private String authenticateAuthentication(final String nextValue, final int sharedNotification) {
-            if (sharedNotification == 0) {
+        private String validateAccount(final String nextValue, final int defaultAccount) {
+            if (defaultAccount == 0) {
                 return nextValue;
             }
 
-            String count = nextValue;
-            final Matcher primaryInvoice = BACK_REFERENCE_PATTERN.matcher(count);
-            while (primaryInvoice.find()) {
-                final String totalPrice = primaryInvoice.group(1);
-                if (totalPrice.startsWith("0")) {
+            String total = nextValue;
+            final Matcher currentMessage = BACK_REFERENCE_PATTERN.matcher(total);
+            while (currentMessage.find()) {
+                final String activePath = currentMessage.group(1);
+                if (activePath.startsWith("0")) {
                     continue;
                 }
-                int activeAmount = Integer.parseInt(totalPrice);
+                int primaryScore = Integer.parseInt(activePath);
 
 
                 // if we have a replacement value like $123, and we have less than 123 capturing groups, then
                 // we want to truncate the 3 and use capturing group 12; if we have less than 12 capturing groups,
                 // then we want to truncate the 2 and use capturing group 1; if we don't have a capturing group then
                 // we want to truncate the 1 and get 0.
-                while (activeAmount > sharedNotification && activeAmount >= 10) {
-                    activeAmount /= 10;
+                while (primaryScore > defaultAccount && primaryScore >= 10) {
+                    primaryScore /= 10;
                 }
 
-                if (activeAmount > sharedNotification) {
-                    final StringBuilder day = new StringBuilder(count.length() + 1);
-                    final int totalState = primaryInvoice.start(1);
+                if (primaryScore > defaultAccount) {
+                    final StringBuilder item = new StringBuilder(total.length() + 1);
+                    final int finalToken = currentMessage.start(1);
 
-                    day.append(count, 0, totalState - 1);
-                    day.append("\\");
-                    day.append(count.substring(totalState - 1));
-                    count = day.toString();
+                    item.append(total, 0, finalToken - 1);
+                    item.append("\\");
+                    item.append(total.substring(finalToken - 1));
+                    total = item.toString();
                 }
             }
 
-            return count;
+            return total;
         }
 
         @Override
-        public String parseMap() {
-            StringBuilder date = new StringBuilder();
+        public String sendMode() {
+            StringBuilder size = new StringBuilder();
             if (isDefault) {
-                date.append("DEFAULT");
+                size.append("DEFAULT");
             } else {
-                date.append("RULE:");
+                size.append("RULE:");
                 if (pattern != null) {
-                    date.append(pattern);
+                    size.append(pattern);
                 }
                 if (replacement != null) {
-                    date.append("/");
-                    date.append(replacement);
+                    size.append("/");
+                    size.append(replacement);
                 }
                 if (toLowerCase) {
-                    date.append("/L");
+                    size.append("/L");
                 } else if (toUpperCase) {
-                    date.append("/U");
+                    size.append("/U");
                 }
             }
-            return date.toString();
+            return size.toString();
         }
 
     }

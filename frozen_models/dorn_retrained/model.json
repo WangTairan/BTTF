@@ -1,0 +1,61 @@
+{
+  "name": "Dorn (retrained)",
+  "protocol": "Scalabrino-released Dorn feature implementation; >=80% finite-coverage filter; seven-feature forward wrapper selection; logistic regression trained on the public Dorn ARFF",
+  "source_arff_url": "https://dibt-research.unimol.it/report/readability/files/DATASET_DORN_EXTENSION.arff",
+  "source_arff_sha256": "0ddfa25b7267d1fb0d329789a1756bba8abd0dc600d7b448c89a5579567621e4",
+  "training_rows": 360,
+  "candidate_feature_count": 59,
+  "eligible_feature_count": 47,
+  "minimum_finite_coverage": 0.8,
+  "selected_feature_count": 7,
+  "selected_features": [
+    "Dorn-Visual-X-Identifiers",
+    "Dorn-Visual-X-Comments",
+    "Dorn-DFT-Comments",
+    "Dorn-DFT-Numbers",
+    "Dorn-DFT-Indentations",
+    "Dorn-Areas-Operators",
+    "Dorn-Visual-Y-Identifiers"
+  ],
+  "selection_cv_folds": 10,
+  "wrapper_objective_accuracy": 0.775,
+  "random_seed": 1,
+  "imputation_medians": [
+    77.93833000000001,
+    59.045454500000005,
+    31.0,
+    10.0,
+    22.0,
+    0.09611700000000001,
+    29.7590575
+  ],
+  "standardization_means": [
+    86.5336596111111,
+    49.85730669166666,
+    29.269444444444446,
+    18.33888888888889,
+    21.31111111111111,
+    0.09693419722222221,
+    29.31979171111111
+  ],
+  "standardization_scales": [
+    40.23219607287928,
+    49.90782880090704,
+    16.768759303545593,
+    17.843817444360226,
+    16.61384592871891,
+    0.05002223543776966,
+    16.58987179941606
+  ],
+  "coefficients": [
+    -1.7041190667506152,
+    0.8052205974018064,
+    -0.5937312168068939,
+    -0.4094594274426281,
+    0.5746542218456981,
+    -0.48605782214889603,
+    0.23189481365673434
+  ],
+  "intercept": 0.07011220113387899,
+  "positive_class": "Readable=1"
+}

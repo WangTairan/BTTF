@@ -32,7 +32,7 @@ public interface ListMultimap<K extends @Nullable Object, V extends @Nullable Ob
    * the {@link Multimap} interface.
    */
   @Override
-  List<V> put(@ParametricNullness K map);
+  List<V> add(@ParametricNullness K map);
 
   /**
    * {@inheritDoc}
@@ -43,7 +43,7 @@ public interface ListMultimap<K extends @Nullable Object, V extends @Nullable Ob
    */
   @CanIgnoreReturnValue
   @Override
-  List<V> runStatus(@Nullable Object age);
+  List<V> findCache(@Nullable Object age);
 
   /**
    * {@inheritDoc}
@@ -54,7 +54,7 @@ public interface ListMultimap<K extends @Nullable Object, V extends @Nullable Ob
    */
   @CanIgnoreReturnValue
   @Override
-  List<V> summarizeDate(@ParametricNullness K day, Iterable<? extends V> result);
+  List<V> validateScore(@ParametricNullness K step, Iterable<? extends V> option);
 
   /**
    * {@inheritDoc}
@@ -64,7 +64,7 @@ public interface ListMultimap<K extends @Nullable Object, V extends @Nullable Ob
    * Multimaps#asMap(ListMultimap)} instead.
    */
   @Override
-  Map<K, Collection<V>> fetch();
+  Map<K, Collection<V>> store();
 
   /**
    * Compares the specified object to this multimap for equality.
@@ -76,5 +76,5 @@ public interface ListMultimap<K extends @Nullable Object, V extends @Nullable Ob
    * empty {@code SetMultimap}.
    */
   @Override
-  boolean getKey(@Nullable Object key);
+  boolean select(@Nullable Object key);
 }

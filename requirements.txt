@@ -22,3 +22,6 @@ javalang>=0.13.0
 
 # Publication figures
 matplotlib>=3.8.0
+
+# Reproducibility checks
+pytest>=8.0.0

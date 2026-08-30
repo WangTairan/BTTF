@@ -7,126 +7,209 @@
     "netty": 25,
     "spring-framework": 25
   },
+  "comment_replacement_corpora": {
+    "apache-kafka": {
+      "comments_extracted": 120,
+      "maximum_length": 983,
+      "median_length": 98,
+      "minimum_length": 3,
+      "p90_length": 398,
+      "p95_length": 561,
+      "unique_comment_texts": 117
+    },
+    "google-guava": {
+      "comments_extracted": 155,
+      "maximum_length": 2696,
+      "median_length": 86,
+      "minimum_length": 7,
+      "p90_length": 370,
+      "p95_length": 541,
+      "unique_comment_texts": 139
+    },
+    "netty": {
+      "comments_extracted": 89,
+      "maximum_length": 1086,
+      "median_length": 83,
+      "minimum_length": 10,
+      "p90_length": 256,
+      "p95_length": 378,
+      "unique_comment_texts": 82
+    },
+    "spring-framework": {
+      "comments_extracted": 114,
+      "maximum_length": 1121,
+      "median_length": 141,
+      "minimum_length": 6,
+      "p90_length": 485,
+      "p95_length": 686,
+      "unique_comment_texts": 114
+    }
+  },
   "counts_by_interference": {
     "encode-boolean-literals": 100,
     "encode-integer-literals": 100,
     "garble-identifiers": 100,
     "inject-low-readability-unrelated-code": 100,
-    "inject-natural-language-comment": 100,
     "inject-readable-unrelated-code": 100,
+    "inline-intermediate-variables": 100,
     "insert-dead-branches": 100,
     "invert-conditions": 100,
+    "lower-for-to-while": 100,
     "mislead-identifiers": 100,
     "partially-compact-layout": 100,
     "remove-comments": 100,
+    "replace-comments-with-nonsense": 100,
     "shorten-identifiers": 100
   },
-  "created_at": "2026-08-27T22:48:19.444596+00:00",
+  "created_at": "2026-08-30T06:09:50.135372+00:00",
   "granularity": "class",
   "input": {
     "java_file_count": 100,
-    "manifest": "<USER_HOME>/Desktop/readability/data/constructed/java-progressive-obfuscation-class-100/manifest.jsonl",
-    "manifest_sha256": "32b91bd9e8b11f2c091f9cc1780f08334a3e8b01163e59a6eb2ec812dd2e0c04",
-    "policy": "all recursively discovered Java files; no sampling",
-    "root": "<USER_HOME>/Desktop/readability/data/constructed/java-progressive-obfuscation-class-100/level-00-original"
+    "source_manifest_sha256": "32b91bd9e8b11f2c091f9cc1780f08334a3e8b01163e59a6eb2ec812dd2e0c04",
+    "policy": "the 100 committed source snapshots; no additional sampling",
+    "root": "source-original"
   },
-  "interference_count": 12,
+  "interference_count": 14,
   "interferences": [
     {
       "application": "original-source",
       "category": "comments",
       "description": "Remove line comments, block comments, and Javadoc",
-      "implementation": "readability_data.obfuscation_module.interferences.comments.remove.RemoveComments",
+      "implementation": "readability_data.java_degradation.interferences.comments.remove.RemoveComments",
       "order": 1,
-      "slug": "remove-comments"
+      "slug": "remove-comments",
+      "target_policy": "all-comments-and-documentation",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "comments",
-      "description": "Select one of ten non-informative ten-line comments per class",
-      "implementation": "readability_data.obfuscation_module.interferences.comments.inject.InjectNaturalLanguageComment",
+      "description": "Replace existing comments and Javadoc with unrelated project comments",
+      "implementation": "readability_data.java_degradation.interferences.comments.replace.ReplaceCommentsWithNonsense",
       "order": 2,
-      "slug": "inject-natural-language-comment"
+      "slug": "replace-comments-with-nonsense",
+      "target_policy": "same-project-other-class-length-matched",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "identifiers",
       "description": "Shorten method, parameter, and local names without collisions",
-      "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+      "implementation": "readability_data.java_degradation.interferences.identifiers.rename.RenameIdentifiers",
       "order": 3,
-      "slug": "shorten-identifiers"
+      "slug": "shorten-identifiers",
+      "target_policy": "all-eligible-bindings",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "identifiers",
       "description": "Replace method, parameter, and local names with length-matched, meaningful but unrelated names",
-      "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+      "implementation": "readability_data.java_degradation.interferences.identifiers.rename.RenameIdentifiers",
       "order": 4,
-      "slug": "mislead-identifiers"
+      "slug": "mislead-identifiers",
+      "target_policy": "all-eligible-bindings",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "identifiers",
       "description": "Replace method, parameter, and local names with deterministic ProGuard-style short identifiers",
-      "implementation": "readability_data.obfuscation_module.interferences.identifiers.rename.RenameIdentifiers",
+      "implementation": "readability_data.java_degradation.interferences.identifiers.rename.RenameIdentifiers",
       "order": 5,
-      "slug": "garble-identifiers"
+      "slug": "garble-identifiers",
+      "target_policy": "all-eligible-bindings",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "expressions",
       "description": "Replace eligible decimal integer literals with complex expressions",
-      "implementation": "readability_data.obfuscation_module.interferences.expressions.literals.integers.EncodeIntegerLiterals",
+      "implementation": "readability_data.java_degradation.interferences.expressions.literals.integers.EncodeIntegerLiterals",
       "order": 6,
-      "slug": "encode-integer-literals"
+      "slug": "encode-integer-literals",
+      "target_policy": "all-eligible-decimal-integers",
+      "template_count": 10
     },
     {
       "application": "original-source",
       "category": "expressions",
       "description": "Replace true and false literals with complex constant predicates",
-      "implementation": "readability_data.obfuscation_module.interferences.expressions.literals.booleans.EncodeBooleanLiterals",
+      "implementation": "readability_data.java_degradation.interferences.expressions.literals.booleans.EncodeBooleanLiterals",
       "order": 7,
-      "slug": "encode-boolean-literals"
+      "slug": "encode-boolean-literals",
+      "target_policy": "all-eligible-booleans",
+      "template_count": 10
     },
     {
       "application": "original-source",
       "category": "expressions",
       "description": "Invert eligible conditions and exchange their branches",
-      "implementation": "readability_data.obfuscation_module.interferences.expressions.conditions.InvertConditions",
+      "implementation": "readability_data.java_degradation.interferences.expressions.conditions.InvertConditions",
       "order": 8,
-      "slug": "invert-conditions"
+      "slug": "invert-conditions",
+      "target_policy": "all-safe-outer-conditions",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "code-injection",
       "description": "Insert deterministic runtime-dead branches into callable bodies",
-      "implementation": "readability_data.obfuscation_module.interferences.code_injection.dead_branch.InsertDeadBranches",
+      "implementation": "readability_data.java_degradation.interferences.code_injection.dead_branch.InsertDeadBranches",
       "order": 9,
-      "slug": "insert-dead-branches"
+      "slug": "insert-dead-branches",
+      "target_policy": "every-callable",
+      "template_count": 0
     },
     {
       "application": "original-source",
       "category": "code-injection",
       "description": "Select one of ten high-readability unrelated code templates per class",
-      "implementation": "readability_data.obfuscation_module.interferences.code_injection.readable.InjectReadableCode",
+      "implementation": "readability_data.java_degradation.interferences.code_injection.readable.InjectReadableCode",
       "order": 10,
-      "slug": "inject-readable-unrelated-code"
+      "slug": "inject-readable-unrelated-code",
+      "target_policy": "one-callable-per-class",
+      "template_count": 10
     },
     {
       "application": "original-source",
       "category": "code-injection",
       "description": "Select one of ten low-readability unrelated code templates per class",
-      "implementation": "readability_data.obfuscation_module.interferences.code_injection.low_readability.InjectLowReadabilityCode",
+      "implementation": "readability_data.java_degradation.interferences.code_injection.low_readability.InjectLowReadabilityCode",
       "order": 11,
-      "slug": "inject-low-readability-unrelated-code"
+      "slug": "inject-low-readability-unrelated-code",
+      "target_policy": "one-callable-per-class",
+      "template_count": 10
     },
     {
       "application": "original-source",
       "category": "layout",
       "description": "Remove about 40% of line-break groups while retaining structure",
-      "implementation": "readability_data.obfuscation_module.interferences.layout.compact.PartiallyCompactLayout",
+      "implementation": "readability_data.java_degradation.interferences.layout.compact.PartiallyCompactLayout",
       "order": 12,
-      "slug": "partially-compact-layout"
+      "slug": "partially-compact-layout",
+      "target_policy": "fixed-40-percent-retain-two",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "data-flow",
+      "description": "Inline all eligible single-use intermediate local variables",
+      "implementation": "readability_data.java_degradation.interferences.data_flow.inline_temporaries.InlineIntermediateVariables",
+      "order": 13,
+      "slug": "inline-intermediate-variables",
+      "target_policy": "all-eligible-single-use",
+      "template_count": 0
+    },
+    {
+      "application": "original-source",
+      "category": "control-flow",
+      "description": "Lower every eligible classic and enhanced for loop to a while loop",
+      "implementation": "readability_data.java_degradation.interferences.control_flow.loops.LowerForToWhile",
+      "order": 14,
+      "slug": "lower-for-to-while",
+      "target_policy": "all-eligible-for-loops",
+      "template_count": 0
     }
   ],
   "module": "source-interference",
@@ -136,5 +219,5 @@
     "policy": "source and every independently generated interference must parse without syntax errors",
     "semantic_scope": "transformations are source-local; project-level compilation and strict semantic equivalence are not claimed"
   },
-  "variant_count_including_originals": 1300
+  "variant_count_including_originals": 1500
 }

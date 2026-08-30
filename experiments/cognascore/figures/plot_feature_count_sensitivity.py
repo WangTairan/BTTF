@@ -1,8 +1,10 @@
-"""Plot the complete six-dataset consensus Top-K sensitivity curve.
+"""Plot the six-dataset consensus Top-K development sensitivity curve.
 
 The script reuses the feature-screening implementation and the already
-generated consensus ranking.  It refits the final Ridge model for every
-K=1..N, then writes a publication-sized 2x3 vector PDF.
+generated consensus ranking. It evaluates a pooled Ridge model for every
+K=1..N with task-grouped cross-validation, then writes a publication-sized
+2x3 vector PDF. Feature ranking is fixed before this diagnostic CV; this is
+therefore a budget-sensitivity analysis, not nested feature-selection CV.
 """
 
 from __future__ import annotations
@@ -48,11 +50,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-k", type=int, default=150)
     parser.add_argument("--ridge-alpha", type=float, default=200.0)
     parser.add_argument("--c", type=float, default=0.08)
+    parser.add_argument("--folds", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--evaluation",
+        choices=("pooled-cv", "train-fit"),
+        default="pooled-cv",
+        help="Evaluation used for the curve; pooled-cv is the publication default.",
+    )
     return parser.parse_args()
 
 
 def make_args(ridge_alpha: float, c: float) -> argparse.Namespace:
     from experiments.cognascore import feature_selection as fs
+    from experiments.cognascore.selection_policy import with_default_exclusions
     from src.experiments.registry import DATASETS
     from src.methods.cognascore.dataset_io import dataset_output_name
     from src.methods.cognascore.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
@@ -70,6 +81,9 @@ def make_args(ridge_alpha: float, c: float) -> argparse.Namespace:
         ridge_alpha=ridge_alpha,
         select_top=18,
         correlation_threshold=0.9,
+        exclude_feature=with_default_exclusions([]),
+        exclude_feature_prefix=[],
+        exclude_group=[],
         dataset_names=dataset_names,
     )
 
@@ -95,6 +109,7 @@ def calculate_curve(
         selection_datasets=fs.DEFAULT_DATASET_KEYS,
         external_datasets=fs.DEFAULT_DATASET_KEYS,
     )
+    folds = pooled_fold_assignments(bundle["row_metadata"], args.folds, args.seed)
     max_k = min(len(ranking), len(bundle["feature_names"]))
     rows: list[dict[str, object]] = []
     for k in range(1, max_k + 1):
@@ -123,18 +138,101 @@ def calculate_curve(
             elasticnet_l1_ratio=0.2,
             seed=runtime_args.seed,
         )
-        fit_mask = bundle["fit_selection_mask"]
-        fs._fit_final_model(
-            model,
-            bundle["x"][fit_mask][:, indices],
-            bundle["regression_target"][fit_mask],
-            bundle["fit_sample_weight"][fit_mask],
-            "ridge",
-        )
-        prediction = fs._predict_final_model(model, bundle["x"][:, indices], "ridge")
+        if args.evaluation == "train-fit":
+            fit_mask = bundle["fit_selection_mask"]
+            fs._fit_final_model(
+                model,
+                bundle["x"][fit_mask][:, indices],
+                bundle["regression_target"][fit_mask],
+                bundle["fit_sample_weight"][fit_mask],
+                "ridge",
+            )
+            prediction = fs._predict_final_model(model, bundle["x"][:, indices], "ridge")
+        else:
+            prediction = pooled_cv_prediction(
+                bundle,
+                indices,
+                folds,
+                c=runtime_args.c,
+                ridge_alpha=runtime_args.ridge_alpha,
+                seed=runtime_args.seed,
+            )
         metrics = fs._report_metrics_by_dataset(bundle["row_metadata"], prediction)
         rows.append({"k": k, **metrics})
     return rows
+
+
+def pooled_fold_assignments(
+    row_metadata: list[dict[str, object]],
+    folds: int,
+    seed: int,
+) -> np.ndarray:
+    """Build matching task-grouped folds independently within each dataset."""
+    import pandas as pd
+
+    from experiments.cognascore.cross_validate_fixed import fold_assignments
+
+    metadata = pd.DataFrame(row_metadata)
+    assignments = np.full(len(metadata), -1, dtype=int)
+    for dataset_index, (_, indices) in enumerate(metadata.groupby("dataset", sort=False).groups.items()):
+        index_array = np.asarray(list(indices), dtype=int)
+        assignments[index_array] = fold_assignments(
+            metadata.loc[index_array],
+            folds,
+            seed + dataset_index,
+        )
+    if np.any(assignments < 0):
+        raise RuntimeError("Failed to assign every feature row to a CV fold.")
+    return assignments
+
+
+def pooled_cv_prediction(
+    bundle: dict[str, object],
+    feature_indices: np.ndarray,
+    folds: np.ndarray,
+    *,
+    c: float,
+    ridge_alpha: float,
+    seed: int,
+) -> np.ndarray:
+    """Return pooled out-of-fold predictions for one fixed Top-K feature set."""
+    from experiments.cognascore import feature_selection as fs
+
+    x = np.asarray(bundle["x"])
+    row_metadata = list(bundle["row_metadata"])
+    prediction = np.full(len(row_metadata), np.nan, dtype=float)
+    for fold in sorted(set(folds.tolist())):
+        test = folds == fold
+        train = ~test
+        train_rows = [row for row, keep in zip(row_metadata, train) if keep]
+        target = fs._regression_target(train_rows)
+        weights = fs._sample_weight_for_rows(
+            train_rows,
+            np.ones(len(train_rows), dtype=bool),
+        )
+        model = fs._build_final_model(
+            "ridge",
+            c=c,
+            ridge_alpha=ridge_alpha,
+            elasticnet_alpha=0.02,
+            elasticnet_l1_ratio=0.2,
+            seed=seed,
+        )
+        fs._fit_final_model(
+            model,
+            x[train][:, feature_indices],
+            target,
+            weights,
+            "ridge",
+        )
+        prediction[test] = fs._predict_final_model(
+            model,
+            x[test][:, feature_indices],
+            "ridge",
+        )
+    if not np.isfinite(prediction).all():
+        raise RuntimeError("Pooled cross-validation left non-finite predictions.")
+    return prediction
 
 
 def write_curve(path: Path, rows: list[dict[str, object]]) -> None:
@@ -207,7 +305,14 @@ def plot_pdf(path: Path, rows: list[dict[str, object]], top_k: int, max_k: int) 
         axis.plot(x, y, color=line_color, linewidth=1.35, solid_capstyle="round")
         if top_k <= x[-1]:
             axis.axvline(top_k, color="#b91c1c", linewidth=1.0, linestyle=(0, (4, 3)), zorder=0)
-            axis.text(top_k + 2, 0.975, f"K={top_k}", color="#991b1b", fontsize=7.5, va="top")
+            axis.text(
+                top_k + 2,
+                0.975,
+                f"Final K={top_k}",
+                color="#991b1b",
+                fontsize=7.5,
+                va="top",
+            )
         finite = np.isfinite(y)
         if np.any(finite):
             best_index = int(np.nanargmax(y))
@@ -234,9 +339,7 @@ def plot_pdf(path: Path, rows: list[dict[str, object]], top_k: int, max_k: int) 
             ),
         )
         axis.set_ylim(0.0, 1.0)
-        ticks = [0, 1, 5, 10, 25, 50, 100, 150]
-        if x[-1] not in ticks:
-            ticks.append(int(x[-1]))
+        ticks = [0, 5, 10, 20, 50, 100, 150]
         axis.set_xticks(ticks)
         axis.tick_params(axis="x", labelrotation=25, labelsize=7)
         axis.grid(axis="y", color="#e5e7eb", linewidth=0.65)
@@ -244,11 +347,10 @@ def plot_pdf(path: Path, rows: list[dict[str, object]], top_k: int, max_k: int) 
         axis.spines["right"].set_visible(False)
         axis.spines["left"].set_color("#9ca3af")
         axis.spines["bottom"].set_color("#9ca3af")
-    for axis in axes[3:]:
-        axis.set_xlabel("Number of consensus-ranked features (K, power scale)")
     for axis in (axes[0], axes[3]):
         axis.set_ylabel("Spearman")
-    fig.tight_layout(rect=(0.02, 0.03, 0.99, 0.98), h_pad=1.35, w_pad=1.0)
+    fig.supxlabel("Number of consensus-ranked features (K, power scale)", y=0.015)
+    fig.tight_layout(rect=(0.02, 0.05, 0.99, 0.93), h_pad=1.35, w_pad=1.0)
     fig.savefig(path)
     plt.close(fig)
 

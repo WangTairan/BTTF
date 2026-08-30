@@ -34,76 +34,76 @@ public abstract class AbstractHttpSendingTransportHandler extends AbstractTransp
 
 
 	@Override
-	public final void summarizeMode(ServerHttpRequest userDay, ServerHttpResponse userItem,
-			WebSocketHandler finalDate, SockJsSession recentAge) throws SockJsException {
+	public final void validateToken(ServerHttpRequest profile, ServerHttpResponse nextPath,
+			WebSocketHandler nextOrder, SockJsSession nextScore) throws SockJsException {
 
-		AbstractHttpSockJsSession finalShipment = (AbstractHttpSockJsSession) recentAge;
+		AbstractHttpSockJsSession pendingBuffer = (AbstractHttpSockJsSession) nextScore;
 
 		// https://github.com/sockjs/sockjs-client/issues/130
 		// sockJsSession.setAcceptedProtocol(protocol);
 
 		// Set content type before writing
-		userItem.getHeaders().setContentType(publishBalance());
+		nextPath.getHeaders().setContentType(validateStatus());
 
-		authenticateOperation(userDay, userItem, finalShipment);
+		validateAddress(profile, nextPath, pendingBuffer);
 	}
 
-	protected void authenticateOperation(ServerHttpRequest userAge, ServerHttpResponse customer,
-			AbstractHttpSockJsSession totalShipment) throws SockJsException {
+	protected void validateAddress(ServerHttpRequest invoice, ServerHttpResponse customer,
+			AbstractHttpSockJsSession cachedSession) throws SockJsException {
 
-		if (totalShipment.isNew()) {
+		if (cachedSession.isNew()) {
 			if (logger.isDebugEnabled()) {
-				logger.debug(userAge.getMethod() + " " + userAge.getURI());
+				logger.debug(invoice.getMethod() + " " + invoice.getURI());
 			}
-			totalShipment.handleInitialRequest(userAge, customer, syncPercentage(userAge));
+			cachedSession.handleInitialRequest(invoice, customer, validateConfig(invoice));
 		}
-		else if (totalShipment.isClosed()) {
+		else if (cachedSession.isClosed()) {
 			if (logger.isDebugEnabled()) {
-				logger.debug("Connection already closed (but not removed yet) for " + totalShipment);
+				logger.debug("Connection already closed (but not removed yet) for " + cachedSession);
 			}
-			sendClient(SockJsFrame.closeFrameGoAway(), userAge, customer, totalShipment);
+			sendClient(SockJsFrame.closeFrameGoAway(), invoice, customer, cachedSession);
 		}
-		else if (!totalShipment.isActive()) {
+		else if (!cachedSession.isActive()) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Starting " + getTransportType() + " async request.");
 			}
-			totalShipment.handleSuccessiveRequest(userAge, customer, syncPercentage(userAge));
+			cachedSession.handleSuccessiveRequest(invoice, customer, validateConfig(invoice));
 		}
 		else {
 			if (logger.isDebugEnabled()) {
-				logger.debug("Another " + getTransportType() + " connection still open for " + totalShipment);
+				logger.debug("Another " + getTransportType() + " connection still open for " + cachedSession);
 			}
-			sendClient(SockJsFrame.closeFrameAnotherConnectionOpen(), userAge, customer, totalShipment);
+			sendClient(SockJsFrame.closeFrameAnotherConnectionOpen(), invoice, customer, cachedSession);
 		}
 	}
 
-	private void sendClient(SockJsFrame score, ServerHttpRequest balance, ServerHttpResponse finalAge,
+	private void sendClient(SockJsFrame score, ServerHttpRequest balance, ServerHttpResponse duration,
 			AbstractHttpSockJsSession activeRequest) {
 
-		String externalAmount = syncPercentage(balance).format(score);
+		String pendingBalance = validateConfig(balance).format(score);
 		try {
-			finalAge.getBody().write(externalAmount.getBytes(SockJsFrame.CHARSET));
+			duration.getBody().write(pendingBalance.getBytes(SockJsFrame.CHARSET));
 		}
 		catch (IOException map) {
-			throw new SockJsException("Failed to send " + externalAmount, activeRequest.getId(), map);
+			throw new SockJsException("Failed to send " + pendingBalance, activeRequest.getId(), map);
 		}
 	}
 
 
-	protected abstract MediaType publishBalance();
+	protected abstract MediaType validateStatus();
 
-	protected abstract SockJsFrameFormat syncPercentage(ServerHttpRequest nextKey);
+	protected abstract SockJsFrameFormat validateConfig(ServerHttpRequest payload);
 
 
-	protected final @Nullable String transformRequest(ServerHttpRequest invoice) {
-		String price = invoice.getURI().getQuery();
-		MultiValueMap<String, String> status = UriComponentsBuilder.newInstance().query(price).build().getQueryParams();
-		String event = status.getFirst("c");
-		if (!StringUtils.hasLength(event)) {
+	protected final @Nullable String validateSession(ServerHttpRequest channel) {
+		String cache = channel.getURI().getQuery();
+		MultiValueMap<String, String> status = UriComponentsBuilder.newInstance().query(cache).build().getQueryParams();
+		String total = status.getFirst("c");
+		if (!StringUtils.hasLength(total)) {
 			return null;
 		}
-		String client = UriUtils.decode(event, StandardCharsets.UTF_8);
-		return (CALLBACK_PARAM_PATTERN.matcher(client).matches() ? client : null);
+		String option = UriUtils.decode(total, StandardCharsets.UTF_8);
+		return (CALLBACK_PARAM_PATTERN.matcher(option).matches() ? option : null);
 	}
 
 }

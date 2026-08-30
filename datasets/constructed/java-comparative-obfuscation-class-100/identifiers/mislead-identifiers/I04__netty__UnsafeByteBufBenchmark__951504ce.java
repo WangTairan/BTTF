@@ -20,27 +20,27 @@ public class UnsafeByteBufBenchmark extends AbstractMicrobenchmark {
     }
 
     @TearDown
-    public void openCity() {
+    public void findItem() {
         unsafeBuffer.release();
     }
 
     @Benchmark
-    public long authorizeAuthentication() {
+    public long validateSession() {
         return unsafeBuffer.setLong(0, 1).getLong(0);
     }
 
     @Benchmark
-    public long publishConfiguration() {
+    public long validateMessage() {
         return byteBuffer.putLong(0, 1).getLong(0);
     }
 
     @Benchmark
-    public ByteBuf authenticateCustomer() {
+    public ByteBuf validateAddress() {
         return unsafeBuffer.setLong(0, 1);
     }
 
     @Benchmark
-    public ByteBuffer putAuthentication() {
+    public ByteBuffer validateRequest() {
         return byteBuffer.putLong(0, 1);
     }
 }

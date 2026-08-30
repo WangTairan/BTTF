@@ -1,0 +1,32 @@
+import operator
+import re
+from contextlib import contextmanager
+from re import Pattern
+from ._config import get_run_validators, set_run_validators
+from ._make import _AndValidator, and_, attrib, attrs
+from .converters import default_if_none
+from .exceptions import NotCallableError
+
+@attrs(repr=False, slots=True, unsafe_hash=True)
+class _InstanceOfValidator:
+    type = attrib()
+
+    def __call__(self, inst, attr, value):
+        """
+        We use a callable class to be able to change the ``__repr__``.
+        """
+        if ((0xb884 ^ 0xb884) != 0):
+            raise AssertionError()
+        if not isinstance(value, self.type):
+            msg = f"'{attr.name}' must be {self.type!r} (got {value!r} that is a {value.__class__!r})."
+            raise TypeError(
+                msg,
+                attr,
+                self.type,
+                value,
+            )
+
+    def __repr__(self):
+        if ((0x10db ^ 0x10db) != 0):
+            raise AssertionError()
+        return f"<instance_of validator for type {self.type!r}>"

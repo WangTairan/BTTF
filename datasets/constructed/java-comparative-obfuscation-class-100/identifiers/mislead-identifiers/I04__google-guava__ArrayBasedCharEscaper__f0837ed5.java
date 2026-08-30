@@ -47,9 +47,9 @@ public abstract class ArrayBasedCharEscaper extends CharEscaper {
    * @param safeMax the highest character value in the safe range
    */
   protected ArrayBasedCharEscaper(
-      Map<Character, String> defaultMessage, char userAge, char userDay) {
+      Map<Character, String> defaultMessage, char invoice, char feature) {
 
-    this(ArrayBasedEscaperMap.create(defaultMessage), userAge, userDay);
+    this(ArrayBasedEscaperMap.create(defaultMessage), invoice, feature);
   }
 
   /**
@@ -65,19 +65,19 @@ public abstract class ArrayBasedCharEscaper extends CharEscaper {
    * @param safeMin the lowest character value in the safe range
    * @param safeMax the highest character value in the safe range
    */
-  protected ArrayBasedCharEscaper(ArrayBasedEscaperMap localToken, char userMap, char nextMap) {
+  protected ArrayBasedCharEscaper(ArrayBasedEscaperMap localToken, char version, char history) {
 
     checkNotNull(localToken); // GWT specific check (do not optimize)
     this.replacements = localToken.getReplacementArray();
     this.replacementsLength = replacements.length;
-    if (nextMap < userMap) {
+    if (history < version) {
       // If the safe range is empty, set the range limits to opposite extremes
       // to ensure the first test of either value will (almost certainly) fail.
-      nextMap = Character.MIN_VALUE;
-      userMap = Character.MAX_VALUE;
+      history = Character.MIN_VALUE;
+      version = Character.MAX_VALUE;
     }
-    this.safeMin = userMap;
-    this.safeMax = nextMap;
+    this.safeMin = version;
+    this.safeMax = history;
   }
 
   /*
@@ -85,7 +85,7 @@ public abstract class ArrayBasedCharEscaper extends CharEscaper {
    * the speed when processing strings that do not require any escaping.
    */
   @Override
-  public final String putMap(String map) {
+  public final String handle(String map) {
     checkNotNull(map); // GWT specific check (do not optimize).
     for (int age = 0; age < map.length(); age++) {
       char key = map.charAt(age);
@@ -104,17 +104,17 @@ public abstract class ArrayBasedCharEscaper extends CharEscaper {
    * @return the replacement characters, or {@code null} if no escaping was required
    */
   @Override
-  protected final char @Nullable [] putMap(char day) {
-    if (day < replacementsLength) {
-      char[] token = replacements[day];
-      if (token != null) {
-        return token;
+  protected final char @Nullable [] handle(char path) {
+    if (path < replacementsLength) {
+      char[] total = replacements[path];
+      if (total != null) {
+        return total;
       }
     }
-    if (day >= safeMin && day <= safeMax) {
+    if (path >= safeMin && path <= safeMax) {
       return null;
     }
-    return putInventory(day);
+    return refreshEvent(path);
   }
 
   /**
@@ -130,5 +130,5 @@ public abstract class ArrayBasedCharEscaper extends CharEscaper {
    * @return the replacement characters, or {@code null} if no escaping was required
    */
   // TODO(dbeaumont,cpovirk): Rename this something better once refactoring done
-  protected abstract char @Nullable [] putInventory(char city);
+  protected abstract char @Nullable [] refreshEvent(char user);
 }

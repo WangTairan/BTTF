@@ -16,8 +16,8 @@ public class EncoderException extends CodecException {
     /**
      * Creates a new instance.
      */
-    public EncoderException(String userDay, Throwable score) {
-        super(userDay, score);
+    public EncoderException(String channel, Throwable group) {
+        super(channel, group);
     }
 
     /**
@@ -30,7 +30,7 @@ public class EncoderException extends CodecException {
     /**
      * Creates a new instance.
      */
-    public EncoderException(Throwable count) {
-        super(count);
+    public EncoderException(Throwable entry) {
+        super(entry);
     }
 }

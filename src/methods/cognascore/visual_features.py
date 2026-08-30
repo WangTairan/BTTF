@@ -35,6 +35,7 @@ def visual_layout_features(
     per_line_identifier_counts = [0.0 for _ in range(physical_line_count)]
     per_line_keyword_counts = [0.0 for _ in range(physical_line_count)]
     per_line_period_counts = [0.0 for _ in range(physical_line_count)]
+    per_line_comma_counts = [0.0 for _ in range(physical_line_count)]
     per_line_comparison_counts = [0.0 for _ in range(physical_line_count)]
     per_line_number_counts = [0.0 for _ in range(physical_line_count)]
     per_line_parenthesis_counts = [0.0 for _ in range(physical_line_count)]
@@ -53,6 +54,7 @@ def visual_layout_features(
                 per_line_period_counts[index] += 1.0
             elif token == ",":
                 comma_positions.append(line_number)
+                per_line_comma_counts[index] += 1.0
             elif token in {"==", "!=", ">=", "<=", ">", "<"}:
                 comparison_positions.append(line_number)
                 per_line_comparison_counts[index] += 1.0
@@ -72,6 +74,7 @@ def visual_layout_features(
     return {
         "visual_keyword_density": len(keyword_positions) / max(loc, 1),
         "operator_density": len(operator_positions) / max(loc, 1),
+        "visual_period_density": len(period_positions) / max(loc, 1),
         "visual_comma_density": len(comma_positions) / max(loc, 1),
         "comparison_operator_density": len(comparison_positions) / max(loc, 1),
         "scalabrino_visual_parenthesis_density": sum(per_line_parenthesis_counts) / max(loc, 1),
@@ -87,12 +90,14 @@ def visual_layout_features(
         "visual_operator_y_mean": _normalized_position_mean(operator_positions, physical_line_count),
         "visual_operator_y_std": _normalized_position_std(operator_positions, physical_line_count),
         "visual_period_y_mean": _normalized_position_mean(period_positions, physical_line_count),
+        "visual_period_y_std": _normalized_position_std(period_positions, physical_line_count),
         "scalabrino_visual_comment_y_mean": _normalized_position_mean(comment_positions, physical_line_count),
         "scalabrino_visual_number_y_mean": _normalized_position_mean(number_positions, physical_line_count),
         "visual_line_length_dft_energy": _low_frequency_dft_energy(line_lengths),
         "visual_identifier_dft_energy": _low_frequency_dft_energy(per_line_identifier_counts),
         "visual_keyword_dft_energy": _low_frequency_dft_energy(per_line_keyword_counts),
         "visual_period_dft_energy": _low_frequency_dft_energy(per_line_period_counts),
+        "scalabrino_visual_comma_dft_energy": _low_frequency_dft_energy(per_line_comma_counts),
         "scalabrino_visual_comparison_dft_energy": _low_frequency_dft_energy(per_line_comparison_counts),
         "scalabrino_align_blocks_count": float(_aligned_character_block_count(lines)),
         "chunk_y_mean": _chunk_y_mean(chunks, physical_line_count),

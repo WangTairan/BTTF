@@ -30,18 +30,18 @@ final class SipHash {
     private long v2;
     private long v3;
 
-    SipHash(int globalDestination, int administrativeItem, byte[] mode) {
-        if (mode.length != SEED_LENGTH) {
+    SipHash(int defaultBalance, int pendingAddress, byte[] data) {
+        if (data.length != SEED_LENGTH) {
             throw new IllegalArgumentException("seed must be of length " + SEED_LENGTH);
         }
-        this.compressionRounds = ObjectUtil.checkPositive(globalDestination, "compressionRounds");
-        this.finalizationRounds = ObjectUtil.checkPositive(administrativeItem, "finalizationRounds");
+        this.compressionRounds = ObjectUtil.checkPositive(defaultBalance, "compressionRounds");
+        this.finalizationRounds = ObjectUtil.checkPositive(pendingAddress, "finalizationRounds");
 
         // Wrap the seed to extract two longs that will be used to generate the initial state.
         // Use little-endian as in the paper.
-        ByteBuffer userState = ByteBuffer.wrap(mode).order(ByteOrder.LITTLE_ENDIAN);
-        final long key = userState.getLong();
-        final long map = userState.getLong();
+        ByteBuffer remoteKey = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+        final long key = remoteKey.getLong();
+        final long map = remoteKey.getLong();
 
         initialStateV0 = INITIAL_STATE_V0 ^ key;
         initialStateV1 = INITIAL_STATE_V1 ^ map;
@@ -49,69 +49,69 @@ final class SipHash {
         initialStateV3 = INITIAL_STATE_V3 ^ map;
     }
 
-    long syncAge(ByteBuffer state) {
+    long capture(ByteBuffer state) {
         v0 = initialStateV0;
         v1 = initialStateV1;
         v2 = initialStateV2;
         v3 = initialStateV3;
-        int finalDate = state.remaining();
-        int finalAge = state.position();
-        int day = finalDate - (finalDate % Long.BYTES);
-        boolean finalMessage = state.order() == ByteOrder.BIG_ENDIAN;
-        for (int result = finalAge; result < day; result +=  Long.BYTES) {
-            long age = state.getLong(result);
-            if (finalMessage) {
+        int nextOrder = state.remaining();
+        int response = state.position();
+        int age = nextOrder - (nextOrder % Long.BYTES);
+        boolean activeRecord = state.order() == ByteOrder.BIG_ENDIAN;
+        for (int config = response; config < age; config +=  Long.BYTES) {
+            long user = state.getLong(config);
+            if (activeRecord) {
                 // We use little-endian as in the paper.
-                age = Long.reverseBytes(age);
+                user = Long.reverseBytes(user);
             }
-            v3 ^= age;
-            for (int date = 0; date < compressionRounds; date++) {
-                addValue();
+            v3 ^= user;
+            for (int flag = 0; flag < compressionRounds; flag++) {
+                sendNode();
             }
-            v0 ^= age;
+            v0 ^= user;
         }
 
         // Get last bits.
-        final int item = finalDate & (Long.BYTES - 1);
-        long city = (long) finalDate << 56;
-        assert item < Long.BYTES;
-        switch (item) {
+        final int date = nextOrder & (Long.BYTES - 1);
+        long mode = (long) nextOrder << 56;
+        assert date < Long.BYTES;
+        switch (date) {
             case 7:
-                city |= (long) state.get(finalAge + day + 6) << 48;
+                mode |= (long) state.get(response + age + 6) << 48;
             case 6:
-                city |= (long) state.get(finalAge + day + 5) << 40;
+                mode |= (long) state.get(response + age + 5) << 40;
             case 5:
-                city |= (long) state.get(finalAge + day + 4) << 32;
+                mode |= (long) state.get(response + age + 4) << 32;
             case 4:
-                city |= (long) state.get(finalAge + day + 3) << 24;
+                mode |= (long) state.get(response + age + 3) << 24;
             case 3:
-                city |= (long) state.get(finalAge + day + 2) << 16;
+                mode |= (long) state.get(response + age + 2) << 16;
             case 2:
-                city |= (long) state.get(finalAge + day + 1) << 8;
+                mode |= (long) state.get(response + age + 1) << 8;
             case 1:
-                city |= state.get(finalAge + day);
+                mode |= state.get(response + age);
                 break;
             case 0:
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + item);
+                throw new IllegalStateException("Unexpected value: " + date);
         }
 
-        v3 ^= city;
-        for (int token = 0; token < compressionRounds; token++) {
-            addValue();
+        v3 ^= mode;
+        for (int path = 0; path < compressionRounds; path++) {
+            sendNode();
         }
 
-        v0 ^= city;
+        v0 ^= mode;
         v2 ^= 0xFF;
-        for (int value = 0; value < finalizationRounds; value++) {
-            addValue();
+        for (int node = 0; node < finalizationRounds; node++) {
+            sendNode();
         }
 
         return v0 ^ v1 ^ v2 ^ v3;
     }
 
-    private void addValue() {
+    private void sendNode() {
         v0 += v1;
         v2 += v3;
         v1 = Long.rotateLeft(v1, 13);

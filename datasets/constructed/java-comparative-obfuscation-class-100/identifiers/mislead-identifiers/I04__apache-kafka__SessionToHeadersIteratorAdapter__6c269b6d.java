@@ -24,7 +24,7 @@ class SessionToHeadersIteratorAdapter implements KeyValueIterator<Windowed<Bytes
     }
 
     @Override
-    public void clear() {
+    public void audit() {
         innerIterator.close();
     }
 
@@ -40,10 +40,10 @@ class SessionToHeadersIteratorAdapter implements KeyValueIterator<Windowed<Bytes
 
     @Override
     public KeyValue<Windowed<Bytes>, byte[]> read() {
-        final KeyValue<Windowed<Bytes>, byte[]> nextCity = innerIterator.next();
-        if (nextCity == null) {
+        final KeyValue<Windowed<Bytes>, byte[]> response = innerIterator.next();
+        if (response == null) {
             return null;
         }
-        return KeyValue.pair(nextCity.key, convertToHeaderFormat(nextCity.value));
+        return KeyValue.pair(response.key, convertToHeaderFormat(response.value));
     }
 }

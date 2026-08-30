@@ -48,6 +48,28 @@ def scalabrino_metrics(code: str) -> ScalabrinoMetricsResult:
     return scalabrino_java_source_metrics(prepare_java_source(code))
 
 
+def scalabrino_language_metrics(code: str, language: str) -> ScalabrinoMetricsResult:
+    """Extract released metrics using the parser for the declared language."""
+    normalized = language.strip().lower()
+    suffixes = {
+        "java": ".java",
+        "python": ".py",
+        "cuda": ".cu",
+    }
+    try:
+        suffix = suffixes[normalized]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported Scalabrino metric language: {language!r}") from exc
+
+    prepared = prepare_java_source(code) if normalized == "java" else code
+    if not SCALABRINO_JAR.is_file():
+        raise FileNotFoundError(f"Scalabrino jar not found: {SCALABRINO_JAR}")
+    with tempfile.TemporaryDirectory(prefix="rmc_scalabrino_") as temp_dir:
+        source_path = Path(temp_dir) / f"Snippet{suffix}"
+        source_path.write_text(prepared, encoding="utf-8")
+        return scalabrino_file_metrics(source_path)
+
+
 def scalabrino_metrics_wrapped(code: str) -> ScalabrinoMetricsResult:
     return scalabrino_java_source_metrics(wrap_java_snippet(code))
 

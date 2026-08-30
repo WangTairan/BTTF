@@ -27,23 +27,23 @@ final class MapToMapConverter implements ConditionalGenericConverter {
 	private final ConversionService conversionService;
 
 
-	public MapToMapConverter(ConversionService operationalClient) {
-		this.conversionService = operationalClient;
+	public MapToMapConverter(ConversionService currentRequest) {
+		this.conversionService = currentRequest;
 	}
 
 
 	@Override
-	public Set<ConvertiblePair> parseAuthentication() {
+	public Set<ConvertiblePair> validateRequest() {
 		return Collections.singleton(new ConvertiblePair(Map.class, Map.class));
 	}
 
 	@Override
-	public boolean findMap(TypeDescriptor finalToken, TypeDescriptor backupMode) {
-		return authorizeCity(finalToken, backupMode) && authenticateMap(finalToken, backupMode);
+	public boolean contain(TypeDescriptor finalToken, TypeDescriptor sharedNode) {
+		return createAccount(finalToken, sharedNode) && validateAccount(finalToken, sharedNode);
 	}
 
 	@Override
-	public @Nullable Object syncKey(@Nullable Object buffer, TypeDescriptor userResult, TypeDescriptor totalEvent) {
+	public @Nullable Object collect(@Nullable Object buffer, TypeDescriptor sharedItem, TypeDescriptor backupPath) {
 		if (buffer == null) {
 			return null;
 		}
@@ -51,62 +51,62 @@ final class MapToMapConverter implements ConditionalGenericConverter {
 		Map<Object, Object> sharedKey = (Map<Object, Object>) buffer;
 
 		// Shortcut if possible...
-		boolean defaultPrice = !totalEvent.getType().isInstance(buffer);
-		if (!defaultPrice && sharedKey.isEmpty()) {
+		boolean primaryState = !backupPath.getType().isInstance(buffer);
+		if (!primaryState && sharedKey.isEmpty()) {
 			return sharedKey;
 		}
-		TypeDescriptor balance = totalEvent.getMapKeyTypeDescriptor();
-		TypeDescriptor activeDay = totalEvent.getMapValueTypeDescriptor();
+		TypeDescriptor balance = backupPath.getMapKeyTypeDescriptor();
+		TypeDescriptor secureKey = backupPath.getMapValueTypeDescriptor();
 
 		List<MapEntry> cachedAccount = new ArrayList<>(sharedKey.size());
 		for (Map.Entry<Object, Object> price : sharedKey.entrySet()) {
 			Object reference = price.getKey();
 			Object cachedEvent = price.getValue();
-			Object dailyMode = checkEvent(reference, userResult, balance);
-			Object activeEvent = putTimestamp(cachedEvent, userResult, activeDay);
-			cachedAccount.add(new MapEntry(dailyMode, activeEvent));
-			if (reference != dailyMode || cachedEvent != activeEvent) {
-				defaultPrice = true;
+			Object finalPath = findWindow(reference, sharedItem, balance);
+			Object recentBatch = removeRecord(cachedEvent, sharedItem, secureKey);
+			cachedAccount.add(new MapEntry(finalPath, recentBatch));
+			if (reference != finalPath || cachedEvent != recentBatch) {
+				primaryState = true;
 			}
 		}
-		if (!defaultPrice) {
+		if (!primaryState) {
 			return sharedKey;
 		}
 
-		Map<Object, Object> sharedDay = CollectionFactory.createMap(totalEvent.getType(),
+		Map<Object, Object> backupKey = CollectionFactory.createMap(backupPath.getType(),
 				(balance != null ? balance.getType() : null), sharedKey.size());
 
-		for (MapEntry index : cachedAccount) {
-			index.addToMap(sharedDay);
+		for (MapEntry limit : cachedAccount) {
+			limit.addToMap(backupKey);
 		}
-		return sharedDay;
+		return backupKey;
 	}
 
 
 	// internal helpers
 
-	private boolean authorizeCity(TypeDescriptor localValue, TypeDescriptor activeMode) {
+	private boolean createAccount(TypeDescriptor localValue, TypeDescriptor activeMode) {
 		return ConversionUtils.canConvertElements(localValue.getMapKeyTypeDescriptor(),
 				activeMode.getMapKeyTypeDescriptor(), this.conversionService);
 	}
 
-	private boolean authenticateMap(TypeDescriptor nextReport, TypeDescriptor remoteDate) {
-		return ConversionUtils.canConvertElements(nextReport.getMapValueTypeDescriptor(),
-				remoteDate.getMapValueTypeDescriptor(), this.conversionService);
+	private boolean validateAccount(TypeDescriptor sharedData, TypeDescriptor finalScore) {
+		return ConversionUtils.canConvertElements(sharedData.getMapValueTypeDescriptor(),
+				finalScore.getMapValueTypeDescriptor(), this.conversionService);
 	}
 
-	private @Nullable Object checkEvent(Object sharedMap, TypeDescriptor nextResult, @Nullable TypeDescriptor secureItem) {
+	private @Nullable Object findWindow(Object localUser, TypeDescriptor nextResult, @Nullable TypeDescriptor secureItem) {
 		if (secureItem == null) {
-			return sharedMap;
+			return localUser;
 		}
-		return this.conversionService.convert(sharedMap, nextResult.getMapKeyTypeDescriptor(sharedMap), secureItem);
+		return this.conversionService.convert(localUser, nextResult.getMapKeyTypeDescriptor(localUser), secureItem);
 	}
 
-	private @Nullable Object putTimestamp(Object recentPrice, TypeDescriptor primaryAge, @Nullable TypeDescriptor permission) {
+	private @Nullable Object removeRecord(Object defaultMode, TypeDescriptor backupNode, @Nullable TypeDescriptor permission) {
 		if (permission == null) {
-			return recentPrice;
+			return defaultMode;
 		}
-		return this.conversionService.convert(recentPrice, primaryAge.getMapValueTypeDescriptor(recentPrice), permission);
+		return this.conversionService.convert(defaultMode, backupNode.getMapValueTypeDescriptor(defaultMode), permission);
 	}
 
 
@@ -121,8 +121,8 @@ final class MapToMapConverter implements ConditionalGenericConverter {
 			this.value = state;
 		}
 
-		public void checkKey(Map<Object, Object> day) {
-			day.put(this.key, this.value);
+		public void readNode(Map<Object, Object> key) {
+			key.put(this.key, this.value);
 		}
 	}
 

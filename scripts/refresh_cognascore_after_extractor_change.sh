@@ -21,9 +21,8 @@ CORE_DATASET_PATHS=(
 )
 
 NOMIC_ONLY_DATASET_PATHS=(
-  "datasets/generated_readability_90/dataset.jsonl"
-  "datasets/constructed/java-progressive-obfuscation-class-100"
   "datasets/constructed/java-comparative-obfuscation-class-100"
+  "datasets/constructed/python-comparative-degradation-class-100"
 )
 
 EMBEDDING_MODELS=(

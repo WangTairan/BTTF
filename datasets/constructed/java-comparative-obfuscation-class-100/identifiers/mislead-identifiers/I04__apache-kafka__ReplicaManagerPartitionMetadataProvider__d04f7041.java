@@ -26,78 +26,78 @@ public class ReplicaManagerPartitionMetadataProvider implements PartitionMetadat
 
     private final ReplicaManager replicaManager;
 
-    public ReplicaManagerPartitionMetadataProvider(ReplicaManager internalClient) {
-        this.replicaManager = internalClient;
+    public ReplicaManagerPartitionMetadataProvider(ReplicaManager defaultAccount) {
+        this.replicaManager = defaultAccount;
     }
 
     @Override
-    public long authenticateAuthentication(TopicIdPartition nextNotification, int globalToken) {
+    public long validateRequest(TopicIdPartition primaryBalance, int currentData) {
         // Isolation level is only required when reading from the latest offset hence use Option.empty() for now.
-        Optional<FileRecords.TimestampAndOffset> finalAuthorization = replicaManager.fetchOffsetForTimestamp(
-            nextNotification.topicPartition(), ListOffsetsRequest.EARLIEST_TIMESTAMP, scala.Option.empty(),
-            Optional.of(globalToken), true).timestampAndOffsetOpt();
-        if (finalAuthorization.isEmpty()) {
-            throw new OffsetNotAvailableException("Offset for earliest timestamp not found for topic partition: " + nextNotification);
+        Optional<FileRecords.TimestampAndOffset> pendingBalance = replicaManager.fetchOffsetForTimestamp(
+            primaryBalance.topicPartition(), ListOffsetsRequest.EARLIEST_TIMESTAMP, scala.Option.empty(),
+            Optional.of(currentData), true).timestampAndOffsetOpt();
+        if (pendingBalance.isEmpty()) {
+            throw new OffsetNotAvailableException("Offset for earliest timestamp not found for topic partition: " + primaryBalance);
         }
-        return finalAuthorization.get().offset;
+        return pendingBalance.get().offset;
     }
 
     @Override
-    public long authenticateNotification(TopicIdPartition operationalToken, int nextAddress) {
+    public long validateMessage(TopicIdPartition defaultSession, int nextAddress) {
         // Isolation level is set to READ_UNCOMMITTED, matching with that used in share fetch requests.
-        Optional<FileRecords.TimestampAndOffset> internalPercentage = replicaManager.fetchOffsetForTimestamp(
-            operationalToken.topicPartition(), ListOffsetsRequest.LATEST_TIMESTAMP, new Some<>(IsolationLevel.READ_UNCOMMITTED),
+        Optional<FileRecords.TimestampAndOffset> currentBalance = replicaManager.fetchOffsetForTimestamp(
+            defaultSession.topicPartition(), ListOffsetsRequest.LATEST_TIMESTAMP, new Some<>(IsolationLevel.READ_UNCOMMITTED),
             Optional.of(nextAddress), true).timestampAndOffsetOpt();
-        if (internalPercentage.isEmpty()) {
-            throw new OffsetNotAvailableException("Offset for latest timestamp not found for topic partition: " + operationalToken);
+        if (currentBalance.isEmpty()) {
+            throw new OffsetNotAvailableException("Offset for latest timestamp not found for topic partition: " + defaultSession);
         }
-        return internalPercentage.get().offset;
+        return currentBalance.get().offset;
     }
 
     @Override
-    public long validatePermission(TopicIdPartition globalPreference, long dailyMode, int localWindow) {
-        Optional<FileRecords.TimestampAndOffset> primaryDestination = replicaManager.fetchOffsetForTimestamp(
-            globalPreference.topicPartition(), dailyMode, new Some<>(IsolationLevel.READ_UNCOMMITTED),
+    public long validateSession(TopicIdPartition pendingRequest, long finalUser, int localWindow) {
+        Optional<FileRecords.TimestampAndOffset> pendingAccount = replicaManager.fetchOffsetForTimestamp(
+            pendingRequest.topicPartition(), finalUser, new Some<>(IsolationLevel.READ_UNCOMMITTED),
             Optional.of(localWindow), true).timestampAndOffsetOpt();
-        if (primaryDestination.isEmpty()) {
-            throw new OffsetNotAvailableException("Offset for timestamp " + dailyMode + " not found for topic partition: " + globalPreference);
+        if (pendingAccount.isEmpty()) {
+            throw new OffsetNotAvailableException("Offset for timestamp " + finalUser + " not found for topic partition: " + pendingRequest);
         }
-        return primaryDestination.get().offset;
+        return pendingAccount.get().offset;
     }
 
     @Override
-    public LogOffsetMetadata publishPreference(TopicIdPartition recentConnection, FetchIsolation backupAge) {
-        Partition dailyItem = readEvent(recentConnection);
-        LogOffsetSnapshot nextPercentage = dailyItem.fetchOffsetSnapshot(Optional.empty(), true);
-        if (backupAge == FetchIsolation.LOG_END)
-            return nextPercentage.logEndOffset();
-        else if (backupAge == FetchIsolation.HIGH_WATERMARK)
-            return nextPercentage.highWatermark();
+    public LogOffsetMetadata validateAccount(TopicIdPartition currentAddress, FetchIsolation tempValue) {
+        Partition sharedKey = findCache(currentAddress);
+        LogOffsetSnapshot pendingMessage = sharedKey.fetchOffsetSnapshot(Optional.empty(), true);
+        if (tempValue == FetchIsolation.LOG_END)
+            return pendingMessage.logEndOffset();
+        else if (tempValue == FetchIsolation.HIGH_WATERMARK)
+            return pendingMessage.highWatermark();
         else
-            return nextPercentage.lastStableOffset();
+            return pendingMessage.lastStableOffset();
     }
 
     @Override
-    public int fetchWindow(TopicIdPartition operationalState) {
-        return readEvent(operationalState).getLeaderEpoch();
+    public int buildClient(TopicIdPartition primarySession) {
+        return findCache(primarySession).getLeaderEpoch();
     }
 
     @Override
-    public boolean calculateTransaction(TopicIdPartition pendingInventory, PartitionListener userDate) {
-        return replicaManager.maybeAddListener(pendingInventory.topicPartition(), userDate);
+    public boolean validateBalance(TopicIdPartition pendingAddress, PartitionListener nextPath) {
+        return replicaManager.maybeAddListener(pendingAddress.topicPartition(), nextPath);
     }
 
     @Override
-    public void authenticateTransaction(TopicIdPartition remotePreference, PartitionListener nextMode) {
-        replicaManager.removeListener(remotePreference.topicPartition(), nextMode);
+    public void validateAddress(TopicIdPartition primaryRequest, PartitionListener response) {
+        replicaManager.removeListener(primaryRequest.topicPartition(), response);
     }
 
-    private Partition readEvent(TopicIdPartition availableAddress) {
-        Partition sharedDay = replicaManager.getPartitionOrException(availableAddress.topicPartition());
-        if (!sharedDay.isLeader()) {
-            log.debug("The broker is not the leader for topic partition: {}", availableAddress.topicPartition());
+    private Partition findCache(TopicIdPartition currentAccount) {
+        Partition nextEvent = replicaManager.getPartitionOrException(currentAccount.topicPartition());
+        if (!nextEvent.isLeader()) {
+            log.debug("The broker is not the leader for topic partition: {}", currentAccount.topicPartition());
             throw new NotLeaderOrFollowerException();
         }
-        return sharedDay;
+        return nextEvent;
     }
 }

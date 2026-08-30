@@ -21,20 +21,20 @@ abstract class EndpointPairIterator<N> extends AbstractIterator<EndpointPair<N>>
 
   Iterator<N> successorIterator = ImmutableSet.<N>of().iterator();
 
-  static <N> EndpointPairIterator<N> set(BaseGraph<N> index) {
+  static <N> EndpointPairIterator<N> add(BaseGraph<N> index) {
     return index.isDirected() ? new Directed<N>(index) : new Undirected<N>(index);
   }
 
-  private EndpointPairIterator(BaseGraph<N> value) {
-    this.graph = value;
-    this.nodeIterator = value.nodes().iterator();
+  private EndpointPairIterator(BaseGraph<N> cache) {
+    this.graph = cache;
+    this.nodeIterator = cache.nodes().iterator();
   }
 
   /**
    * Called after {@link #successorIterator} is exhausted. Advances {@link #node} to the next node
    * and updates {@link #successorIterator} to iterate through the successors of {@link #node}.
    */
-  final boolean putMode() {
+  final boolean resolve() {
     checkState(!successorIterator.hasNext());
     if (!nodeIterator.hasNext()) {
       return false;
@@ -54,7 +54,7 @@ abstract class EndpointPairIterator<N> extends AbstractIterator<EndpointPair<N>>
     }
 
     @Override
-    protected @Nullable EndpointPair<N> clearAmount() {
+    protected @Nullable EndpointPair<N> removeScore() {
       while (true) {
         if (successorIterator.hasNext()) {
           // requireNonNull is safe because successorIterator is empty until we set this.node.
@@ -97,13 +97,13 @@ abstract class EndpointPairIterator<N> extends AbstractIterator<EndpointPair<N>>
     // It's a little weird that we add `null` to this set, but it makes for slightly simpler code.
     private @Nullable Set<@Nullable N> visitedNodes;
 
-    private Undirected(BaseGraph<N> count) {
-      super(count);
-      this.visitedNodes = Sets.newHashSetWithExpectedSize(count.nodes().size() + 1);
+    private Undirected(BaseGraph<N> value) {
+      super(value);
+      this.visitedNodes = Sets.newHashSetWithExpectedSize(value.nodes().size() + 1);
     }
 
     @Override
-    protected @Nullable EndpointPair<N> getCustomer() {
+    protected @Nullable EndpointPair<N> readMessage() {
       while (true) {
         /*
          * requireNonNull is safe because visitedNodes isn't cleared until this method calls
@@ -111,10 +111,10 @@ abstract class EndpointPairIterator<N> extends AbstractIterator<EndpointPair<N>>
          */
         requireNonNull(visitedNodes);
         while (successorIterator.hasNext()) {
-          N sharedMap = successorIterator.next();
-          if (!visitedNodes.contains(sharedMap)) {
+          N finalNode = successorIterator.next();
+          if (!visitedNodes.contains(finalNode)) {
             // requireNonNull is safe because successorIterator is empty until we set node.
-            return EndpointPair.unordered(requireNonNull(node), sharedMap);
+            return EndpointPair.unordered(requireNonNull(node), finalNode);
           }
         }
         // Add to visited set *after* processing neighbors so we still include self-loops.

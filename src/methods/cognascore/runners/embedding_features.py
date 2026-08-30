@@ -19,7 +19,7 @@ from ..embedding_features import (
     extract_embedding_feature_row,
     write_embedding_feature_database,
 )
-from ..extractors.python import LexemeExtractor
+from ..extractors import extractor_for_language
 from ..results import model_slug
 from ..semantic_context import (
     APPLICATION_ANCHOR_TASK,
@@ -28,7 +28,7 @@ from ..semantic_context import (
     context_anchor_groups,
     centroid,
 )
-from ..dataset_io import dataset_output_name, load_items
+from ..dataset_io import dataset_output_name, item_source_sha256, load_items
 from ..paths import CALIBRATION_ROOT, EMBEDDING_CACHE_ROOT, EMBEDDING_FEATURE_ROOT
 
 
@@ -94,6 +94,11 @@ def parse_args() -> argparse.Namespace:
         default=1,
         help="With --resume, write the CSV/metadata after this many newly computed rows.",
     )
+    parser.add_argument(
+        "--quiet-reuse",
+        action="store_true",
+        help="Suppress one-line logs for rows reused by source hash.",
+    )
     return parser.parse_args()
 
 
@@ -146,22 +151,85 @@ def main() -> None:
                 },
             }
             rows_by_task: dict[str, dict] = {}
+            stored_hashes: dict[str, str] = {}
             if args.replace_existing:
                 _delete_existing_table(feature_dir)
             if args.resume:
-                rows_by_task = _load_existing_rows(feature_dir)
+                rows_by_task, stored_hashes = _load_existing_rows(feature_dir)
                 if rows_by_task:
                     print(f"Loaded {len(rows_by_task)} existing feature rows for {dataset_name}", flush=True)
+            source_hashes = {
+                item.task_id: item_source_sha256(item)
+                for item in all_items
+            }
+            if rows_by_task and not stored_hashes:
+                if all(item.metadata.get("content_sha256") for item in all_items):
+                    stored_hashes = {
+                        item.task_id: source_hashes[item.task_id]
+                        for item in all_items
+                        if item.task_id in rows_by_task
+                    }
+                    print(
+                        f"Bootstrapped {len(stored_hashes)} embedding-feature source hashes "
+                        "from unchanged task IDs",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        "Existing embedding-feature metadata has no source hashes and "
+                        "the dataset has no manifest-validated content hashes; "
+                        "recomputing selected rows.",
+                        flush=True,
+                    )
+            rows_by_hash = {
+                stored_hashes[task_id]: row
+                for task_id, row in rows_by_task.items()
+                if task_id in stored_hashes
+            }
             rows = []
             skipped = []
             computed_since_checkpoint = 0
+            computed_count = 0
+            reused_task_count = 0
+            reused_hash_count = 0
             for index, item in enumerate(items, start=1):
-                if args.resume and item.task_id in rows_by_task and not _should_update_existing(
-                    rows_by_task[item.task_id],
-                    update_incomplete=args.update_incomplete,
-                    update_all=args.update_all,
+                source_hash = source_hashes[item.task_id]
+                existing = rows_by_task.get(item.task_id)
+                existing_hash = stored_hashes.get(item.task_id)
+                if (
+                    args.resume
+                    and existing is not None
+                    and existing_hash == source_hash
+                    and not _should_update_existing(
+                        existing,
+                        update_incomplete=args.update_incomplete,
+                        update_all=args.update_all,
+                    )
                 ):
-                    print(f"[{index}/{len(items)}] Reusing embedding features for {dataset_name} {item.task_id}", flush=True)
+                    if not args.quiet_reuse:
+                        print(f"[{index}/{len(items)}] Reusing embedding features for {dataset_name} {item.task_id}", flush=True)
+                    reused_task_count += 1
+                    continue
+                hash_match = rows_by_hash.get(source_hash)
+                if (
+                    args.resume
+                    and hash_match is not None
+                    and not _should_update_existing(
+                        hash_match,
+                        update_incomplete=args.update_incomplete,
+                        update_all=args.update_all,
+                    )
+                ):
+                    if not args.quiet_reuse:
+                        print(
+                            f"[{index}/{len(items)}] Reusing identical-source embedding features "
+                            f"for {dataset_name} {item.task_id}",
+                            flush=True,
+                        )
+                    row = _clone_embedding_identity(hash_match, dataset_name, item)
+                    rows_by_task[item.task_id] = row
+                    stored_hashes[item.task_id] = source_hash
+                    reused_hash_count += 1
                     continue
                 print(f"[{index}/{len(items)}] Embedding features for {dataset_name} {item.task_id}", flush=True)
                 total_count, available_count = cache.task_source_counts(
@@ -171,9 +239,10 @@ def main() -> None:
                 )
                 coverage = available_count / max(total_count, 1)
                 if total_count == 0:
-                    extracted_chunks, _ = LexemeExtractor().extract_with_member_fallback(
-                        item.content
-                    )
+                    extracted_chunks, _ = extractor_for_language(
+                        item.metadata.get("language"),
+                        allow_fragments=item.metadata.get("source_form") == "snippet",
+                    ).extract_with_member_fallback(item.content)
                     if extracted_chunks:
                         raise SystemExit(
                             f"No embedding source references for {dataset_name} {item.task_id}, "
@@ -215,6 +284,9 @@ def main() -> None:
                     )
                 )
                 row = rows[-1]
+                rows_by_hash[source_hash] = row
+                stored_hashes[item.task_id] = source_hash
+                computed_count += 1
                 if args.resume:
                     rows_by_task[item.task_id] = row
                     computed_since_checkpoint += 1
@@ -223,7 +295,12 @@ def main() -> None:
                             rows_by_task,
                             items=all_items,
                             output_dir=feature_dir,
-                            metadata={**base_metadata, "skipped_count": len(skipped), "skipped": skipped},
+                            metadata={
+                                **base_metadata,
+                                "source_sha256_by_task": source_hashes,
+                                "skipped_count": len(skipped),
+                                "skipped": skipped,
+                            },
                         )
                         computed_since_checkpoint = 0
             if args.resume:
@@ -233,22 +310,34 @@ def main() -> None:
                 output_dir=feature_dir,
                 metadata={
                     **base_metadata,
+                    "source_sha256_by_task": source_hashes,
+                    "computed_count": computed_count,
+                    "reused_unchanged_task_count": reused_task_count,
+                    "reused_identical_source_count": reused_hash_count,
                     "skipped_count": len(skipped),
                     "skipped": skipped,
                 },
             )
             print(f"Wrote {csv_path}", flush=True)
             print(f"Wrote {metadata_path}", flush=True)
+            print(
+                "Embedding-feature update: "
+                f"computed={computed_count}, "
+                f"reused_unchanged_task={reused_task_count}, "
+                f"reused_identical_source={reused_hash_count}, "
+                f"retired={len(set(rows_by_task) - set(source_hashes))}",
+                flush=True,
+            )
 
 
-def _load_existing_rows(feature_dir: Path) -> dict[str, dict]:
+def _load_existing_rows(feature_dir: Path) -> tuple[dict[str, dict], dict[str, str]]:
     csv_path = feature_dir / "features.csv"
     if not csv_path.exists():
-        return {}
+        return {}, {}
     metadata_path = feature_dir / "metadata.json"
     if not metadata_path.exists():
         print(f"Ignoring {csv_path}: missing metadata.json", flush=True)
-        return {}
+        return {}, {}
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     existing_version = metadata.get("embedding_feature_build_version")
     if existing_version != EMBEDDING_FEATURE_BUILD_VERSION:
@@ -257,7 +346,7 @@ def _load_existing_rows(feature_dir: Path) -> dict[str, dict]:
             f"{existing_version!r} -> {EMBEDDING_FEATURE_BUILD_VERSION}",
             flush=True,
         )
-        return {}
+        return {}, {}
     expected_columns = ["dataset", "task_id", "readability_score", *extract_embedding_feature_columns()]
     with csv_path.open("r", newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
@@ -267,7 +356,20 @@ def _load_existing_rows(feature_dir: Path) -> dict[str, dict]:
                 f"Cannot resume from {csv_path}: schema mismatch. "
                 "Regenerate without --resume or move the old feature table."
             )
-        return {str(row["task_id"]): dict(row) for row in reader}
+        rows = {str(row["task_id"]): dict(row) for row in reader}
+    source_hashes = {
+        str(task_id): str(source_hash)
+        for task_id, source_hash in metadata.get("source_sha256_by_task", {}).items()
+    }
+    return rows, source_hashes
+
+
+def _clone_embedding_identity(row: dict, dataset_name: str, item) -> dict:
+    cloned = dict(row)
+    cloned["dataset"] = dataset_name
+    cloned["task_id"] = item.task_id
+    cloned["readability_score"] = item.readability_score
+    return cloned
 
 
 def _write_comment_relevance_calibration(

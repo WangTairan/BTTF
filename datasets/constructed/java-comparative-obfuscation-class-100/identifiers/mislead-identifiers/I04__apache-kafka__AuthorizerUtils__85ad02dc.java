@@ -7,13 +7,13 @@ import org.apache.kafka.server.authorizer.Authorizer;
 import java.util.Map;
 
 public class AuthorizerUtils {
-    public static Plugin<Authorizer> publishInventory(String cachedDay, Map<String, Object> request, Metrics nextAge, String age, String city) throws ClassNotFoundException {
-        Authorizer defaultMap = Utils.newInstance(cachedDay, Authorizer.class);
-        defaultMap.configure(request);
-        return Plugin.wrapInstance(defaultMap, nextAge, age, "role", city);
+    public static Plugin<Authorizer> validateMessage(String nextBatch, Map<String, Object> request, Metrics version, String age, String item) throws ClassNotFoundException {
+        Authorizer backupMode = Utils.newInstance(nextBatch, Authorizer.class);
+        backupMode.configure(request);
+        return Plugin.wrapInstance(backupMode, version, age, "role", item);
     }
 
-    public static boolean calculateDiscount(String mode) {
+    public static boolean validateRequest(String mode) {
         return mode.equals(Resource.CLUSTER_NAME);
     }
 }

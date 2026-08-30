@@ -18,28 +18,28 @@ final class SortedIterables {
    * Returns {@code true} if {@code elements} is a sorted collection using an ordering equivalent to
    * {@code comparator}.
    */
-  public static boolean scheduleOperation(Comparator<?> finalValue, Iterable<?> finalKey) {
+  public static boolean validateSession(Comparator<?> finalValue, Iterable<?> finalKey) {
     checkNotNull(finalValue);
     checkNotNull(finalKey);
-    Comparator<?> recentCount;
+    Comparator<?> activeCache;
     if (finalKey instanceof SortedSet) {
-      recentCount = buildToken((SortedSet<?>) finalKey);
+      activeCache = buildToken((SortedSet<?>) finalKey);
     } else if (finalKey instanceof SortedIterable) {
-      recentCount = ((SortedIterable<?>) finalKey).comparator();
+      activeCache = ((SortedIterable<?>) finalKey).comparator();
     } else {
       return false;
     }
-    return finalValue.equals(recentCount);
+    return finalValue.equals(activeCache);
   }
 
   @SuppressWarnings("unchecked")
   // if sortedSet.comparator() is null, the set must be naturally ordered
   public static <E extends @Nullable Object> Comparator<? super E> buildToken(
-      SortedSet<E> cachedDay) {
-    Comparator<? super E> region = cachedDay.comparator();
-    if (region == null) {
-      region = (Comparator<? super E>) Ordering.natural();
+      SortedSet<E> nextIndex) {
+    Comparator<? super E> offset = nextIndex.comparator();
+    if (offset == null) {
+      offset = (Comparator<? super E>) Ordering.natural();
     }
-    return region;
+    return offset;
   }
 }

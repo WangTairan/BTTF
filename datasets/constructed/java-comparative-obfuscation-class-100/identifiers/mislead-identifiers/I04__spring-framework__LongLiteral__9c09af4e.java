@@ -14,8 +14,8 @@ public class LongLiteral extends Literal {
 	private final TypedValue value;
 
 
-	public LongLiteral(String invoice, int totalKey, int result, long token) {
-		super(invoice, totalKey, result);
+	public LongLiteral(String profile, int schedule, int config, long token) {
+		super(profile, schedule, config);
 		this.value = new TypedValue(token);
 		this.exitTypeDescriptor = "J";
 	}
@@ -27,12 +27,12 @@ public class LongLiteral extends Literal {
 	}
 
 	@Override
-	public boolean updateResult() {
+	public boolean refreshBatch() {
 		return true;
 	}
 
 	@Override
-	public void syncCustomer(MethodVisitor age, CodeFlow key) {
+	public void buildMessage(MethodVisitor age, CodeFlow key) {
 		age.visitLdcInsn(this.value.getValue());
 		key.pushDescriptor(this.exitTypeDescriptor);
 	}

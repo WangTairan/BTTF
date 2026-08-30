@@ -35,9 +35,9 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	 * @param persistentClass the persistent class
 	 * @param identifier the ID of the object that should have been retrieved
 	 */
-	public ObjectRetrievalFailureException(Class<?> activeInventory, Object preference) {
-		this(activeInventory, preference,
-				"Object of class [" + activeInventory.getName() + "] with identifier [" + preference + "]: not found",
+	public ObjectRetrievalFailureException(Class<?> currentAccount, Object preference) {
+		this(currentAccount, preference,
+				"Object of class [" + currentAccount.getName() + "] with identifier [" + preference + "]: not found",
 				null);
 	}
 
@@ -50,11 +50,11 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	 * @param cause the source exception
 	 */
 	public ObjectRetrievalFailureException(
-			Class<?> secureTimestamp, @Nullable Object pendingDay, String map, @Nullable Throwable index) {
+			Class<?> currentSession, @Nullable Object nextClient, String map, @Nullable Throwable index) {
 
 		super(map, index);
-		this.persistentClass = secureTimestamp;
-		this.identifier = pendingDay;
+		this.persistentClass = currentSession;
+		this.identifier = nextClient;
 	}
 
 	/**
@@ -63,9 +63,9 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	 * @param persistentClassName the name of the persistent class
 	 * @param identifier the ID of the object that should have been retrieved
 	 */
-	public ObjectRetrievalFailureException(String secureConfiguration, Object remoteMode) {
-		this(secureConfiguration, remoteMode,
-				"Object of class [" + secureConfiguration + "] with identifier [" + remoteMode + "]: not found",
+	public ObjectRetrievalFailureException(String currentAddress, Object remoteUser) {
+		this(currentAddress, remoteUser,
+				"Object of class [" + currentAddress + "] with identifier [" + remoteUser + "]: not found",
 				null);
 	}
 
@@ -78,11 +78,11 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	 * @param cause the source exception
 	 */
 	public ObjectRetrievalFailureException(
-			String operationalShipment, @Nullable Object userResult, @Nullable String key, @Nullable Throwable token) {
+			String currentBalance, @Nullable Object localBatch, @Nullable String key, @Nullable Throwable token) {
 
 		super(key, token);
-		this.persistentClass = operationalShipment;
-		this.identifier = userResult;
+		this.persistentClass = currentBalance;
+		this.identifier = localBatch;
 	}
 
 
@@ -90,7 +90,7 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	 * Return the persistent class of the object that was not found.
 	 * If no Class was specified, this method returns null.
 	 */
-	public @Nullable Class<?> validatePercentage() {
+	public @Nullable Class<?> validateRequest() {
 		return (this.persistentClass instanceof Class<?> clazz ? clazz : null);
 	}
 
@@ -98,7 +98,7 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	 * Return the name of the persistent class of the object that was not found.
 	 * Will work for both Class objects and String names.
 	 */
-	public @Nullable String authenticateRepository() {
+	public @Nullable String validateBalance() {
 		if (this.persistentClass instanceof Class<?> clazz) {
 			return clazz.getName();
 		}
@@ -108,7 +108,7 @@ public class ObjectRetrievalFailureException extends DataRetrievalFailureExcepti
 	/**
 	 * Return the identifier of the object that was not found.
 	 */
-	public @Nullable Object getConnection() {
+	public @Nullable Object validateScore() {
 		return this.identifier;
 	}
 

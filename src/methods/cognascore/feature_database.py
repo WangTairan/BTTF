@@ -15,7 +15,7 @@ from typing import Any, Mapping, Sequence
 from src.datasets import DatasetItem
 from src.methods.posnett.method import posnett_model
 
-from .extractors.python import LexemeExtractor
+from .extractors import ChunkExtractor, extractor_for_language
 from .member_access_features import member_access_features
 from .visual_features import visual_layout_features
 
@@ -56,6 +56,7 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("operator_density", "code_visual_token", "Operator tokens per non-empty source line."),
         FeatureDefinition("member_access_density", "cognascore_member_access", "Validated member-access edges per non-empty source line, excluding declarations, comments, strings, and numeric literals."),
         FeatureDefinition("member_access_chain_depth_mean", "cognascore_member_access", "Mean number of semantic hops across maximal member-access chains."),
+        FeatureDefinition("visual_period_density", "code_visual_token", "Period/member-access tokens per non-empty source line."),
         FeatureDefinition("visual_comma_density", "code_visual_token", "Comma tokens per non-empty source line."),
         FeatureDefinition("comparison_operator_density", "code_lexical_density", "Comparison operators per non-empty source line."),
         FeatureDefinition("scalabrino_visual_parenthesis_density", "scalabrino_buse_weimer", "Opening and closing parentheses per non-empty source line."),
@@ -71,12 +72,14 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("visual_operator_y_mean", "code_visual_position", "Normalized mean vertical position of operator tokens."),
         FeatureDefinition("visual_operator_y_std", "code_visual_position", "Normalized standard deviation of operator token vertical positions."),
         FeatureDefinition("visual_period_y_mean", "code_visual_position", "Normalized mean vertical position of period/member-access tokens."),
+        FeatureDefinition("visual_period_y_std", "code_visual_position", "Normalized standard deviation of period/member-access token vertical positions."),
         FeatureDefinition("scalabrino_visual_comment_y_mean", "scalabrino_dorn", "Normalized mean vertical position of comment chunks."),
         FeatureDefinition("scalabrino_visual_number_y_mean", "scalabrino_dorn", "Normalized mean vertical position of numeric-literal tokens."),
         FeatureDefinition("visual_line_length_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line length series."),
         FeatureDefinition("visual_identifier_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line identifier count series."),
         FeatureDefinition("visual_keyword_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line keyword count series."),
         FeatureDefinition("visual_period_dft_energy", "code_visual_dft", "Normalized low-frequency DFT energy of the per-line period/member-access count series."),
+        FeatureDefinition("scalabrino_visual_comma_dft_energy", "scalabrino_dorn", "Normalized low-frequency DFT energy of the per-line comma-count series."),
         FeatureDefinition("scalabrino_visual_comparison_dft_energy", "scalabrino_dorn", "Normalized low-frequency DFT energy of the per-line comparison-count series."),
         FeatureDefinition("scalabrino_align_blocks_count", "scalabrino_dorn", "Number of vertically aligned runs of the same visible character across consecutive source lines."),
         FeatureDefinition("chunk_y_mean", "cognascore_visual_chunk", "Normalized mean vertical position of CognaScore chunks."),
@@ -88,6 +91,11 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("chunk_chars_cv", "cognascore_chunk", "Coefficient of variation for chunk character length."),
         FeatureDefinition("log_max_chunk_chars", "cognascore_chunk", "log(1 + maximum chunk character length)."),
         FeatureDefinition("chunk_tokens_cv", "cognascore_chunk", "Coefficient of variation for token count inside chunks."),
+        FeatureDefinition(
+            "literal_expression_log_balance",
+            "cognascore_literal",
+            "log((1 + literal chunks) / (1 + arithmetic, bitwise, comparison, and logical chunks)).",
+        ),
         FeatureDefinition("identifier_mean_length", "cognascore_identifier_quality", "Mean character length of identifier chunks."),
         FeatureDefinition("identifier_std_length", "cognascore_identifier_quality", "Standard deviation of identifier character length."),
         FeatureDefinition("identifier_max_length", "cognascore_identifier_quality", "Maximum character length among identifier chunks."),
@@ -150,6 +158,7 @@ TYPE_STAT_NAMES = tuple(
         "type_identifier_count",
         "type_identifier_ratio",
         "type_literal_count",
+        "type_literal_ratio",
     }
 )
 
@@ -158,9 +167,12 @@ def extract_feature_row(
     *,
     dataset: str,
     item: DatasetItem,
-    extractor: LexemeExtractor | None = None,
+    extractor: ChunkExtractor | None = None,
 ) -> dict[str, Any]:
-    active_extractor = extractor or LexemeExtractor()
+    active_extractor = extractor or extractor_for_language(
+        item.metadata.get("language"),
+        allow_fragments=item.metadata.get("source_form") == "snippet",
+    )
     chunks, _ = active_extractor.extract_with_member_fallback(item.content)
     chunks.sort(key=lambda chunk: (chunk.line, chunk.lexeme))
     lexemes = [chunk.lexeme for chunk in chunks]
@@ -184,10 +196,21 @@ def extract_feature_row(
     comment_alignment = _comment_identifier_word_features(identifier_lexemes, comment_lexemes)
     text_coherence = _text_coherence_features(chunks)
 
-    posnett = posnett_model(item.content)
+    posnett = posnett_model(
+        item.content,
+        language=str(item.metadata.get("language", "java")),
+        allow_fragments=item.metadata.get("source_form") == "snippet",
+    )
     lexeme_count = len(chunks)
     vocabulary_size = int(posnett.vocabulary_size)
     type_counts = Counter(chunk.type.upper() for chunk in chunks)
+    literal_count = float(type_counts.get("LITERAL", 0))
+    literal_expression_operator_count = float(
+        sum(
+            type_counts.get(chunk_type, 0)
+            for chunk_type in ("ARITHMETIC", "BITWISE", "COMPARISON", "LOGICAL")
+        )
+    )
     visual_features = visual_layout_features(item.content, chunks)
     access_features = member_access_features(item.content)
 
@@ -220,6 +243,9 @@ def extract_feature_row(
         "chunk_chars_cv": _coefficient_of_variation(chunk_char_lengths),
         "log_max_chunk_chars": math.log1p(max(chunk_char_lengths, default=0)),
         "chunk_tokens_cv": _coefficient_of_variation(chunk_token_lengths),
+        "literal_expression_log_balance": (
+            math.log1p(literal_count) - math.log1p(literal_expression_operator_count)
+        ),
         "identifier_mean_length": mean(identifier_lengths),
         "identifier_std_length": pstdev(identifier_lengths) if len(identifier_lengths) > 1 else 0.0,
         "identifier_max_length": max(identifier_lengths, default=0),

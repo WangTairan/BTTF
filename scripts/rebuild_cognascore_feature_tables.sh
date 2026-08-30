@@ -17,9 +17,8 @@ DATASET_PATHS=(
   "datasets/jetbrains"
   "datasets/dorn/dataset"
   "datasets/schnappinger"
-  "datasets/generated_readability_90/dataset.jsonl"
-  "datasets/constructed/java-progressive-obfuscation-class-100"
   "datasets/constructed/java-comparative-obfuscation-class-100"
+  "datasets/constructed/python-comparative-degradation-class-100"
 )
 
 DATASET_NAMES=(
@@ -29,9 +28,8 @@ DATASET_NAMES=(
   "jetbrains"
   "dorn"
   "schnappinger"
-  "generated_readability_90"
-  "java_progressive_obfuscation"
   "java_comparative_obfuscation"
+  "python_comparative_degradation"
 )
 
 EMBEDDING_MODELS=(
@@ -76,7 +74,7 @@ else
   done
   echo "Embedding features for Nomic-only additional datasets."
   PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runners.embedding_features \
-    "${DATASET_PATHS[@]:6:3}" \
+    "${DATASET_PATHS[@]:6:2}" \
     --embedding-model "nomic-ai/nomic-embed-text-v1.5" \
     --max-vectors-per-task "${MAX_VECTORS_PER_TASK}" \
     --resume \
@@ -99,9 +97,8 @@ PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runne
 
 echo "Validating Nomic-only additional datasets."
 PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" -m src.methods.cognascore.runners.validate_feature_tables \
-  --dataset generated_readability_90 \
-  --dataset java_progressive_obfuscation \
   --dataset java_comparative_obfuscation \
+  --dataset python_comparative_degradation \
   --embedding-model "nomic-ai/nomic-embed-text-v1.5"
 
 echo "Done."

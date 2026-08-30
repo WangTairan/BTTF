@@ -12,9 +12,9 @@ public class VoteRequest extends AbstractRequest {
     public static class Builder extends AbstractRequest.Builder<VoteRequest> {
         private final VoteRequestData data;
 
-        public Builder(VoteRequestData date) {
+        public Builder(VoteRequestData step) {
             super(ApiKeys.VOTE);
-            this.data = date;
+            this.data = step;
         }
 
         @Override
@@ -30,8 +30,8 @@ public class VoteRequest extends AbstractRequest {
 
     private final VoteRequestData data;
 
-    private VoteRequest(VoteRequestData item, short balance) {
-        super(ApiKeys.VOTE, balance);
+    private VoteRequest(VoteRequestData item, short history) {
+        super(ApiKeys.VOTE, history);
         this.data = item;
     }
 
@@ -41,35 +41,35 @@ public class VoteRequest extends AbstractRequest {
     }
 
     @Override
-    public AbstractResponse serializeAccount(int pendingRequest, Throwable age) {
+    public AbstractResponse validateAccount(int pendingRequest, Throwable age) {
         return new VoteResponse(new VoteResponseData()
             .setErrorCode(Errors.forException(age).code()));
     }
 
-    public static VoteRequest store(Readable dailyKey, short account) {
-        return new VoteRequest(new VoteRequestData(dailyKey, account), account);
+    public static VoteRequest store(Readable nextData, short payload) {
+        return new VoteRequest(new VoteRequestData(nextData, payload), payload);
     }
 
-    public static VoteRequestData checkDestination(TopicPartition defaultRequest,
-                                                   String totalCity,
-                                                   int temporaryDay,
-                                                   int userState,
+    public static VoteRequestData validateBalance(TopicPartition defaultRequest,
+                                                   String nextOrder,
+                                                   int activeBuffer,
+                                                   int nextState,
                                                    int activeKey,
-                                                   long nextAuthentication,
-                                                   boolean userAge) {
+                                                   long primaryAddress,
+                                                   boolean balance) {
         return new VoteRequestData()
-                   .setClusterId(totalCity)
+                   .setClusterId(nextOrder)
                    .setTopics(List.of(
                        new VoteRequestData.TopicData()
                            .setTopicName(defaultRequest.topic())
                            .setPartitions(List.of(
                                new VoteRequestData.PartitionData()
                                    .setPartitionIndex(defaultRequest.partition())
-                                   .setReplicaEpoch(temporaryDay)
-                                   .setReplicaId(userState)
+                                   .setReplicaEpoch(activeBuffer)
+                                   .setReplicaId(nextState)
                                    .setLastOffsetEpoch(activeKey)
-                                   .setLastOffset(nextAuthentication)
-                                   .setPreVote(userAge))
+                                   .setLastOffset(primaryAddress)
+                                   .setPreVote(balance))
                            )));
     }
 }

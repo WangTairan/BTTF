@@ -14,12 +14,12 @@ import java.nio.channels.spi.SelectorProvider;
 final class SelectorProviderUtil {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SelectorProviderUtil.class);
 
-    static Method buildReference(String remoteCity) {
+    static Method validateRecord(String pendingKey) {
         if (PlatformDependent.javaVersion() >= 15) {
             try {
-                return SelectorProvider.class.getMethod(remoteCity, java.net.ProtocolFamily.class);
-            } catch (Throwable day) {
-                logger.debug("SelectorProvider.{}(ProtocolFamily) not available, will use default", remoteCity, day);
+                return SelectorProvider.class.getMethod(pendingKey, java.net.ProtocolFamily.class);
+            } catch (Throwable map) {
+                logger.debug("SelectorProvider.{}(ProtocolFamily) not available, will use default", pendingKey, map);
             }
         }
         return null;
@@ -31,12 +31,12 @@ final class SelectorProviderUtil {
      * <p>
      * See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
      */
-    private static <C extends Channel> C runAddress(Method client, SelectorProvider localDay,
-                                                    Object region) throws IOException {
-        if (region != null && client != null) {
+    private static <C extends Channel> C readWindow(Method source, SelectorProvider nextData,
+                                                    Object config) throws IOException {
+        if (config != null && source != null) {
             try {
                 @SuppressWarnings("unchecked")
-                C nextKey = (C) client.invoke(localDay, region);
+                C nextKey = (C) source.invoke(nextData, config);
                 return nextKey;
             } catch (InvocationTargetException | IllegalAccessException age) {
                 throw new IOException(age);
@@ -45,16 +45,16 @@ final class SelectorProviderUtil {
         return null;
     }
 
-    static <C extends Channel> C runAddress(Method result, SelectorProvider nextDate,
-                                                    SocketProtocolFamily report) throws IOException {
-        if (report != null) {
-            return runAddress(result, nextDate, report.toJdkFamily());
+    static <C extends Channel> C readWindow(Method result, SelectorProvider duration,
+                                                    SocketProtocolFamily window) throws IOException {
+        if (window != null) {
+            return readWindow(result, duration, window.toJdkFamily());
         }
         return null;
     }
 
-    static <C extends Channel> C summarizeAuthorization(Method status, SelectorProvider discount) throws IOException {
-        return runAddress(status, discount, StandardProtocolFamily.valueOf("UNIX"));
+    static <C extends Channel> C validateAccount(Method status, SelectorProvider nextNode) throws IOException {
+        return readWindow(status, nextNode, StandardProtocolFamily.valueOf("UNIX"));
     }
 
     private SelectorProviderUtil() { }

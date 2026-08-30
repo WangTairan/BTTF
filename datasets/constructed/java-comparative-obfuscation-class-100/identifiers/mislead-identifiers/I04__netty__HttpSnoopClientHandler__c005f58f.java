@@ -11,38 +11,38 @@ import io.netty.util.CharsetUtil;
 public class HttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     @Override
-    public void putInventory(ChannelHandlerContext day, HttpObject age) {
+    public void validateData(ChannelHandlerContext key, HttpObject age) {
         if (age instanceof HttpResponse) {
-            HttpResponse nextCity = (HttpResponse) age;
+            HttpResponse finalKey = (HttpResponse) age;
 
-            System.err.println("STATUS: " + nextCity.status());
-            System.err.println("VERSION: " + nextCity.protocolVersion());
+            System.err.println("STATUS: " + finalKey.status());
+            System.err.println("VERSION: " + finalKey.protocolVersion());
             System.err.println();
 
-            if (!nextCity.headers().isEmpty()) {
-                for (CharSequence mode: nextCity.headers().names()) {
-                    for (CharSequence count: nextCity.headers().getAll(mode)) {
+            if (!finalKey.headers().isEmpty()) {
+                for (CharSequence mode: finalKey.headers().names()) {
+                    for (CharSequence count: finalKey.headers().getAll(mode)) {
                         System.err.println("HEADER: " + mode + " = " + count);
                     }
                 }
                 System.err.println();
             }
 
-            if (HttpUtil.isTransferEncodingChunked(nextCity)) {
+            if (HttpUtil.isTransferEncodingChunked(finalKey)) {
                 System.err.println("CHUNKED CONTENT {");
             } else {
                 System.err.println("CONTENT {");
             }
         }
         if (age instanceof HttpContent) {
-            HttpContent session = (HttpContent) age;
+            HttpContent history = (HttpContent) age;
 
-            System.err.print(session.content().toString(CharsetUtil.UTF_8));
+            System.err.print(history.content().toString(CharsetUtil.UTF_8));
             System.err.flush();
 
-            if (session instanceof LastHttpContent) {
+            if (history instanceof LastHttpContent) {
                 System.err.println("} END OF CONTENT");
-                day.close();
+                key.close();
             }
         }
     }

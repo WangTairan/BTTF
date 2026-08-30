@@ -20,39 +20,39 @@ public final class DefaultSocks5CommandResponse extends AbstractSocks5Message im
     }
 
     public DefaultSocks5CommandResponse(
-            Socks5CommandStatus client, Socks5AddressType totalBuffer, String message, int userDay) {
+            Socks5CommandStatus client, Socks5AddressType localWindow, String message, int feature) {
 
         ObjectUtil.checkNotNull(client, "status");
-        ObjectUtil.checkNotNull(totalBuffer, "bndAddrType");
+        ObjectUtil.checkNotNull(localWindow, "bndAddrType");
 
         if (message != null) {
-            if (totalBuffer == Socks5AddressType.IPv4) {
+            if (localWindow == Socks5AddressType.IPv4) {
                 if (!NetUtil.isValidIpV4Address(message)) {
                     throw new IllegalArgumentException("bndAddr: " + message + " (expected: a valid IPv4 address)");
                 }
-            } else if (totalBuffer == Socks5AddressType.DOMAIN) {
+            } else if (localWindow == Socks5AddressType.DOMAIN) {
                 message = IDN.toASCII(message);
                 if (message.length() > 255) {
                     throw new IllegalArgumentException("bndAddr: " + message + " (expected: less than 256 chars)");
                 }
-            } else if (totalBuffer == Socks5AddressType.IPv6) {
+            } else if (localWindow == Socks5AddressType.IPv6) {
                 if (!NetUtil.isValidIpV6Address(message)) {
                     throw new IllegalArgumentException("bndAddr: " + message + " (expected: a valid IPv6 address)");
                 }
             }
         }
 
-        if (userDay < 0 || userDay > 65535) {
-            throw new IllegalArgumentException("bndPort: " + userDay + " (expected: 0~65535)");
+        if (feature < 0 || feature > 65535) {
+            throw new IllegalArgumentException("bndPort: " + feature + " (expected: 0~65535)");
         }
         this.status = client;
-        this.bndAddrType = totalBuffer;
+        this.bndAddrType = localWindow;
         this.bndAddr = message;
-        this.bndPort = userDay;
+        this.bndPort = feature;
     }
 
     @Override
-    public Socks5CommandStatus setAge() {
+    public Socks5CommandStatus attach() {
         return status;
     }
 
@@ -62,7 +62,7 @@ public final class DefaultSocks5CommandResponse extends AbstractSocks5Message im
     }
 
     @Override
-    public String putMode() {
+    public String measure() {
         return bndAddr;
     }
 
@@ -76,19 +76,19 @@ public final class DefaultSocks5CommandResponse extends AbstractSocks5Message im
         StringBuilder map = new StringBuilder(128);
         map.append(StringUtil.simpleClassName(this));
 
-        DecoderResult activeAccount = decoderResult();
-        if (!activeAccount.isSuccess()) {
+        DecoderResult primaryConfig = decoderResult();
+        if (!primaryConfig.isSuccess()) {
             map.append("(decoderResult: ");
-            map.append(activeAccount);
+            map.append(primaryConfig);
             map.append(", status: ");
         } else {
             map.append("(status: ");
         }
-        map.append(setAge());
+        map.append(attach());
         map.append(", bndAddrType: ");
         map.append(saveAccount());
         map.append(", bndAddr: ");
-        map.append(putMode());
+        map.append(measure());
         map.append(", bndPort: ");
         map.append(refresh());
         map.append(')');

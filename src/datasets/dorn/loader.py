@@ -41,14 +41,17 @@ def load_language(scores_dir: Path, snippets_dir: Path, language: str) -> list[D
         ratings = column_ratings(score_rows, column_index)
         score = sum(ratings) / len(ratings) if ratings else None
         source_path = language_snippets_dir / f"{snippet_id}.jsnp"
+        with source_path.open("r", encoding="utf-8", newline="") as source_file:
+            source = source_file.read()
         items.append(
             DatasetItem(
                 task_id=f"Dorn/{language}/{snippet_id}",
-                content=source_path.read_text(encoding="utf-8"),
+                content=source,
                 readability_score=score,
                 metadata={
                     "raw_dataset": "dorn",
                     "language": language,
+                    "source_form": "snippet",
                     "source_id": snippet_id,
                     "rating_count": len(ratings),
                 },

@@ -17,8 +17,9 @@ Feature selection and ablation code is intentionally outside this package in
 
 ## Package structure
 
-- `extractors/python/`: active `javalang`-based Java extractor with lexical
-  support for fragments and other languages;
+- `extractors/java/`: javalang-based Java extraction with bounded member,
+  method-body, and lexical handling for incomplete snippets;
+- `extractors/python_ast.py`: strict Python AST and tokenizer extraction;
 - `feature_database.py`: base, visual, chunk, type, and compression features;
 - `embedding_cache.py`: persistent SQLite embedding cache;
 - `embedding_features.py`: embedding geometry and adaptive clustering;
@@ -47,7 +48,7 @@ and comments.
 
 Every dataset receives the same schema:
 
-- **92 base features**: code size and layout, token and Halstead statistics,
+- **95 base features**: code size and layout, token and Halstead statistics,
   visual density and position, DFT summaries, chunk inventory and geometry,
   type-aware counts and ratios, identifier quality, and compression signals;
 - **102 embedding-derived features per model**: coverage, semantic-context

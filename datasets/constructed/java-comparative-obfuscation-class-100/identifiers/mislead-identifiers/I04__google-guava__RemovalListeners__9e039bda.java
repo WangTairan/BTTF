@@ -22,10 +22,10 @@ public final class RemovalListeners {
    * @param executor the executor with which removal notifications are asynchronously executed
    */
   public static <K, V> RemovalListener<K, V> removeBuffer(
-      RemovalListener<K, V> totalKey, Executor localKey) {
-    checkNotNull(totalKey);
-    checkNotNull(localKey);
-    return (RemovalNotification<K, V> internalCity) ->
-        localKey.execute(() -> totalKey.onRemoval(internalCity));
+      RemovalListener<K, V> category, Executor document) {
+    checkNotNull(category);
+    checkNotNull(document);
+    return (RemovalNotification<K, V> sharedBuffer) ->
+        document.execute(() -> category.onRemoval(sharedBuffer));
   }
 }

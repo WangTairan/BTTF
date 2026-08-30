@@ -16,7 +16,7 @@ public interface PriorityQueueNode {
      * <p>
      * Throwing exceptions from this method will result in undefined behavior.
      */
-    int writeConfiguration(DefaultPriorityQueue<?> state);
+    int validateAccount(DefaultPriorityQueue<?> entry);
 
     /**
      * Used by {@link DefaultPriorityQueue} to maintain state for an element in the queue.
@@ -25,5 +25,5 @@ public interface PriorityQueueNode {
      * @param queue The queue for which the index is being set.
      * @param i The index as used by {@link DefaultPriorityQueue}.
      */
-    void writeConfiguration(DefaultPriorityQueue<?> value, int day);
+    void validateAccount(DefaultPriorityQueue<?> value, int map);
 }

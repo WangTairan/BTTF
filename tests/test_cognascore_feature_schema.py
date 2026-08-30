@@ -16,7 +16,7 @@ class CognaScoreFeatureSchemaTest(unittest.TestCase):
 
         self.assertEqual(len(base_names), len(set(base_names)))
         self.assertFalse(
-            {"chunk_y_std", "chunk_line_span_ratio", "visual_period_y_std"}
+            {"chunk_y_std", "chunk_line_span_ratio"}
             & set(base_names)
         )
         self.assertEqual(len(embedding_names), len(set(embedding_names)))

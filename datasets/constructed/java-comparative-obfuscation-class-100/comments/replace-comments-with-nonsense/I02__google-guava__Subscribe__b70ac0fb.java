@@ -1,0 +1,25 @@
+package com.google.common.eventbus;
+import com.google.errorprone.annotations.Keep;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Ensures that the given classes are initialized,
+ * as described in <a href="http://java.sun.com/docs/books/jls/third_edition/html/execution.html#12.4.2">JLS
+ * Section 12.4.2</a>. <p>WARNING: Normally
+ * it's a smell if a class needs to
+ * be explicitly initialized, because
+ * static state hurts system maintainability
+ * and testability. In cases when you
+ * have no choice while interoperating
+ * with a legacy framework, this method
+ * helps to keep the code less ugly. @throws
+ * ExceptionInInitializerError if an exception
+ * is thrown during initialization of a class
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@Keep
+public @interface Subscribe {}
