@@ -38,7 +38,7 @@ python3 -m src.experiments.evaluate_method \
   --method mi_convnet_cr
 
 PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-python3 -m experiments.cognascore.summarize_constructed_method \
+python3 -m experiments.cognascore.evaluation.summarize_constructed_method \
   --dataset java_comparative_obfuscation --method mi_convnet_cr
 ```
 

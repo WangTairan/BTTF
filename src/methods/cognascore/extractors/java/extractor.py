@@ -172,35 +172,67 @@ class LexemeExtractor:
 
     def _extract_comments(self, source: str) -> list[LexemeChunk]:
         chunks: list[LexemeChunk] = []
-        i = 0
-        line = 1
-        while i < len(source):
-            if source.startswith("//", i):
-                end = source.find("\n", i + 2)
-                if end == -1:
-                    end = len(source)
-                lexeme = self._comment_normalize(source[i + 2:end])
+        for kind, start, end, line in self._comment_spans(source):
+            if kind == "line":
+                lexeme = self._comment_normalize(source[start + 2:end])
                 self._add(chunks, f"comment_{lexeme}", line, "COMMENT")
-                i = end
                 continue
 
-            if source.startswith("/*", i):
-                end = source.find("*/", i + 2)
-                block_end = len(source) if end == -1 else end
-                raw = source[i + 2:block_end]
-                current_line = line
-                for comment_line in self._split_block_comment(raw):
-                    lexeme = self._comment_normalize(comment_line)
-                    self._add(chunks, f"comment_{lexeme}", current_line, "COMMENT")
-                    current_line += 1
-                line += raw.count("\n")
-                i = block_end if end == -1 else end + 2
-                continue
-
-            if source[i] == "\n":
-                line += 1
-            i += 1
+            closing_chars = 2 if source[max(start, end - 2):end] == "*/" else 0
+            raw = source[start + 2:end - closing_chars]
+            for line_offset, raw_line in enumerate(raw.split("\n")):
+                comment_line = re.sub(r"^\s*\*+", "", raw_line).strip()
+                if not comment_line:
+                    continue
+                lexeme = self._comment_normalize(comment_line)
+                self._add(chunks, f"comment_{lexeme}", line + line_offset, "COMMENT")
         return chunks
+
+    def _comment_spans(self, source: str) -> list[tuple[str, int, int, int]]:
+        """Return real Java/C-like comments, excluding markers inside literals."""
+
+        spans: list[tuple[str, int, int, int]] = []
+        index = 0
+        line = 1
+        while index < len(source):
+            if source.startswith('"""', index):
+                end = self._skip_quoted_literal(source, index, '"""')
+                line += source[index:end].count("\n")
+                index = end
+                continue
+            if source[index] in {'"', "'"}:
+                end = self._skip_quoted_literal(source, index, source[index])
+                line += source[index:end].count("\n")
+                index = end
+                continue
+            if source.startswith("//", index):
+                end = source.find("\n", index + 2)
+                end = len(source) if end < 0 else end
+                spans.append(("line", index, end, line))
+                index = end
+                continue
+            if source.startswith("/*", index):
+                closing = source.find("*/", index + 2)
+                end = len(source) if closing < 0 else closing + 2
+                spans.append(("block", index, end, line))
+                line += source[index:end].count("\n")
+                index = end
+                continue
+            if source[index] == "\n":
+                line += 1
+            index += 1
+        return spans
+
+    def _skip_quoted_literal(self, source: str, start: int, delimiter: str) -> int:
+        index = start + len(delimiter)
+        while index < len(source):
+            if source.startswith(delimiter, index):
+                return index + len(delimiter)
+            if source[index] == "\\":
+                index = min(index + 2, len(source))
+            else:
+                index += 1
+        return len(source)
 
     def _extract_ast(self, tree) -> list[LexemeChunk]:
         chunks: list[LexemeChunk] = []
@@ -732,26 +764,11 @@ class LexemeExtractor:
         return out
 
     def _mask_comments(self, source: str) -> str:
-        result: list[str] = []
-        i = 0
-        while i < len(source):
-            if source.startswith("//", i):
-                end = source.find("\n", i + 2)
-                if end == -1:
-                    result.append(" " * (len(source) - i))
-                    break
-                result.append(" " * (end - i))
-                i = end
-                continue
-            if source.startswith("/*", i):
-                end = source.find("*/", i + 2)
-                block_end = len(source) if end == -1 else end + 2
-                block = source[i:block_end]
-                result.append("".join("\n" if char == "\n" else " " for char in block))
-                i = block_end
-                continue
-            result.append(source[i])
-            i += 1
+        result = list(source)
+        for _, start, end, _ in self._comment_spans(source):
+            for index in range(start, end):
+                if result[index] != "\n":
+                    result[index] = " "
         return "".join(result)
 
     def _is_regex(self, value: str) -> bool:

@@ -5,20 +5,17 @@ extracts typed cognitive chunks, measures conventional and visual code
 properties, embeds selected chunk views, and summarizes embedding geometry and
 adaptive cluster structure.
 
-Two reported routes consume the same stable feature tables:
-
-- **CognaScore ML**: a performance-oriented Ridge model using 18 frozen
-  features;
-- **CognaScore Compact**: an interpretable linear formula restricted to at
-  most five features.
+The retained CognaScore model is a Ridge predictor over 18 frozen features.
 
 Feature selection and ablation code is intentionally outside this package in
-`experiments/cognascore/`.
+`experiments/cognascore/selection/` and `experiments/cognascore/evaluation/`.
 
 ## Package structure
 
 - `extractors/java/`: javalang-based Java extraction with bounded member,
   method-body, and lexical handling for incomplete snippets;
+- `extractors/c_like.py`: explicit language-neutral lexical extraction for C,
+  C++, and CUDA without passing those languages through the Java parser;
 - `extractors/python_ast.py`: strict Python AST and tokenizer extraction;
 - `feature_database.py`: base, visual, chunk, type, and compression features;
 - `embedding_cache.py`: persistent SQLite embedding cache;
@@ -32,8 +29,9 @@ Feature selection and ablation code is intentionally outside this package in
 ## Chunk extraction
 
 Java snippets are first parsed directly. Member fragments are retried inside a
-synthetic enclosing class. Structurally truncated or non-Java snippets are
-handled by the language-neutral lexical extractor. Missing parsers and invalid
+synthetic enclosing class, and structurally truncated Java snippets use the
+bounded lexical path. C, C++, and CUDA always use the explicit C-like lexical
+extractor and are never passed to the Java parser. Missing parsers and invalid
 feature/cache state raise explicit errors; the pipeline does not silently
 substitute another embedding model or clustering family.
 
@@ -191,19 +189,6 @@ results/methods/cognascore_ml_consensus18_6dataset_sampled_margin/<dataset>/<emb
 ```
 
 The ranking and selection experiment that produced the frozen list lives in
-`experiments/cognascore/consensus_selection.py`. Keeping it outside the stable
+`experiments/cognascore/selection/consensus_selection.py`. Keeping it outside the stable
 runner prevents a new exploratory selection from silently changing the
 reported model.
-
-## CognaScore Compact
-
-The compact materializer is:
-
-```bash
-python -m src.methods.cognascore.runners.compact_formula
-```
-
-It retains a fixed four-feature linear formula and writes results under
-`results/methods/cognascore_compact/`. Alternative compact-formula searches are
-research experiments in `experiments/cognascore/compact_search.py`. Its default
-run covers the six established datasets.

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from .c_like import CLikeLexemeExtractor
 from .java import LexemeExtractor as JavaLexemeExtractor
 from .python_ast import PythonAstLexemeExtractor
 
-JAVA_FAMILY_LANGUAGES = {"java", "c", "cpp", "c++", "cuda"}
+C_LIKE_LANGUAGES = {"c", "cpp", "c++", "cuda"}
 
 
 class ChunkExtractor(Protocol):
@@ -20,6 +21,8 @@ def extractor_for_language(
     normalized = str(language or "java").strip().lower()
     if normalized in {"python", "py"}:
         return PythonAstLexemeExtractor(allow_fragments=allow_fragments)
-    if normalized in JAVA_FAMILY_LANGUAGES:
+    if normalized == "java":
         return JavaLexemeExtractor()
+    if normalized in C_LIKE_LANGUAGES:
+        return CLikeLexemeExtractor()
     raise ValueError(f"Unsupported CognaScore language: {language!r}")

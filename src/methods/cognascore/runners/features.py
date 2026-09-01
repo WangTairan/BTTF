@@ -9,7 +9,11 @@ from src.datasets import load_code_dataset
 from src.experiments.paths import dataset_name_for_path
 from src.experiments.registry import COGNASCORE_DEFAULT_MODEL
 
-from ..feature_database import extract_feature_row, write_feature_database
+from ..feature_database import (
+    BASE_FEATURE_BUILD_VERSION,
+    extract_feature_row,
+    write_feature_database,
+)
 from ..dataset_io import item_source_sha256
 from ..paths import BASE_FEATURE_ROOT
 from ..results import model_slug
@@ -113,6 +117,7 @@ def main() -> None:
                 "embedding_model_namespace": embedding_model,
                 "source": "direct_chunk_and_code_extraction",
                 "model_independent": True,
+                "base_feature_build_version": BASE_FEATURE_BUILD_VERSION,
                 "incremental_resume": bool(args.resume and not args.replace_existing),
                 "source_sha256_by_task": source_hashes,
                 "extracted_count": extracted_count,
@@ -157,9 +162,17 @@ def _load_reusable_rows(
     if not metadata_path.is_file():
         print(f"Ignoring {csv_path}: missing metadata.json", flush=True)
         return {}, {}
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    existing_version = metadata.get("base_feature_build_version")
+    if existing_version != BASE_FEATURE_BUILD_VERSION:
+        print(
+            f"Rebuilding {csv_path}: base-feature build version "
+            f"{existing_version!r} -> {BASE_FEATURE_BUILD_VERSION}",
+            flush=True,
+        )
+        return {}, {}
     with csv_path.open("r", newline="", encoding="utf-8") as handle:
         rows = {str(row["task_id"]): dict(row) for row in csv.DictReader(handle)}
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     stored_hashes = {
         str(task_id): str(source_hash)
         for task_id, source_hash in metadata.get("source_sha256_by_task", {}).items()

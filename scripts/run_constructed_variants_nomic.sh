@@ -24,6 +24,6 @@ done
 
 echo "Evaluating the frozen CognaScore model on both paired datasets."
 PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN:-python3}" \
-  -m experiments.cognascore.evaluate_constructed_variants
+  -m experiments.cognascore.evaluation.evaluate_constructed_variants
 
 echo "Constructed-dataset feature and evaluation pipeline complete."

@@ -3,8 +3,7 @@
 Stable readability methods and their materialization runners live here:
 
 - `cognascore/`: typed cognitive chunks, conventional code features,
-  embedding geometry, adaptive clustering, CognaScore ML, and CognaScore
-  Compact;
+  embedding geometry, adaptive clustering, and the frozen CognaScore model;
 - `rmc/`: Recursive Masking Complexity and its dataset runners;
 - `posnett/`: the deterministic Posnett readability formula;
 - `scalabrino/`: wrapper around the released Scalabrino implementation;

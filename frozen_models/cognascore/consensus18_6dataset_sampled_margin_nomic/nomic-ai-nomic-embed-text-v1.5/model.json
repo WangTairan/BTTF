@@ -1,10 +1,10 @@
 {
   "artifact_format_version": 1,
-  "created_at_utc": "2026-08-30T07:21:51.073583+00:00",
+  "created_at_utc": "2026-08-30T19:03:40.257480+00:00",
   "name": "consensus18_6dataset_sampled_margin_nomic",
   "embedding_model": "nomic-ai/nomic-embed-text-v1.5",
   "serialized_model": "model.joblib",
-  "serialized_model_sha256": "51d66d893627207f731b85190b322156f9fd9e341c8d5643a2bc4ed30c53a7bc",
+  "serialized_model_sha256": "916d2f64fe7f0a917c32ec21c6cbf8603b9016ac2aa071abeab67f50a3338ef4",
   "libraries": {
     "python_model_format": "joblib",
     "scikit_learn": "1.8.0",
@@ -37,73 +37,73 @@
         "dataset": "mbjp",
         "family": "base",
         "path": "artifacts/cognascore/features/base/mbjp/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "ced1069c6eb6c95d027754e80c2a92e49f95782ec87ed800d6dedd9d4381fc2f"
+        "sha256": "c8d4c8f7b735ae679b7b5d587fa62960ba584ecfb5206f8005401a696bf379f6"
       },
       {
         "dataset": "mbjp",
         "family": "embedding",
         "path": "artifacts/cognascore/features/embedding/mbjp/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "28c8f7d00628426cb1fc7b501450e25077de14fc6e4be84be48d770f80bbbc62"
+        "sha256": "8de50541b1de8cf794ff8b29cdc0ba48a903770e8650072f5b42dae21bd58fca"
       },
       {
         "dataset": "buse",
         "family": "base",
         "path": "artifacts/cognascore/features/base/buse/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "5a4be93ddccab3360559e16d3df0915be1e958d84c91cfb8cbe05a31563811a9"
+        "sha256": "e82476f337609053c682bf80edcd3954f262de1d3ef5a3f6c29dfe6b765961a9"
       },
       {
         "dataset": "buse",
         "family": "embedding",
         "path": "artifacts/cognascore/features/embedding/buse/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "731cec7f8c62c89208939ea20b6a8a994ac9802881d38979dc710114bb7b7e48"
+        "sha256": "d85c80b7cb5f4be5cec28e484ba3861e7803d671e9a07b7cf5bf1b937f0bdc82"
       },
       {
         "dataset": "dorn",
         "family": "base",
         "path": "artifacts/cognascore/features/base/dorn/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "15d0f9b00ab41fbd3eb5ced9c5d9e38112ae0e5e416878bfa64208b159084374"
+        "sha256": "1e446bef3886caefde1e59775301c839bc32b44336e2534f41b7ef90ba922c1b"
       },
       {
         "dataset": "dorn",
         "family": "embedding",
         "path": "artifacts/cognascore/features/embedding/dorn/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "34a9fd7082c2cc922294ef4c8a56dacc9f2a6d451e51d18d0ba001a2eca87989"
+        "sha256": "afd6f1719476ec4ba9e8df2669077f8bb8cd56296b7885429edaa7dd1d48d5fe"
       },
       {
         "dataset": "scalabrino",
         "family": "base",
         "path": "artifacts/cognascore/features/base/scalabrino/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "34398cea8e3547693b673cb3873aaf80d552c7627029e2b8757dfaced7758d0b"
+        "sha256": "fc96d4e0ba6df09ce534c311bd88c0eb9f9180c5e47f567fe53e3739eded8905"
       },
       {
         "dataset": "scalabrino",
         "family": "embedding",
         "path": "artifacts/cognascore/features/embedding/scalabrino/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "ea5fb491e1d4d511b279a057107f034c8497728ec3d0763ea3f78f43a1a70c17"
+        "sha256": "483245b540b27020c1151dadb35cac95d698b3d75fb27554f9878bc0f5d5a0b3"
       },
       {
         "dataset": "schnappinger",
         "family": "base",
         "path": "artifacts/cognascore/features/base/schnappinger/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "dfbfebb04ac540213d8589927fa3b3bf350d8abdad59177a95b22d6b891b8ef3"
+        "sha256": "4a1c35ef2c1d7d6804fac096f43c0a2b8d9ea6dab0a0631e98765098b5e93e78"
       },
       {
         "dataset": "schnappinger",
         "family": "embedding",
         "path": "artifacts/cognascore/features/embedding/schnappinger/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "d605741c939f3ba9d263122e8f258f17e4951cfe2b52576b6bea7a205658b1a6"
+        "sha256": "2ffc07593c1269baa8818140d18033165280877928a6738a8d36959fb257ab30"
       },
       {
         "dataset": "jetbrains",
         "family": "base",
         "path": "artifacts/cognascore/features/base/jetbrains/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "1ea98397a8158e16b62b09ae06ed1ab66b21764feb480c776eb445640f102688"
+        "sha256": "b741068c4ef33a1d23a484847967eff3b9a634b89515fdba46703fdf12468f5a"
       },
       {
         "dataset": "jetbrains",
         "family": "embedding",
         "path": "artifacts/cognascore/features/embedding/jetbrains/nomic-ai-nomic-embed-text-v1.5/features.csv",
-        "sha256": "49aa3f5b1e51034c3eee8e642bb9f6cb03bef2ebda9f7c835624f9b42f578cf5"
+        "sha256": "7fd5ed7671c2121504201e5f7bf74ce765264fc02dfbdfd4051767143a82006c"
       }
     ]
   },
@@ -146,24 +146,24 @@
     "ridge_alpha": 200.0,
     "seed": 42,
     "imputer_statistics": [
-      3.136363636363636,
+      3.1291666666666664,
       4.659684241323777,
       0.0,
       83.0,
       2.0,
-      0.2854038007448704,
+      0.29201378761361785,
       1.0889328063241106,
-      0.7652651875001486,
-      0.29382366201198334,
+      0.7729018339308646,
+      0.2872561644539645,
       0.0,
-      0.5974937501201928,
+      0.5992317070944042,
       0.0,
       0.0,
       0.0,
       0.0,
       0.5745014526745555,
-      0.0434782608695652,
-      0.1045896129811479
+      0.0526315789473684,
+      0.11460941847523645
     ],
     "training_feature_min": [
       0.0,
@@ -203,69 +203,69 @@
       0.88,
       2.1671634348837574,
       1.5714285714285714,
-      0.3285714285714285
+      0.4107142857142857
     ],
     "scaler_mean": [
-      3.3941440052632688,
+      3.3852357155729114,
       4.589348052979083,
-      0.1540852811884582,
+      0.15827350530410522,
       95.60363636363637,
-      3.590909090909091,
-      0.3278617118935269,
+      3.6363636363636362,
+      0.33483602353651176,
       1.481782359989807,
-      0.5493152174320572,
-      0.3280759639694853,
-      0.000259328936437503,
-      0.45778882504941787,
-      0.08921568237902436,
-      0.005329258871521341,
+      0.543506483576698,
+      0.3229703706823159,
+      0.0002593319754015809,
+      0.455679861879597,
+      0.08902412834965102,
+      0.005653281719980903,
       0.0022007579784576875,
-      0.10126447709741873,
-      0.5959613731156183,
-      0.1083763602868715,
-      0.10984570968992985
+      0.10530772241792882,
+      0.5956782652571969,
+      0.11492132328623439,
+      0.12270757914507524
     ],
     "scaler_scale": [
-      1.7978989434652717,
+      1.804973992692883,
       0.4578755568910406,
-      1.1016850060326626,
+      1.105924123712608,
       48.76113565549129,
-      4.285908102661887,
-      0.20854880757844285,
+      4.33700204944147,
+      0.21132451850410258,
       1.580374604738594,
-      0.4180536154588822,
-      0.2917427833303095,
-      0.005378631722487295,
-      0.3705010483934175,
-      0.16380604580664682,
-      0.03288329599821212,
+      0.42177323049615467,
+      0.2898168990433613,
+      0.005378633289050081,
+      0.37255235612050597,
+      0.1636442748059051,
+      0.03242293785201116,
       0.013202084719558537,
-      0.20646371190364338,
-      0.2951755733108239,
-      0.18223000059762678,
-      0.05369949080036631
+      0.20957526105206084,
+      0.29501561393926634,
+      0.183333887975262,
+      0.06372278510519747
     ],
     "ridge_coefficients": [
-      -0.07820284250434649,
-      -0.04342002063248438,
-      0.019997994671161142,
-      -0.03628947359695673,
-      -0.02268635198994713,
-      0.027551680779220895,
-      -0.01593054533392732,
-      -0.017192049600538307,
-      0.017637556160478924,
-      -0.003534264097834844,
-      -0.009718977182654742,
-      -0.007088678945433834,
-      -0.004103932826011543,
-      -0.017268423509953553,
-      -0.03958444441544467,
-      -0.022878441941218623,
-      -0.006630075504384281,
-      -0.024557272284074654
+      -0.07868121271910554,
+      -0.044711969915502456,
+      0.018997919779667923,
+      -0.035872911474439904,
+      -0.02145434469147376,
+      0.029226231458443577,
+      -0.015778326364179102,
+      -0.018665032500196296,
+      0.01761699826477599,
+      -0.003420442762725181,
+      -0.0065054146645783665,
+      -0.007832178193909025,
+      -0.003634959801107154,
+      -0.017216998990901112,
+      -0.03846100753151647,
+      -0.022620434895311053,
+      -0.006270696171361716,
+      -0.026419828271617114
     ],
-    "ridge_intercept": 0.49651529065877137,
+    "ridge_intercept": 0.4968030687908217,
     "prediction_bounds": [
       0.0,
       1.0

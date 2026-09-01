@@ -4,7 +4,7 @@
   "frozen_at": "2026-08-30",
   "selection_note": "The frozen 18-feature model with the handcrafted short-identifier context gate replaced by a reproducible mathematical-versus-application margin estimated from pinned open-source anchor snippets. Raw margin and raw distance variants are excluded; the normalized distance variant remains an ablation only.",
   "model_artifact": "frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/nomic-ai-nomic-embed-text-v1.5",
-  "serialized_model_sha256": "51d66d893627207f731b85190b322156f9fd9e341c8d5643a2bc4ed30c53a7bc",
+  "serialized_model_sha256": "916d2f64fe7f0a917c32ec21c6cbf8603b9016ac2aa071abeab67f50a3338ef4",
   "selection_evidence": {
     "protocol": "five-model L1 stability consensus",
     "embedding_models": 5,
@@ -18,7 +18,7 @@
     "all_selected_active_model_count": 5,
     "ranking_artifact": "experiments/cognascore/configs/evidence/consensus18_5model_full_ranking.csv",
     "selected_rank_artifact": "experiments/cognascore/configs/evidence/consensus18_selected_ranks.csv",
-    "selected_consensus_ranks": [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 16, 18, 19, 21, 24],
+    "selected_consensus_ranks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 23],
     "theory_driven_exclusions": {
       "cluster_size_variability": {
         "reason": "Excluded because these view/algorithm combinations produced unstable or redundant cluster-size variability signals.",

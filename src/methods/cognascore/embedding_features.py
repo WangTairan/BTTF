@@ -21,7 +21,7 @@ from .semantic_context import (
 
 OPTICS_XI = 0.05
 AUTO_KMEANS_K_VALUES = (2, 3, 4, 6, 8, 12, 16)
-EMBEDDING_FEATURE_BUILD_VERSION = 3
+EMBEDDING_FEATURE_BUILD_VERSION = 4
 
 COMMENT_RELEVANCE_FEATURE_NAMES = (
     "comment_code_similarity_mean",
@@ -46,7 +46,7 @@ VIEW_COVERAGE_SUFFIXES = (
 
 VIEW_FAMILY_SUFFIXES: dict[str, tuple[str, ...]] = {
     "embedding": (
-        "mean_cosine_to_centroid",
+        "mean_cosine_distance_to_centroid",
         "pairwise_cosine_std",
         "effective_rank",
         "first_pc_explained_variance",
@@ -161,7 +161,7 @@ def embedding_feature_definitions() -> list[EmbeddingFeatureDefinition]:
         EmbeddingFeatureDefinition("comment_code_similarity_min", "comment_code_relevance", "Minimum across comments of their maximum cosine similarity to a non-comment semantic chunk."),
         EmbeddingFeatureDefinition("irrelevant_comment_ratio", "comment_code_relevance", "Source-count-weighted fraction of comments below the embedding model's calibrated relevance threshold."),
         EmbeddingFeatureDefinition("irrelevant_comment_deficit_mean", "comment_code_relevance", "Mean positive distance below the embedding model's calibrated relevance threshold."),
-        EmbeddingFeatureDefinition("short_identifier_candidate_ratio", "semantic_context_gate", "Mathematical-style short identifiers divided by identifier chunks."),
+        EmbeddingFeatureDefinition("short_identifier_candidate_ratio", "semantic_context_gate", "Configured short-identifier candidates divided by identifier chunks."),
         EmbeddingFeatureDefinition("short_identifier_math_application_margin_mean", "semantic_context_gate", "Mean mathematical-minus-application cosine-similarity margin across candidate-bearing code segments."),
     ]
     defined = {definition.name for definition in definitions}
@@ -352,7 +352,7 @@ def _geometry_features(x: np.ndarray, weights: np.ndarray) -> dict[str, float]:
     pairwise_mean, pairwise_std = _weighted_pairwise_cosine_stats(x, weights)
     effective_rank, first_pc = _effective_rank_features(x, weights)
     return {
-        "embedding_mean_cosine_to_centroid": _weighted_mean(distances, weights),
+        "embedding_mean_cosine_distance_to_centroid": _weighted_mean(distances, weights),
         "embedding_pairwise_cosine_std": pairwise_std,
         "embedding_effective_rank": effective_rank,
         "embedding_first_pc_explained_variance": first_pc,

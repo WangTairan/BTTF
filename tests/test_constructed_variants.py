@@ -4,7 +4,9 @@ import math
 
 from src.datasets import load_code_dataset
 from src.experiments.paths import dataset_name_for_path
-from experiments.cognascore.evaluate_constructed_variants import summarize_paired_variants
+from experiments.cognascore.evaluation.evaluate_constructed_variants import (
+    summarize_paired_variants,
+)
 
 
 CONSTRUCTED_ROOT = Path("datasets/constructed")

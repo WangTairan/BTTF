@@ -23,6 +23,6 @@ PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
 
 echo "[3/3] Summarizing paired interference responses."
 PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
-  -m experiments.cognascore.summarize_constructed_method \
+  -m experiments.cognascore.evaluation.summarize_constructed_method \
   --dataset java_comparative_obfuscation \
   --method mi_convnet_cr

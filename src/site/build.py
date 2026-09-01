@@ -80,7 +80,7 @@ class Run:
     def label(self) -> str:
         if is_rmc_method(self.method):
             return f"{run_group_label(self.method, self.model)} on {dataset_label(self.dataset)}"
-        if self.method in COGNASCORE_ML_METHODS or self.method == "cognascore_compact":
+        if self.method in COGNASCORE_ML_METHODS:
             return f"{method_label(self.method)} on {dataset_label(self.dataset)}"
         model = f" · {short_model_label(self.model)}" if self.model else ""
         return f"{method_label(self.method)} on {dataset_label(self.dataset)}{model}"
@@ -175,8 +175,6 @@ def discover_runs() -> list[Run]:
         if dataset in HIDDEN_DATASETS:
             continue
         model = infer_model(method, parts, data)
-        if method == "cognascore_compact" and model != "Qwen/Qwen3-Embedding-0.6B":
-            continue
         runs.append(Run(method=method, dataset=dataset, model=model, summary_path=path, data=data))
     if SHOW_RMC_HISTORY_RUNS:
         for method, history_root in RMC_HISTORY_RUNS.items():
@@ -488,7 +486,7 @@ if score &gt; limit:
                     <h3>Embedding-space geometry</h3>
                     <p>Semantic concentration versus dispersion.</p>
                     <div class="feature-tags embedding-tags">
-                      <code>all__embedding_mean_cosine_to_centroid</code><code>all__embedding_pairwise_cosine_std</code><code>structural_core__embedding_effective_rank</code><code>all__embedding_first_pc_explained_variance</code>
+                      <code>all__embedding_mean_cosine_distance_to_centroid</code><code>all__embedding_pairwise_cosine_std</code><code>structural_core__embedding_effective_rank</code><code>all__embedding_first_pc_explained_variance</code>
                     </div>
                   </div>
                   <div class="feature-box cluster-box">
@@ -520,22 +518,6 @@ if score &gt; limit:
             <h3>Collinearity control</h3>
             <p class="muted wide">Consensus candidates are considered in ranked order. A later candidate is rejected when its absolute Pearson or Spearman correlation with any retained feature exceeds 0.9, and selection continues with the next non-redundant candidate.</p>
           </section>
-        """
-    if method == "cognascore_compact":
-        return """
-          <p class="muted">CognaScore Compact is the interpretable route. It keeps the model linear after simple monotonic transformations and uses four features that represent visible density, code scale, local chunk irregularity, and semantic dispersion among identifier chunks.</p>
-          <p class="formula">score = 1.43341466 - 0.30461071 * log1p(operator_density) - 0.227365225 * sqrt(log_LOC) - 0.0463927146 * log1p(std_chunks_per_source_line) - 0.196472171 * log1p(qwen_only_identifier_auto_kmeans_cluster_diameter_max)</p>
-          <p class="formula">training: Ridge(alpha = 30), target = per-dataset rank-percentile readability, training datasets = Scalabrino + Schnappinger + Dorn + Buse.</p>
-          <table class="records compact-feature-table">
-            <thead><tr><th>Feature</th><th>Interpretation</th></tr></thead>
-            <tbody>
-              <tr><td><code>operator_density</code></td><td>Operator characters per visible code area. Higher density means the reader sees more symbolic operations in a small visual region.</td></tr>
-              <tr><td><code>log_LOC</code></td><td>Log-transformed non-empty lines of code. It controls for code scale while reducing the dominance of very long snippets.</td></tr>
-              <tr><td><code>std_chunks_per_source_line</code></td><td>Line-level unevenness of CognaScore chunks. Larger values indicate that cognitive chunks are concentrated irregularly across lines.</td></tr>
-              <tr><td><code>qwen_only_identifier_auto_kmeans_cluster_diameter_max</code></td><td>Maximum semantic diameter among automatically selected K-means clusters over identifier chunks. Larger values indicate more dispersed naming concepts within the same identifier view.</td></tr>
-            </tbody>
-          </table>
-          <p class="muted">The formula follows a single principle: readable code should be visually sparse, moderate in scale, locally even, and semantically concentrated. All four learned coefficients are negative, so increases in these burden signals lower the predicted readability score. This entry prioritizes a small, defensible formula; it is strongest on Buse, Schnappinger, Dorn, and JetBrains, while Scalabrino is better handled by the high-feature ML route.</p>
         """
     if method == "loc_baseline":
         return """
@@ -1626,7 +1608,7 @@ def run_sort_key(run: Run) -> str:
 
 
 def run_group_key(run: Run) -> tuple[str, str | None]:
-    if run.method in COGNASCORE_ML_METHODS or run.method == "cognascore_compact":
+    if run.method in COGNASCORE_ML_METHODS:
         return run.method, None
     if run.model:
         return run.method, run.model
@@ -1634,7 +1616,7 @@ def run_group_key(run: Run) -> tuple[str, str | None]:
 
 
 def run_group_label(method: str, model: str | None) -> str:
-    if method in COGNASCORE_ML_METHODS or method == "cognascore_compact":
+    if method in COGNASCORE_ML_METHODS:
         return method_label(method)
     if model is None:
         return method_label(method)
@@ -1651,7 +1633,7 @@ def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
 
 def short_run_label(run: Run) -> str:
     model = short_model_label(run.model)
-    if run.method in COGNASCORE_ML_METHODS or run.method == "cognascore_compact":
+    if run.method in COGNASCORE_ML_METHODS:
         return method_label(run.method)
     if is_rmc_method(run.method) and model:
         return f"{method_label(run.method)} {model}"

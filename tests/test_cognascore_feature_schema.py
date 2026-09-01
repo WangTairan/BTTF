@@ -21,6 +21,14 @@ class CognaScoreFeatureSchemaTest(unittest.TestCase):
         )
         self.assertEqual(len(embedding_names), len(set(embedding_names)))
         self.assertEqual(len(embedding_names), 102)
+        self.assertIn(
+            "all__embedding_mean_cosine_distance_to_centroid",
+            embedding_names,
+        )
+        self.assertNotIn(
+            "all__embedding_mean_cosine_to_centroid",
+            embedding_names,
+        )
 
     def test_frozen_model_uses_only_current_features(self) -> None:
         available = {

@@ -5,7 +5,6 @@ METHOD_LABELS = {
     "dorn": "Dorn (retrained)",
     "dorn_retrained": "Dorn (retrained)",
     "cognascore_ml_consensus18_6dataset_sampled_margin": "CognaScore ML",
-    "cognascore_compact": "CognaScore Compact",
     "llm": "LLM prompt",
     "llm_prompt": "LLM",
 }
@@ -27,7 +26,6 @@ METHOD_ORDER = (
     "dorn",
     "dorn_retrained",
     "cognascore_ml_consensus18_6dataset_sampled_margin",
-    "cognascore_compact",
     "llm_prompt",
     "llm",
     "loc_baseline",

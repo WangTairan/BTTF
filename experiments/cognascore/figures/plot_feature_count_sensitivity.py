@@ -62,8 +62,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def make_args(ridge_alpha: float, c: float) -> argparse.Namespace:
-    from experiments.cognascore import feature_selection as fs
-    from experiments.cognascore.selection_policy import with_default_exclusions
+    from experiments.cognascore.selection import feature_selection as fs
+    from experiments.cognascore.selection.selection_policy import with_default_exclusions
     from src.experiments.registry import DATASETS
     from src.methods.cognascore.dataset_io import dataset_output_name
     from src.methods.cognascore.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT
@@ -97,8 +97,8 @@ def calculate_curve(
     args: argparse.Namespace,
     ranking: list[dict[str, str]],
 ) -> list[dict[str, object]]:
-    from experiments.cognascore import consensus_selection as consensus
-    from experiments.cognascore import feature_selection as fs
+    from experiments.cognascore.selection import consensus_selection as consensus
+    from experiments.cognascore.selection import feature_selection as fs
 
     runtime_args = make_args(args.ridge_alpha, args.c)
     dataset_names = runtime_args.dataset_names
@@ -170,7 +170,7 @@ def pooled_fold_assignments(
     """Build matching task-grouped folds independently within each dataset."""
     import pandas as pd
 
-    from experiments.cognascore.cross_validate_fixed import fold_assignments
+    from experiments.cognascore.evaluation.cross_validate_fixed import fold_assignments
 
     metadata = pd.DataFrame(row_metadata)
     assignments = np.full(len(metadata), -1, dtype=int)
@@ -196,7 +196,7 @@ def pooled_cv_prediction(
     seed: int,
 ) -> np.ndarray:
     """Return pooled out-of-fold predictions for one fixed Top-K feature set."""
-    from experiments.cognascore import feature_selection as fs
+    from experiments.cognascore.selection import feature_selection as fs
 
     x = np.asarray(bundle["x"])
     row_metadata = list(bundle["row_metadata"])

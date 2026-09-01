@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+import io
+import keyword
+import re
 from statistics import mean, pstdev
 from typing import Sequence
+import tokenize
 
 import numpy as np
 
-from src.methods.posnett.method import JAVA_KEYWORDS, JAVA_OPERATORS, TOKEN_PATTERN, strip_comments
+from src.methods.posnett.method import (
+    C_LIKE_KEYWORDS,
+    C_LIKE_LANGUAGES,
+    JAVA_KEYWORDS,
+    JAVA_OPERATORS,
+    TOKEN_PATTERN,
+    strip_comments,
+)
 
 from .lexeme import LexemeChunk
 
@@ -13,13 +24,15 @@ from .lexeme import LexemeChunk
 def visual_layout_features(
     code: str,
     chunks: Sequence[LexemeChunk],
+    *,
+    language: str = "java",
 ) -> dict[str, float]:
     lines = code.splitlines()
     loc = len([line for line in lines if line.strip()])
     physical_line_count = max(len(lines), 1)
-    stripped_code = strip_comments(code)
-    tokens_by_line = _tokens_by_line(stripped_code)
-    non_whitespace_area = sum(len(line.strip()) for line in lines)
+    tokens_by_line = _tokens_by_line(code, language=language)
+    keywords, operators, comparisons, literal_words = _token_categories(language)
+    non_whitespace_area = sum(1 for char in code if not char.isspace())
 
     identifier_positions: list[int] = []
     keyword_positions: list[int] = []
@@ -42,11 +55,13 @@ def visual_layout_features(
 
     for line_number, token in tokens_by_line:
         index = min(max(line_number - 1, 0), physical_line_count - 1)
-        if token in JAVA_KEYWORDS:
+        if token in literal_words:
+            continue
+        if token in keywords:
             keyword_positions.append(line_number)
             keyword_area += len(token)
             per_line_keyword_counts[index] += 1.0
-        elif token in JAVA_OPERATORS:
+        if token in operators:
             operator_positions.append(line_number)
             operator_area += len(token)
             if token == ".":
@@ -55,12 +70,14 @@ def visual_layout_features(
             elif token == ",":
                 comma_positions.append(line_number)
                 per_line_comma_counts[index] += 1.0
-            elif token in {"==", "!=", ">=", "<=", ">", "<"}:
-                comparison_positions.append(line_number)
-                per_line_comparison_counts[index] += 1.0
             if token in {"(", ")"}:
                 per_line_parenthesis_counts[index] += 1.0
-        elif _is_number_token(token):
+        if token in comparisons:
+            comparison_positions.append(line_number)
+            per_line_comparison_counts[index] += 1.0
+        if token in keywords or token in operators:
+            continue
+        if _is_number_token(token):
             number_positions.append(line_number)
             per_line_number_counts[index] += 1.0
         elif _is_identifier_token(token):
@@ -105,17 +122,141 @@ def visual_layout_features(
     }
 
 
-def _tokens_by_line(code: str) -> list[tuple[int, str]]:
+PYTHON_WORD_OPERATORS = frozenset(("and", "or", "not", "in", "is"))
+PYTHON_OPERATORS = frozenset(JAVA_OPERATORS) | PYTHON_WORD_OPERATORS | frozenset(
+    ("**", "//", "@", "**=", "//=", "@=", ":=")
+)
+PYTHON_COMPARISONS = frozenset(("==", "!=", ">=", "<=", ">", "<", "in", "is"))
+PYTHON_KEYWORDS = frozenset(keyword.kwlist) - PYTHON_WORD_OPERATORS
+PYTHON_LITERAL_WORDS = frozenset(("True", "False", "None"))
+C_LIKE_WORD_OPERATORS = frozenset(
+    ("and", "or", "not", "bitand", "bitor", "xor", "compl", "and_eq", "or_eq", "xor_eq", "not_eq")
+)
+C_LIKE_VISUAL_OPERATORS = frozenset(JAVA_OPERATORS) | C_LIKE_WORD_OPERATORS
+C_LIKE_COMPARISONS = frozenset(("==", "!=", ">=", "<=", ">", "<", "not_eq"))
+C_LIKE_LITERAL_WORDS = frozenset(("true", "false", "nullptr"))
+JAVA_VISUAL_OPERATORS = frozenset(JAVA_OPERATORS) | frozenset(("instanceof",))
+JAVA_COMPARISONS = frozenset(("==", "!=", ">=", "<=", ">", "<", "instanceof"))
+JAVA_LITERAL_WORDS = frozenset(("true", "false", "null"))
+PYTHON_VISUAL_TOKEN_PATTERN = re.compile(
+    r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|'
+    r"\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\b[A-Za-z_]\w*\b|"
+    r"\*\*=|//=|<<=|>>=|==|!=|<=|>=|\+=|-=|\*=|/=|%=|&=|\|=|\^=|@=|"
+    r"\*\*|//|<<|>>|:=|->|[+\-*/%@&|^~<>=()[\]{},.:;]"
+)
+
+
+def _token_categories(
+    language: str,
+) -> tuple[
+    set[str] | frozenset[str],
+    set[str] | frozenset[str],
+    frozenset[str],
+    frozenset[str],
+]:
+    normalized = str(language or "java").strip().lower()
+    if normalized in {"python", "py"}:
+        return (
+            PYTHON_KEYWORDS,
+            PYTHON_OPERATORS,
+            PYTHON_COMPARISONS,
+            PYTHON_LITERAL_WORDS,
+        )
+    if normalized in C_LIKE_LANGUAGES:
+        return (
+            C_LIKE_KEYWORDS,
+            C_LIKE_VISUAL_OPERATORS,
+            C_LIKE_COMPARISONS,
+            C_LIKE_LITERAL_WORDS,
+        )
+    if normalized == "java":
+        return (
+            JAVA_KEYWORDS,
+            JAVA_VISUAL_OPERATORS,
+            JAVA_COMPARISONS,
+            JAVA_LITERAL_WORDS,
+        )
+    raise ValueError(f"Unsupported visual-feature language: {language!r}")
+
+
+def _tokens_by_line(code: str, *, language: str = "java") -> list[tuple[int, str]]:
+    normalized = str(language or "java").strip().lower()
+    if normalized in {"python", "py"}:
+        return _python_tokens_by_line(code)
+    if normalized != "java" and normalized not in C_LIKE_LANGUAGES:
+        raise ValueError(f"Unsupported visual-feature language: {language!r}")
+    return _regex_tokens_by_line(strip_comments(code), TOKEN_PATTERN)
+
+
+def _python_tokens_by_line(code: str) -> list[tuple[int, str]]:
+    try:
+        tokens = []
+        for token in tokenize.generate_tokens(io.StringIO(code).readline):
+            if token.type in {tokenize.NAME, tokenize.NUMBER, tokenize.OP, tokenize.STRING}:
+                tokens.append((int(token.start[0]), token.string))
+        return tokens
+    except (IndentationError, SyntaxError, tokenize.TokenError):
+        # Dorn contains intentionally incomplete Python snippets.  The lexical
+        # path remains language-aware: ``#`` is a comment and ``//`` is an
+        # operator, while comment markers inside strings stay untouched.
+        return _regex_tokens_by_line(
+            _mask_python_comments(code),
+            PYTHON_VISUAL_TOKEN_PATTERN,
+        )
+
+
+def _regex_tokens_by_line(code: str, pattern: re.Pattern[str]) -> list[tuple[int, str]]:
     line_starts = [0]
     for index, char in enumerate(code):
         if char == "\n":
             line_starts.append(index + 1)
     line_starts_array = np.asarray(line_starts, dtype=int)
     tokens: list[tuple[int, str]] = []
-    for match in TOKEN_PATTERN.finditer(code):
+    for match in pattern.finditer(code):
         line_number = int(np.searchsorted(line_starts_array, match.start(), side="right"))
         tokens.append((line_number, match.group(0)))
     return tokens
+
+
+def _mask_python_comments(code: str) -> str:
+    """Blank Python comments without treating operators or strings as comments."""
+
+    chars = list(code)
+    index = 0
+    quote: str | None = None
+    triple = False
+    while index < len(code):
+        if quote is not None:
+            delimiter = quote * (3 if triple else 1)
+            if code.startswith(delimiter, index):
+                index += len(delimiter)
+                quote = None
+                triple = False
+                continue
+            if code[index] == "\\":
+                index += 2
+            else:
+                index += 1
+            continue
+
+        if code.startswith("'''", index) or code.startswith('"""', index):
+            quote = code[index]
+            triple = True
+            index += 3
+            continue
+        if code[index] in {"'", '"'}:
+            quote = code[index]
+            index += 1
+            continue
+        if code[index] == "#":
+            end = code.find("\n", index)
+            end = len(code) if end < 0 else end
+            for position in range(index, end):
+                chars[position] = " "
+            index = end
+            continue
+        index += 1
+    return "".join(chars)
 
 
 def _is_identifier_token(token: str) -> bool:

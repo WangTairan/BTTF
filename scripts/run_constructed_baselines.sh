@@ -43,7 +43,7 @@ for index in "${!DATASET_PATHS[@]}"; do
 
   for method in posnett dorn loc; do
     PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
-      -m experiments.cognascore.summarize_constructed_method \
+      -m experiments.cognascore.evaluation.summarize_constructed_method \
       --dataset "${dataset_key}" \
       --method "${method}"
   done

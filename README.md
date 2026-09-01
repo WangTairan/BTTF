@@ -5,12 +5,8 @@ code-readability research. CognaScore represents source code with typed
 cognitive chunks, conventional code measurements, embedding-space geometry,
 and adaptive clustering summaries.
 
-Two CognaScore routes are retained:
-
-- **CognaScore ML** uses data-driven stability screening and a Ridge model. The
-  frozen model uses 18 features.
-- **CognaScore Compact** is restricted to at most five features and exposes a
-  short linear formula.
+The retained CognaScore model uses data-driven stability screening and a Ridge
+predictor over 18 frozen features.
 
 Comparison methods are isolated as separate method families, including RMC,
 Posnett, Dorn, Scalabrino, direct LLM scoring, and the paper-aligned Mi
@@ -134,7 +130,7 @@ selection analysis. Exploratory runs must use a separate output directory and
 cannot overwrite the frozen scorer.
 
 ```bash
-python -m experiments.cognascore.consensus_selection \
+python -m experiments.cognascore.selection.consensus_selection \
   --select-top 30 --candidate-limit 220 \
   --c 0.08 --ridge-alpha 200 --stability-rounds 200 \
   --fit-dataset mbjp --fit-dataset buse --fit-dataset dorn \
@@ -149,11 +145,10 @@ runs independent screens for the five embedding-model instantiations,
 aggregates their canonical feature rankings, filters redundant candidates, and
 fits the final Ridge model with one chosen embedding instantiation.
 
-Materialize the retained scoring routes from existing feature tables:
+Materialize the retained scorer from existing feature tables:
 
 ```bash
 python -m src.methods.cognascore.runners.supervised_ridge
-python -m src.methods.cognascore.runners.compact_formula
 ```
 
 The frozen ML runner fits one dataset-balanced model on MBJP, Buse, Dorn,

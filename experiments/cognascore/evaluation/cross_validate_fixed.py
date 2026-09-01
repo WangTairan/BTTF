@@ -11,11 +11,7 @@ from statistics import mean
 
 import numpy as np
 import pandas as pd
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import Ridge
 from sklearn.model_selection import KFold, StratifiedKFold
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.methods.cognascore.paths import (
@@ -25,10 +21,9 @@ from src.methods.cognascore.paths import (
 )
 from src.methods.cognascore.runners.supervised_ridge import (
     SELECTED_FEATURES,
-    dataset_balanced_sample_weight,
+    fit_ridge,
     load_combined_features,
     load_selected_features,
-    regression_target,
 )
 
 
@@ -201,8 +196,9 @@ def main() -> None:
             "are pooled across datasets"
         ),
         "training": (
-            "one pooled Ridge per fold with median imputation, standardization, "
-            "and inverse-dataset-size sample weighting"
+            "one pooled bounded Ridge per fold with median imputation, "
+            "training-range clipping, standardization, and inverse-dataset-size "
+            "sample weighting; identical estimator pipeline to the frozen model"
         ),
         "metrics": metrics,
         "fold_sizes": fold_sizes,
@@ -261,20 +257,12 @@ def fit_model(
     *,
     selected_features: list[str] | tuple[str, ...] = tuple(SELECTED_FEATURES),
 ):
-    target = regression_target(train)
-    eligible = np.ones(len(train), dtype=bool)
-    sample_weight = dataset_balanced_sample_weight(train, eligible)
-    model = make_pipeline(
-        SimpleImputer(strategy="median"),
-        StandardScaler(),
-        Ridge(alpha=ridge_alpha),
+    return fit_ridge(
+        train,
+        np.ones(len(train), dtype=bool),
+        ridge_alpha,
+        list(selected_features),
     )
-    model.fit(
-        train.loc[:, selected_features].to_numpy(dtype=float),
-        target,
-        ridge__sample_weight=sample_weight,
-    )
-    return model
 
 
 def report_metrics(frame: pd.DataFrame) -> dict[str, dict[str, float | int | str]]:

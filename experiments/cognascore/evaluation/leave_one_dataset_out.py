@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from experiments.cognascore.cross_validate_fixed import (
+from experiments.cognascore.evaluation.cross_validate_fixed import (
     DEFAULT_DATASETS,
     best_mcc_threshold,
     fit_model,
@@ -143,7 +143,11 @@ def main() -> None:
     write_prediction_rows(output / "predictions.csv", rows)
     payload = {
         "method": f"CognaScore ML fixed-{len(selected_features)} leave-one-dataset-out evaluation",
-        "protocol": "one Ridge fit on N-1 datasets for each completely held-out dataset",
+        "protocol": (
+            "one bounded Ridge fit on N-1 datasets for each held-out dataset, "
+            "using the frozen model's median-imputation, training-range-clipping, "
+            "standardization, and inverse-dataset-size weighting pipeline"
+        ),
         "ridge_alpha": args.ridge_alpha,
         "datasets": list(datasets),
         "selected_feature_count": len(selected_features),

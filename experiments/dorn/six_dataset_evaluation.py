@@ -17,7 +17,7 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from experiments.cognascore.cross_validate_fixed import fold_assignments
+from experiments.cognascore.evaluation.cross_validate_fixed import fold_assignments
 from src.datasets import load_code_dataset
 from src.experiments.registry import DATASETS
 from src.experiments.statistics import spearman

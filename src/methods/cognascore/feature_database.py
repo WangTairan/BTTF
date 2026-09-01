@@ -19,6 +19,8 @@ from .extractors import ChunkExtractor, extractor_for_language
 from .member_access_features import member_access_features
 from .visual_features import visual_layout_features
 
+BASE_FEATURE_BUILD_VERSION = 3
+
 
 @dataclass(frozen=True)
 class FeatureDefinition:
@@ -85,7 +87,7 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("chunk_y_mean", "cognascore_visual_chunk", "Normalized mean vertical position of CognaScore chunks."),
         FeatureDefinition("chunk_line_span", "cognascore_visual_chunk", "Number of source lines spanned by all CognaScore chunks."),
         FeatureDefinition("mean_chunks_per_source_line", "cognascore_chunk", "Mean chunk count on source lines that contain chunks."),
-        FeatureDefinition("std_chunks_per_source_line", "cognascore_chunk", "Standard deviation of per-line chunk count."),
+        FeatureDefinition("std_chunks_per_source_line", "cognascore_chunk", "Standard deviation of chunk count across source lines that contain chunks."),
         FeatureDefinition("unique_lexeme_ratio", "cognascore_chunk", "Distinct chunk lexemes divided by all chunks."),
         FeatureDefinition("log_avg_chunk_chars", "cognascore_chunk", "log(1 + average chunk character length)."),
         FeatureDefinition("chunk_chars_cv", "cognascore_chunk", "Coefficient of variation for chunk character length."),
@@ -211,7 +213,11 @@ def extract_feature_row(
             for chunk_type in ("ARITHMETIC", "BITWISE", "COMPARISON", "LOGICAL")
         )
     )
-    visual_features = visual_layout_features(item.content, chunks)
+    visual_features = visual_layout_features(
+        item.content,
+        chunks,
+        language=str(item.metadata.get("language", "java")),
+    )
     access_features = member_access_features(item.content)
 
     row: dict[str, Any] = {

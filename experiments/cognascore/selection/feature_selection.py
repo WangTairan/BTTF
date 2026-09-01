@@ -31,7 +31,7 @@ from src.methods.cognascore.paths import (
 from src.methods.cognascore.results import model_slug
 from src.methods.cognascore.modeling import BoundedRidge, TrainingRangeClipper
 from src.methods.cognascore.dataset_io import dataset_output_name
-from experiments.cognascore.selection_policy import with_default_exclusions
+from experiments.cognascore.selection.selection_policy import with_default_exclusions
 
 
 DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schnappinger")
