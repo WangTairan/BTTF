@@ -122,6 +122,40 @@ function initializeResultMatrices() {
   document.querySelectorAll("[data-result-matrix]").forEach((matrix) => updateResultMatrixBest(matrix));
 }
 
+function updatePairFilters(filters) {
+  const panel = filters.closest(".panel");
+  if (!panel) return;
+  const selected = filters.querySelector('[data-pair-category][aria-pressed="true"]');
+  const category = selected ? selected.dataset.pairCategory : "all";
+  const changedButton = filters.querySelector("[data-changed-only]");
+  const changedOnly = changedButton && changedButton.getAttribute("aria-pressed") === "true";
+  panel.querySelectorAll("[data-pair-row]").forEach((row) => {
+    const categoryMatch = category === "all" || row.dataset.category === category;
+    const changedMatch = !changedOnly || row.dataset.changed === "true";
+    row.hidden = !(categoryMatch && changedMatch);
+  });
+}
+
+function selectPairCategory(button) {
+  const filters = button.closest("[data-pair-filters]");
+  if (!filters) return;
+  filters.querySelectorAll("[data-pair-category]").forEach((item) => {
+    const active = item === button;
+    item.setAttribute("aria-pressed", active ? "true" : "false");
+    item.classList.toggle("active", active);
+  });
+  updatePairFilters(filters);
+}
+
+function toggleChangedPairs(button) {
+  const filters = button.closest("[data-pair-filters]");
+  if (!filters) return;
+  const active = button.getAttribute("aria-pressed") !== "true";
+  button.setAttribute("aria-pressed", active ? "true" : "false");
+  button.classList.toggle("active", active);
+  updatePairFilters(filters);
+}
+
 function dragInsertBefore(container, dragging, target, clientX) {
   if (!container || !dragging || !target || dragging === target) return;
   const box = target.getBoundingClientRect();
@@ -143,6 +177,16 @@ function syncMatrixOrderFromFilters(filters) {
 }
 
 document.addEventListener("click", (event) => {
+  const pairCategory = event.target.closest("[data-pair-category]");
+  if (pairCategory) {
+    selectPairCategory(pairCategory);
+    return;
+  }
+  const changedOnly = event.target.closest("[data-changed-only]");
+  if (changedOnly) {
+    toggleChangedPairs(changedOnly);
+    return;
+  }
   const methodFilter = event.target.closest(".method-filter[data-method-group]");
   if (methodFilter) {
     if (methodFilter.dataset.dragJustEnded === "true") {

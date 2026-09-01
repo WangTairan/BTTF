@@ -2,8 +2,9 @@ METHOD_LABELS = {
     "loc_baseline": "LOC",
     "posnett": "Posnett",
     "scalabrino": "Scalabrino",
-    "dorn": "Dorn (retrained)",
-    "dorn_retrained": "Dorn (retrained)",
+    "dorn": "Dorn",
+    "dorn_retrained": "Dorn",
+    "mi_convnet_cr_reproduction": "Mi",
     "cognascore_ml_consensus18_6dataset_sampled_margin": "CognaScore ML",
     "llm": "LLM prompt",
     "llm_prompt": "LLM",
@@ -16,8 +17,8 @@ DATASET_LABELS = {
     "jetbrains": "JetBrains",
     "dorn": "Dorn",
     "schnappinger": "Schnappinger",
-    "java_comparative_obfuscation": "Java Independent Interferences",
-    "python_comparative_degradation": "Python Independent Interferences",
+    "java_comparative_obfuscation": "Java Interferences",
+    "python_comparative_degradation": "Python Interferences",
 }
 
 METHOD_ORDER = (
@@ -25,6 +26,7 @@ METHOD_ORDER = (
     "scalabrino",
     "dorn",
     "dorn_retrained",
+    "mi_convnet_cr_reproduction",
     "cognascore_ml_consensus18_6dataset_sampled_margin",
     "llm_prompt",
     "llm",
@@ -55,6 +57,8 @@ MODEL_LABELS = {
     "jinaai/jina-embeddings-v2-base-code": "Jina Code",
     "Qwen-Qwen3-Embedding-0.6B": "Qwen3 0.6B",
     "Qwen/Qwen3-Embedding-0.6B": "Qwen3 0.6B",
+    "dorn_retrained_7feature": "7 features",
+    "mi_2018_convnet_cr_independent_reproduction": "ConvNetCR",
 }
 
 

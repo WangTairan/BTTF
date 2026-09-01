@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import html
 import json
 import shutil
@@ -61,6 +62,8 @@ RMC_HISTORY_RUNS: dict[str, Path] = {}
 _TASK_RESULT_CACHE: dict[tuple[Path, str], dict[str, Any] | None] = {}
 _RUN_SCORE_CACHE: dict[str, dict[str, float | None]] = {}
 _DATASET_TOTAL_CACHE: dict[str, int | None] = {}
+_PAIRED_SUMMARY_CACHE: dict[Path, dict[str, Any] | None] = {}
+_CONTINUOUS_TARGET_CACHE: dict[str, dict[str, float]] = {}
 COGNASCORE_ML_METHODS = {
     COGNASCORE_ML_METHOD,
 }
@@ -70,6 +73,12 @@ INDEPENDENT_INTERFERENCE_DATASETS = (
     "java_comparative_obfuscation",
     "python_comparative_degradation",
 )
+METHOD_NOTE_MARKERS = {
+    COGNASCORE_ML_METHOD: "*",
+    "dorn": "†",
+    "dorn_retrained": "†",
+    "mi_convnet_cr_reproduction": "‡",
+}
 
 
 @dataclass(frozen=True)
@@ -98,6 +107,10 @@ class Run:
 
     @property
     def metric_name(self) -> str:
+        if self.interference_response is not None:
+            return "Changed-pair response"
+        if self.dataset == "jetbrains" and self.continuous_spearman is not None:
+            return "Spearman"
         if self.data.get("mcc") is not None:
             return "MCC"
         if self.data.get("spearman") is not None:
@@ -109,6 +122,10 @@ class Run:
 
     @property
     def metric_value(self) -> float | None:
+        if self.interference_response is not None:
+            return self.interference_response
+        if self.dataset == "jetbrains" and self.continuous_spearman is not None:
+            return self.continuous_spearman
         value = self.data.get("mcc")
         if value is None:
             value = self.data.get("spearman")
@@ -118,7 +135,49 @@ class Run:
 
     @property
     def count(self) -> int | None:
+        paired = self.paired_summary
+        if paired is not None:
+            return as_int(paired.get("overall", {}).get("changed_pair_count"))
         return self.data.get("valid_count") or len(self.valid_rows()) or self.data.get("count")
+
+    @property
+    def paired_summary(self) -> dict[str, Any] | None:
+        if self.dataset not in INDEPENDENT_INTERFERENCE_DATASETS:
+            return None
+        if isinstance(self.data.get("overall"), dict):
+            return self.data
+        path = self.summary_path.with_name("paired_summary.json")
+        if path not in _PAIRED_SUMMARY_CACHE:
+            if not path.exists():
+                _PAIRED_SUMMARY_CACHE[path] = None
+            else:
+                value = json.loads(path.read_text(encoding="utf-8"))
+                _PAIRED_SUMMARY_CACHE[path] = value if isinstance(value, dict) else None
+        return _PAIRED_SUMMARY_CACHE[path]
+
+    @property
+    def interference_response(self) -> float | None:
+        paired = self.paired_summary
+        if paired is None:
+            return None
+        return as_float(
+            paired.get("overall", {}).get("changed_only_score_decrease_rate")
+        )
+
+    @property
+    def continuous_spearman(self) -> float | None:
+        targets = continuous_targets(self.dataset)
+        pairs = [
+            (as_float(row.get("score", row.get("rmc_score"))), targets.get(str(row.get("task_id"))))
+            for row in self.data.get("results", [])
+        ]
+        valid = [(score, target) for score, target in pairs if score is not None and target is not None]
+        if len(valid) < 2:
+            return None
+        return spearman(
+            [float(score) for score, _ in valid],
+            [float(target) for _, target in valid],
+        )
 
     def valid_rows(self) -> list[dict[str, Any]]:
         rows = []
@@ -180,6 +239,8 @@ def discover_runs() -> list[Run]:
             continue
         model = infer_model(method, parts, data)
         runs.append(Run(method=method, dataset=dataset, model=model, summary_path=path, data=data))
+    runs.extend(discover_paired_only_runs(runs))
+    runs.extend(discover_cognascore_interference_runs(runs))
     if SHOW_RMC_HISTORY_RUNS:
         for method, history_root in RMC_HISTORY_RUNS.items():
             for path in sorted(history_root.glob("*/gpt41-nano/summary.json")):
@@ -195,6 +256,113 @@ def discover_runs() -> list[Run]:
                     )
                 )
     return sorted(runs, key=lambda run: (method_rank(run.method), dataset_rank(run.dataset), run.model or ""))
+
+
+def discover_paired_only_runs(existing_runs: list[Run]) -> list[Run]:
+    """Expose paired experiments whose per-sample files have no aggregate summary."""
+    existing = {(run.method, run.dataset) for run in existing_runs}
+    runs: list[Run] = []
+    for path in sorted(RESULTS_DIR.glob("*/**/paired_summary.json")):
+        rel = path.relative_to(RESULTS_DIR)
+        if len(rel.parts) != 3:
+            continue
+        method, dataset, _ = rel.parts
+        if (
+            method not in METHOD_ORDER
+            or dataset not in INDEPENDENT_INTERFERENCE_DATASETS
+            or (method, dataset) in existing
+        ):
+            continue
+        paired = json.loads(path.read_text(encoding="utf-8"))
+        results = [
+            json.loads(result_path.read_text(encoding="utf-8"))
+            for result_path in sorted(path.parent.glob("*.json"))
+            if result_path.name != "paired_summary.json"
+        ]
+        dataset_path = (
+            ROOT
+            / "datasets"
+            / "constructed"
+            / (
+                "java-comparative-obfuscation-class-100"
+                if dataset == "java_comparative_obfuscation"
+                else "python-comparative-degradation-class-100"
+            )
+        )
+        data = {
+            "method": paired.get("method") or method,
+            "dataset": str(dataset_path.relative_to(ROOT)),
+            "model": "paper-aligned reproduction",
+            "valid_count": len(results),
+            "error_count": as_int(paired.get("failed_variant_count")) or 0,
+            "evaluation_metric": "changed_pair_response",
+            "results": results,
+        }
+        runs.append(
+            Run(
+                method=method,
+                dataset=dataset,
+                model=None,
+                summary_path=path,
+                data=data,
+            )
+        )
+    return runs
+
+
+def discover_cognascore_interference_runs(existing_runs: list[Run]) -> list[Run]:
+    existing = {(run.method, run.dataset) for run in existing_runs}
+    root = (
+        ROOT
+        / "results"
+        / "experiments"
+        / "cognascore"
+        / "consensus18_6dataset_sampled_margin_nomic"
+        / "constructed_variants_nomic"
+    )
+    runs: list[Run] = []
+    for dataset in INDEPENDENT_INTERFERENCE_DATASETS:
+        if (COGNASCORE_ML_METHOD, dataset) in existing:
+            continue
+        summary_path = root / dataset / "summary.json"
+        predictions_path = root / dataset / "predictions.csv"
+        if not summary_path.is_file() or not predictions_path.is_file():
+            continue
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        with predictions_path.open(newline="", encoding="utf-8") as handle:
+            results = [
+                {
+                    "task_id": row["task_id"],
+                    "score": as_float(row.get("score")),
+                    "readability_score": None,
+                }
+                for row in csv.DictReader(handle)
+            ]
+        summary["method"] = COGNASCORE_ML_METHOD
+        summary["dataset"] = str(
+            Path("datasets")
+            / "constructed"
+            / (
+                "java-comparative-obfuscation-class-100"
+                if dataset == "java_comparative_obfuscation"
+                else "python-comparative-degradation-class-100"
+            )
+        )
+        summary["model"] = "nomic-ai/nomic-embed-text-v1.5"
+        summary["valid_count"] = len(results)
+        summary["error_count"] = 0
+        summary["evaluation_metric"] = "changed_pair_response"
+        summary["results"] = results
+        runs.append(
+            Run(
+                method=COGNASCORE_ML_METHOD,
+                dataset=dataset,
+                model="nomic-ai/nomic-embed-text-v1.5",
+                summary_path=summary_path,
+                data=summary,
+            )
+        )
+    return runs
 
 
 def infer_model(method: str, parts: tuple[str, ...], data: dict[str, Any]) -> str | None:
@@ -264,7 +432,7 @@ def write_index(runs: list[Run]) -> None:
             cells.append(f"<td>{render_run_cell(cell_runs, best_runs)}</td>")
         rows.append(
             f'<tr data-method-group="{escape(group_id)}">'
-            f'<th><a href="methods/{slugify(method)}.html">{escape(label)}</a></th>'
+            f'<th><a href="methods/{slugify(method)}.html">{annotated_method_label(method, label)}</a></th>'
             + "".join(cells)
             + "</tr>"
         )
@@ -284,6 +452,7 @@ def write_index(runs: list[Run]) -> None:
           <thead><tr><th>Method / Dataset</th>{header}</tr></thead>
           <tbody>{''.join(rows)}</tbody>
         </table>
+        {method_notes_html({method for method, _ in run_groups})}
       </div>
     </section>
     {render_interference_overview()}
@@ -294,6 +463,7 @@ def write_index(runs: list[Run]) -> None:
 def render_interference_overview() -> str:
     methods = (
         (
+            COGNASCORE_ML_METHOD,
             "CognaScore ML",
             ROOT
             / "results"
@@ -303,18 +473,19 @@ def render_interference_overview() -> str:
             / "constructed_variants_nomic",
             False,
         ),
-        ("Dorn (retrained)", RESULTS_DIR / "dorn_retrained", True),
-        ("Posnett", RESULTS_DIR / "posnett", True),
-        ("Scalabrino", RESULTS_DIR / "scalabrino", True),
+        ("dorn_retrained", "Dorn", RESULTS_DIR / "dorn_retrained", True),
+        ("posnett", "Posnett", RESULTS_DIR / "posnett", True),
+        ("scalabrino", "Scalabrino", RESULTS_DIR / "scalabrino", True),
         (
-            "Mi ConvNetCR (reproduced)",
+            "mi_convnet_cr_reproduction",
+            "Mi",
             RESULTS_DIR / "mi_convnet_cr_reproduction",
             True,
         ),
-        ("LOC", RESULTS_DIR / "loc_baseline", True),
+        ("loc_baseline", "LOC", RESULTS_DIR / "loc_baseline", True),
     )
     values: dict[tuple[str, str], float] = {}
-    for label, root, paired in methods:
+    for _, label, root, paired in methods:
         for dataset in INDEPENDENT_INTERFERENCE_DATASETS:
             path = root / dataset / ("paired_summary.json" if paired else "summary.json")
             if not path.is_file():
@@ -332,7 +503,7 @@ def render_interference_overview() -> str:
         for dataset in INDEPENDENT_INTERFERENCE_DATASETS
     }
     rows = []
-    for label, _, _ in methods:
+    for method, label, _, _ in methods:
         cells = []
         for dataset in INDEPENDENT_INTERFERENCE_DATASETS:
             value = values.get((label, dataset))
@@ -345,7 +516,9 @@ def render_interference_overview() -> str:
                 f'<strong>{value * 100:.1f}%</strong>'
                 '<span>changed-pair response</span></a></td>'
             )
-        rows.append(f"<tr><th>{escape(label)}</th>{''.join(cells)}</tr>")
+        rows.append(
+            f'<tr><th>{method_link_html(method, label, "")}</th>{"".join(cells)}</tr>'
+        )
 
     return f"""
     <section class="panel">
@@ -361,6 +534,7 @@ def render_interference_overview() -> str:
           <thead><tr><th>Method</th><th><a href="datasets/java_comparative_obfuscation.html">Java</a></th><th><a href="datasets/python_comparative_degradation.html">Python</a></th></tr></thead>
           <tbody>{''.join(rows)}</tbody>
         </table>
+        {method_notes_html({method for method, _, _, _ in methods})}
       </div>
     </section>
     """
@@ -384,7 +558,7 @@ def render_run_cell(runs: list[Run], best_runs: set[str]) -> str:
         return '<span class="missing">Not run</span>'
     links = []
     for run in runs:
-        value = format_metric(run.metric_value)
+        value = format_run_metric(run)
         coverage = format_coverage(run)
         class_name = "result-link best" if run.slug in best_runs else "result-link"
         score = run.metric_value
@@ -420,19 +594,41 @@ def dataset_total(run: Run) -> int | None:
     return total
 
 
+def continuous_targets(dataset: str) -> dict[str, float]:
+    if dataset in _CONTINUOUS_TARGET_CACHE:
+        return _CONTINUOUS_TARGET_CACHE[dataset]
+    if dataset != "jetbrains":
+        _CONTINUOUS_TARGET_CACHE[dataset] = {}
+        return {}
+    items = load_code_dataset(ROOT / "datasets" / "jetbrains")
+    targets = {
+        str(item.task_id): float(item.readability_score)
+        for item in items
+        if as_float(item.readability_score) is not None
+    }
+    _CONTINUOUS_TARGET_CACHE[dataset] = targets
+    return targets
+
+
 def write_dataset_pages(runs: list[Run]) -> None:
     for dataset in sorted({run.dataset for run in runs}, key=dataset_rank):
         dataset_runs = [run for run in runs if run.dataset == dataset]
+        if dataset in INDEPENDENT_INTERFERENCE_DATASETS:
+            write_interference_dataset_page(dataset, dataset_runs)
+            continue
+        sample_table_runs = [
+            run for run in dataset_runs if run.method != "loc_baseline"
+        ]
         run_rows = "".join(run_row(run, prefix="../") for run in dataset_runs)
         items = load_dataset_items(dataset_runs)
         write_sample_pages(dataset, items, dataset_runs)
         sample_rows = "".join(
-            dataset_sample_row(dataset, index, item, dataset_runs)
+            dataset_sample_row(dataset, index, item, sample_table_runs)
             for index, item in enumerate(items, start=1)
         )
         score_headers = "".join(
             sortable_header(short_run_label(run), run_sort_key(run))
-            for run in dataset_runs
+            for run in sample_table_runs
         )
         human_label = dataset_human_label(dataset_runs)
         body = f"""
@@ -447,6 +643,7 @@ def write_dataset_pages(runs: list[Run]) -> None:
             <thead><tr><th>Method</th><th>Model</th><th>Metric</th><th>Count</th></tr></thead>
             <tbody>{run_rows}</tbody>
           </table>
+          {method_notes_html({run.method for run in dataset_runs})}
         </section>
         <section class="panel">
           <div class="panel-head compact">
@@ -462,6 +659,285 @@ def write_dataset_pages(runs: list[Run]) -> None:
         </section>
         """
         write_page(DOCS_DIR / "datasets" / f"{slugify(dataset)}.html", dataset_label(dataset), body, prefix="../")
+
+
+def write_interference_dataset_page(dataset: str, runs: list[Run]) -> None:
+    items = load_dataset_items(runs)
+    by_group: dict[str, list[Any]] = {}
+    for item in items:
+        group_id = str(item.metadata.get("group_id") or item.task_id)
+        by_group.setdefault(group_id, []).append(item)
+
+    score_sets = interference_score_sets(dataset, runs)
+    pairs: list[tuple[Any, Any, bool]] = []
+    for group_items in by_group.values():
+        originals = [item for item in group_items if is_original_interference_item(item)]
+        if len(originals) != 1:
+            raise ValueError(
+                f"Expected exactly one original in interference group; got {len(originals)}"
+            )
+        original = originals[0]
+        variants = sorted(
+            (item for item in group_items if item is not original),
+            key=lambda item: (
+                str(item.metadata.get("category") or ""),
+                as_int(item.metadata.get("order")) or 0,
+                str(item.task_id),
+            ),
+        )
+        for variant in variants:
+            changed = interference_item_changed(original, variant)
+            pairs.append((original, variant, changed))
+
+    pairs.sort(
+        key=lambda pair: (
+            str(pair[1].metadata.get("category") or ""),
+            str(pair[1].metadata.get("interference") or ""),
+            str(pair[1].metadata.get("group_id") or ""),
+        )
+    )
+    write_interference_pair_pages(dataset, by_group, score_sets)
+
+    method_headers = "".join(
+        f'<th>{method_link_html(method, label, "../")}</th>'
+        for method, label, _ in score_sets
+    )
+    rows = "".join(
+        interference_pair_row(dataset, original, variant, changed, score_sets)
+        for original, variant, changed in pairs
+    )
+    changed_count = sum(changed for _, _, changed in pairs)
+    categories = sorted(
+        {
+            readable_interference_name(variant.metadata.get("category"))
+            for _, variant, _ in pairs
+        }
+    )
+    category_buttons = (
+        '<button class="pair-filter active" type="button" data-pair-category="all" aria-pressed="true">All categories</button>'
+        + "".join(
+            f'<button class="pair-filter" type="button" data-pair-category="{escape(slugify(category))}" aria-pressed="false">{escape(category)}</button>'
+            for category in categories
+        )
+    )
+    body = f"""
+    <section class="panel">
+      <p class="eyebrow">Paired dataset</p>
+      <h1>{escape(dataset_label(dataset))}</h1>
+      <p class="muted wide">Every interference is evaluated against the matched original from the same source group. Positive score differences mean that the method assigned lower readability to the transformed version.</p>
+      <div class="stats dataset-stats">
+        {stat("Source groups", str(len(by_group)))}
+        {stat("Paired variants", str(len(pairs)))}
+        {stat("Source-changing pairs", str(changed_count))}
+        {stat("Language", "Java" if dataset.startswith("java") else "Python")}
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head compact"><div><h2>Original–variant comparisons</h2><p class="muted">Open a pair to inspect the original and transformed source side by side.</p></div></div>
+      <div class="pair-filters" data-pair-filters>
+        <div class="pair-category-filters">{category_buttons}</div>
+        <button class="pair-filter pair-changed-toggle" type="button" data-changed-only aria-pressed="false">Changed only</button>
+      </div>
+      <div class="matrix-wrap">
+        <table class="records pair-table">
+          <thead><tr><th>Pair</th><th>Category</th><th>Interference</th><th>Changed</th>{method_headers}</tr></thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+      {method_notes_html({method for method, _, _ in score_sets})}
+    </section>
+    """
+    write_page(
+        DOCS_DIR / "datasets" / f"{slugify(dataset)}.html",
+        dataset_label(dataset),
+        body,
+        prefix="../",
+    )
+
+
+def interference_score_sets(
+    dataset: str, runs: list[Run]
+) -> list[tuple[str, str, dict[str, float | None]]]:
+    preferred = {
+        COGNASCORE_ML_METHOD: 0,
+        "dorn_retrained": 1,
+        "posnett": 2,
+        "scalabrino": 3,
+        "mi_convnet_cr_reproduction": 4,
+        "loc_baseline": 5,
+    }
+    ordered = []
+    for run in sorted(runs, key=lambda run: preferred.get(run.method, 99)):
+        ordered.append((run.method, method_label(run.method), run_score_by_task(run)))
+    return ordered
+
+
+def is_original_interference_item(item: Any) -> bool:
+    metadata = item.metadata
+    return bool(
+        metadata.get("is_baseline_variant")
+        or metadata.get("is_baseline")
+        or str(item.task_id).endswith("-SRC")
+        or str(metadata.get("stage") or "").lower() == "original"
+    )
+
+
+def interference_item_changed(original: Any, variant: Any) -> bool:
+    original_hash = original.metadata.get("content_sha256")
+    variant_hash = variant.metadata.get("content_sha256")
+    if original_hash is not None and variant_hash is not None:
+        return str(original_hash) != str(variant_hash)
+    return original.content != variant.content
+
+
+def interference_pair_row(
+    dataset: str,
+    original: Any,
+    variant: Any,
+    changed: bool,
+    score_sets: list[tuple[str, str, dict[str, float | None]]],
+) -> str:
+    score_cells = "".join(
+        interference_delta_cell(scores.get(str(original.task_id)), scores.get(str(variant.task_id)))
+        for _, _, scores in score_sets
+    )
+    href = f"../samples/{slugify(dataset)}/{slugify(str(variant.task_id))}.html"
+    label = str(variant.metadata.get("display_label") or variant.task_id)
+    category = readable_interference_name(variant.metadata.get("category"))
+    return (
+        f'<tr data-pair-row data-category="{escape(slugify(category))}" data-changed="{"true" if changed else "false"}">'
+        f'<td><a href="{href}">{escape(label)}</a><br><small>{escape(str(variant.metadata.get("unit_name") or variant.metadata.get("source") or ""))}</small></td>'
+        f"<td>{escape(category)}</td>"
+        f"<td>{escape(readable_interference_name(variant.metadata.get('interference') or variant.metadata.get('stage')))}</td>"
+        f"<td>{'Yes' if changed else 'No'}</td>"
+        f"{score_cells}</tr>"
+    )
+
+
+def interference_delta_cell(original: float | None, variant: float | None) -> str:
+    if original is None or variant is None:
+        return '<td><span class="missing">Not available</span></td>'
+    delta = float(original) - float(variant)
+    state = "pair-good" if delta > 0 else "pair-bad" if delta < 0 else "pair-tie"
+    return f'<td class="{state}"><strong>{delta:+.4f}</strong><br><small>{original:.4f} → {variant:.4f}</small></td>'
+
+
+def readable_interference_name(value: Any) -> str:
+    return str(value or "Unknown").replace("_", " ").replace("-", " ").title()
+
+
+def write_interference_pair_pages(
+    dataset: str,
+    by_group: dict[str, list[Any]],
+    score_sets: list[tuple[str, str, dict[str, float | None]]],
+) -> None:
+    sample_dir = DOCS_DIR / "samples" / slugify(dataset)
+    sample_dir.mkdir(parents=True, exist_ok=True)
+    for group_items in by_group.values():
+        original = next(item for item in group_items if is_original_interference_item(item))
+        variants = [item for item in group_items if item is not original]
+        write_interference_original_page(dataset, original, variants, sample_dir)
+        for variant in variants:
+            write_interference_pair_page(
+                dataset, original, variant, score_sets, sample_dir
+            )
+
+
+def write_interference_original_page(
+    dataset: str, original: Any, variants: list[Any], sample_dir: Path
+) -> None:
+    links = "".join(
+        "<tr>"
+        f'<td><a href="{slugify(str(variant.task_id))}.html">{escape(str(variant.metadata.get("display_label") or variant.task_id))}</a></td>'
+        f"<td>{escape(readable_interference_name(variant.metadata.get('category')))}</td>"
+        f"<td>{escape(readable_interference_name(variant.metadata.get('interference') or variant.metadata.get('stage')))}</td>"
+        "</tr>"
+        for variant in sorted(variants, key=lambda item: as_int(item.metadata.get("order")) or 0)
+    )
+    body = f"""
+    <section class="panel">
+      <p class="eyebrow">Original source</p>
+      <h1>{escape(str(original.metadata.get("unit_name") or original.task_id))}</h1>
+      <p class="muted">{escape(str(original.metadata.get("source_path") or original.metadata.get("group_id") or ""))}</p>
+    </section>
+    <section class="panel"><h2>Original code</h2><pre class="code-block"><code>{escape(original.content)}</code></pre></section>
+    <section class="panel"><h2>Matched interference variants</h2><table class="records"><thead><tr><th>Variant</th><th>Category</th><th>Interference</th></tr></thead><tbody>{links}</tbody></table></section>
+    """
+    write_page(
+        sample_dir / f"{slugify(str(original.task_id))}.html",
+        str(original.task_id),
+        body,
+        prefix="../../",
+    )
+
+
+def write_interference_pair_page(
+    dataset: str,
+    original: Any,
+    variant: Any,
+    score_sets: list[tuple[str, str, dict[str, float | None]]],
+    sample_dir: Path,
+) -> None:
+    changed = interference_item_changed(original, variant)
+    score_rows = "".join(
+        interference_pair_score_row(
+            method,
+            label,
+            scores.get(str(original.task_id)),
+            scores.get(str(variant.task_id)),
+        )
+        for method, label, scores in score_sets
+    )
+    body = f"""
+    <section class="panel">
+      <p class="eyebrow">Matched comparison</p>
+      <h1>{escape(str(variant.metadata.get("unit_name") or variant.task_id))}</h1>
+      <div class="stats">
+        {stat("Dataset", dataset_label(dataset))}
+        {stat("Category", readable_interference_name(variant.metadata.get("category")))}
+        {stat("Interference", readable_interference_name(variant.metadata.get("interference") or variant.metadata.get("stage")))}
+        {stat("Source changed", "Yes" if changed else "No")}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Original and transformed source</h2>
+      <div class="paired-code-grid">
+        <article><h3>Original</h3><p class="muted"><a href="{slugify(str(original.task_id))}.html">{escape(str(original.task_id))}</a></p><pre class="code-block"><code>{escape(original.content)}</code></pre></article>
+        <article><h3>Interference variant</h3><p class="muted">{escape(str(variant.task_id))}</p><pre class="code-block"><code>{escape(variant.content)}</code></pre></article>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Paired score response</h2>
+      <p class="muted">A positive difference means the transformed version received a lower readability score.</p>
+      <table class="records"><thead><tr><th>Method</th><th>Original</th><th>Variant</th><th>Score decrease</th><th>Response</th></tr></thead><tbody>{score_rows}</tbody></table>
+      {method_notes_html({method for method, _, _ in score_sets})}
+    </section>
+    """
+    write_page(
+        sample_dir / f"{slugify(str(variant.task_id))}.html",
+        str(variant.task_id),
+        body,
+        prefix="../../",
+    )
+
+
+def interference_pair_score_row(
+    method: str,
+    label: str,
+    original: float | None,
+    variant: float | None,
+) -> str:
+    if original is None or variant is None:
+        values = '<td colspan="4"><span class="missing">Not available</span></td>'
+    else:
+        delta = float(original) - float(variant)
+        response = "Lower readability" if delta > 0 else "Higher readability" if delta < 0 else "Tie"
+        state = "pair-good" if delta > 0 else "pair-bad" if delta < 0 else "pair-tie"
+        values = (
+            f"<td>{original:.4f}</td><td>{variant:.4f}</td>"
+            f'<td class="{state}"><strong>{delta:+.4f}</strong></td><td>{response}</td>'
+        )
+    return f'<tr><td>{method_link_html(method, label, "../../")}</td>{values}</tr>'
 
 
 def write_method_pages(runs: list[Run]) -> None:
@@ -505,15 +981,14 @@ def method_description(method: str) -> str:
         feature_counts = cognascore_feature_category_counts(COGNASCORE_ML_FEATURES)
         selected_feature_rows = cognascore_selected_feature_rows()
         training_note = (
-            "The current ML route first ranks features independently under five "
-            "embedding models, then retains a compact consensus set whose feature names "
-            "are stable across embedding spaces. After the feature set is fixed, the final "
-            "readability score is fitted with Ridge regression using the Nomic feature "
-            f"instantiation. The selected {len(COGNASCORE_ML_FEATURES)} features are evaluated on MBJP, Buse, Dorn, "
-            "Scalabrino, Schnappinger, and JetBrains."
+            "The five embedding-model feature matrices are screened independently rather "
+            "than concatenated. After consensus ranking and construct-validity review, the "
+            f"same fixed {len(COGNASCORE_ML_FEATURES)}-feature representation is instantiated "
+            "separately under each embedding model and used to train an independent Ridge "
+            "readability predictor."
         )
         return f"""
-          <p class="muted wide">CognaScore ML is motivated by a cognitive view of code readability: a reader does not process code as a flat token stream, but maintains short-lived semantic chunks in working memory while tracking visual density, local irregularity, and relationships among related program elements. We therefore build an initial feature library from code layout, cognitive chunks, chunk types, embedding-space geometry, and automatic clustering over embedded chunks. The supervised model is used to test whether this feature space contains predictive readability signal.</p>
+          <p class="muted wide">CognaScore combines handcrafted code-level measurements with semantic representations derived from embedded cognitive chunks. Its code-level features describe code size and layout, lexical and Halstead statistics, visual organization, compression behavior, cognitive-chunk structure, chunk-type distributions, and identifier characteristics. Its embedding-derived features characterize four chunk views—<code>all</code>, <code>only_identifier</code>, <code>semantic_core</code>, and <code>structural_core</code>—through embedding geometry, adaptive clustering, short-identifier context, and comment–code relevance.</p>
           <figure class="feature-diagram">
             <figcaption>
               <span>Feature engineering view before selection</span>
@@ -593,10 +1068,11 @@ if score &gt; limit:
               </section>
             </div>
           </figure>
-          <p class="muted wide">The initial ML feature table contains code-scale, visual-layout, chunk-inventory, identifier-quality, type-aware chunk, compression, embedding-geometry, semantic-context, and adaptive-clustering features. The stable schema contains 98 base features plus 99 embedding-derived features for each model. Feature selection is performed as a cross-embedding consensus: L1 logistic stability screening is run separately under Nomic, Jina Code, Qwen3, Snowflake Arctic, and Voyage Nano; canonical feature names are aggregated and candidates above the collinearity threshold are replaced by the next-ranked non-redundant feature. The final score is a Ridge model over the fixed consensus feature set. {escape(training_note)}</p>
+          <p class="muted wide">Each embedding-model instantiation begins with 197 candidates: 95 shared code-level features and 102 features derived from that embedding representation. A theory-driven eligibility policy removes 16 non-portable or insufficiently interpretable diagnostic features, leaving 181 features for formal screening. L1-regularized logistic-regression stability selection is run independently under Nomic Embed Text v1.5, Qwen3 Embedding 0.6B, Jina Embeddings v2 Base Code, Snowflake Arctic Embed M v2.0, and Voyage 4 Nano. Canonically matched features are combined into a cross-model consensus ranking and audited for redundancy, portability, and interpretability. {escape(training_note)}</p>
+          <p class="muted wide">For readability prediction, human scores are converted to within-dataset rank percentiles and samples are weighted inversely by dataset size. Missing values are median-imputed, features are clipped to their training-set ranges and standardized, and Ridge regression is fitted with <code>alpha = 200</code>. Predictions are bounded to <code>[0, 1]</code>, with larger values indicating greater readability.</p>
           <section class="method-note">
             <h2>Current frozen feature set</h2>
-            <p class="muted wide">The final ML model uses {len(COGNASCORE_ML_FEATURES)} selected features: {feature_counts['base']} base features, {feature_counts['embedding_derived']} embedding-derived features, {feature_counts['compression']} compression feature, and {feature_counts['semantic_context']} semantic-context features. The final Ridge model uses the Nomic instantiation.</p>
+            <p class="muted wide">The fixed representation uses {len(COGNASCORE_ML_FEATURES)} selected features: {feature_counts['base']} base features, {feature_counts['embedding_derived']} embedding-derived features, {feature_counts['compression']} compression feature, and {feature_counts['semantic_context']} semantic-context features. All selected features occur within the first 24 positions of the five-model consensus ranking and receive nonzero support from all five embedding models.</p>
             <table class="records compact-feature-table">
               <thead><tr><th>Feature</th><th>One-sentence interpretation</th></tr></thead>
               <tbody>{selected_feature_rows}</tbody>
@@ -607,25 +1083,33 @@ if score &gt; limit:
         """
     if method == "loc_baseline":
         return """
-          <p class="muted">A length-only control. It predicts that shorter snippets are more readable and uses no syntax, token, chunk, embedding, or supervised feature information.</p>
+          <p class="muted">LOC is the number of non-empty source lines and serves as a simple size-based readability baseline. It uses no learned parameters or semantic representation.</p>
           <p class="formula">score = LOC</p>
-          <p class="formula">LOC is the number of non-empty source lines. Lower score means predicted more readable, so continuous Spearman correlations are expected to be negative.</p>
+          <p class="formula">Smaller values correspond to shorter code; consequently, a negative correlation with human readability is the expected direction.</p>
         """
     if method == "posnett":
         return """
-          <p class="muted">Our implementation of the Posnett logistic readability model using Java tokens, Halstead volume, LOC, and byte entropy.</p>
-          <p class="formula">readability = 1 / (1 + exp(-z)), z = 8.87 - 0.033 * V + 0.40 * LOC - 1.5 * H</p>
+          <p class="muted">The fixed readability model proposed by Posnett et al. is evaluated with its published coefficients and is not retrained on our labels. Here, <code>V</code> is Halstead volume, <code>L</code> is the number of source lines, and <code>H</code> is source-code byte entropy.</p>
+          <p class="formula">z = 8.87 - 0.033V + 0.40L - 1.5H</p>
+          <p class="formula">P(readable) = 1 / (1 + exp(-z))</p>
         """
     if method == "scalabrino":
         return """
-          <p class="muted">The original Scalabrino model, run through the released Java tool and classifier.</p>
-          <p class="muted">It is a traditional feature-based model over structural, visual, and textual code metrics; no tuned hyperparameters are set in our runner.</p>
+          <p class="muted">The comprehensive readability model of Scalabrino et al. is evaluated using the authors' released Java archive and pretrained classifier. Method-level Java snippets are placed in a minimal enclosing class when required by the released tool. Samples that cannot be processed are omitted rather than assigned fallback predictions.</p>
+        """
+    if method in {"dorn", "dorn_retrained"}:
+        return """
+          <p class="muted">Because no pretrained Dorn model was released, we reconstruct it using the public Dorn feature data and the released implementations of its visual metrics. Metrics defined for fewer than 80% of the training samples are excluded; seven features are selected through a forward wrapper evaluated with stratified 10-fold accuracy; and logistic regression is fitted on all 360 original Dorn samples. The readable-class probability is used as the continuous readability score.</p>
+        """
+    if method == "mi_convnet_cr_reproduction":
+        return """
+          <p class="muted">This is our reconstruction of the character-level ConvNetCR branch described by Mi et al., not the complete DeepCRM model whose full implementation and trained weights were not released. It follows the published architecture of three line-spanning convolution banks with 100 feature maps per bank, followed by ReLU activation, global max pooling, dropout, and a two-class output layer.</p>
+          <p class="muted">The model is trained on the highest and lowest readability quartiles of Buse, the Java subset of Dorn, and Scalabrino, with the middle half of each score distribution excluded. Its readable-class probability is used as the continuous score.</p>
         """
     if method in {"llm", "llm_prompt"}:
         prompt = LLM_READABILITY_PROMPT_TEMPLATE.format(code="{code}")
         return f"""
-          <p class="muted">Our direct LLM scoring baseline: the model reads the source text and returns a readability score on a 0-20 scale.</p>
-          <p class="muted">Key parameter: model is shown in the run table.</p>
+          <p class="muted">Following Ouédraogo et al., we use a developer-guided zero-shot prompt as the direct LLM baseline. Their study found that zero-shot prompting obtained the lowest mean absolute error against human readability scores; it also avoids introducing demonstration-selection bias. The same prompt is applied to every sample without access to its human label. The evaluated model is shown in the run table.</p>
           <h2>Prompt</h2>
           <pre class="code-block"><code>{escape(prompt)}</code></pre>
         """
@@ -795,8 +1279,8 @@ def write_run_pages(runs: list[Run]) -> None:
           <p class="eyebrow">Run</p>
           <h1>{escape(run.label)}</h1>
           <div class="stats">
-            {stat("Metric", f"{run.metric_name} {format_metric(run.metric_value)}")}
-            {stat("Valid", str(data.get("valid_count") or data.get("count") or "n/a"))}
+            {stat("Metric", f"{run.metric_name} {format_run_metric(run)}")}
+            {stat("Valid", str(run.count or "n/a"))}
             {stat("Errors", str(data.get("error_count") or 0))}
             {stat("Masks", str(data.get("total_mask_count") or "n/a"))}
           </div>
@@ -924,9 +1408,9 @@ def readable_metric(value: Any) -> str:
 def run_row(run: Run, prefix: str) -> str:
     return (
         "<tr>"
-        f'<td><a href="{prefix}runs/{run.slug}.html">{escape(short_run_label(run))}</a></td>'
+        f'<td><a href="{prefix}runs/{run.slug}.html">{annotated_method_label(run.method, short_run_label(run))}</a></td>'
         f"<td>{escape(short_model_label(run.model) or 'deterministic')}</td>"
-        f"<td>{escape(run.metric_name)} {escape(format_metric(run.metric_value))}</td>"
+        f"<td>{escape(run.metric_name)} {escape(format_run_metric(run))}</td>"
         f"<td>{escape(str(run.count or 'n/a'))}</td>"
         "</tr>"
     )
@@ -937,10 +1421,45 @@ def method_run_row(run: Run, prefix: str) -> str:
         "<tr>"
         f'<td><a href="{prefix}runs/{run.slug}.html">{escape(dataset_label(run.dataset))}</a></td>'
         f"<td>{escape(short_model_label(run.model) or 'deterministic')}</td>"
-        f"<td>{escape(run.metric_name)} {escape(format_metric(run.metric_value))}</td>"
+        f"<td>{escape(run.metric_name)} {escape(format_run_metric(run))}</td>"
         f"<td>{escape(str(run.count or 'n/a'))}</td>"
         "</tr>"
     )
+
+
+def annotated_method_label(method: str, label: str | None = None) -> str:
+    rendered = escape(label or method_label(method))
+    marker = METHOD_NOTE_MARKERS.get(method)
+    return rendered if marker is None else f"{rendered}<sup>{marker}</sup>"
+
+
+def method_link_html(method: str, label: str | None, prefix: str) -> str:
+    return (
+        f'<a href="{prefix}methods/{slugify(method)}.html">'
+        f"{annotated_method_label(method, label)}</a>"
+    )
+
+
+def method_notes_html(methods: set[str]) -> str:
+    notes = []
+    if COGNASCORE_ML_METHOD in methods:
+        notes.append(
+            "<sup>*</sup> CognaScore ML denotes the frozen final model fitted on "
+            "the six benchmark datasets; cross-validation and LODO are reported separately."
+        )
+    if {"dorn", "dorn_retrained"} & methods:
+        notes.append(
+            "<sup>†</sup> Dorn uses the released seven-feature implementation "
+            "and is retrained on the original Dorn dataset."
+        )
+    if "mi_convnet_cr_reproduction" in methods:
+        notes.append(
+            "<sup>‡</sup> Mi denotes our paper-aligned reproduction of Mi et al.'s "
+            "ConvNetCR model."
+        )
+    if not notes:
+        return ""
+    return '<p class="muted method-notes">' + " &nbsp; ".join(notes) + "</p>"
 
 
 def load_dataset_items(runs: list[Run]):
@@ -1704,6 +2223,8 @@ def run_group_key(run: Run) -> tuple[str, str | None]:
 def run_group_label(method: str, model: str | None) -> str:
     if method in COGNASCORE_ML_METHODS:
         return method_label(method)
+    if method in METHOD_NOTE_MARKERS:
+        return method_label(method)
     if model is None:
         return method_label(method)
     short = short_model_label(model) or model
@@ -1720,6 +2241,8 @@ def run_group_rank(group: tuple[str, str | None]) -> tuple[int, str, str]:
 def short_run_label(run: Run) -> str:
     model = short_model_label(run.model)
     if run.method in COGNASCORE_ML_METHODS:
+        return method_label(run.method)
+    if run.method in METHOD_NOTE_MARKERS:
         return method_label(run.method)
     if is_rmc_method(run.method) and model:
         return f"{method_label(run.method)} {model}"
@@ -1849,6 +2372,15 @@ def format_metric(value: float | None) -> str:
     if value is None:
         return "n/a"
     return f"{value:.4f}"
+
+
+def format_run_metric(run: Run) -> str:
+    value = run.metric_value
+    if value is None:
+        return "Not available"
+    if run.interference_response is not None:
+        return f"{100.0 * value:.1f}%"
+    return format_metric(value)
 
 
 def slugify(value: str) -> str:
@@ -2372,6 +2904,56 @@ pre {
   font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .code-block { max-width: none; }
+.paired-code-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.paired-code-grid article { min-width: 0; }
+.paired-code-grid .code-block {
+  max-height: 70vh;
+  overflow: auto;
+}
+.pair-table small { white-space: nowrap; }
+.pair-filters {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+.pair-category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pair-filter {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  padding: 7px 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pair-filter.active,
+.pair-filter[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.pair-changed-toggle { flex: 0 0 auto; }
+.pair-good { color: #116149; }
+.pair-bad { color: #9b2c2c; }
+.pair-tie { color: var(--muted); }
+@media (max-width: 900px) {
+  .paired-code-grid { grid-template-columns: 1fr; }
+  .pair-filters { display: block; }
+  .pair-changed-toggle { margin-top: 10px; }
+}
 .code-block mark {
   background: #fff2a8;
   color: inherit;
@@ -2660,6 +3242,40 @@ function initializeResultMatrices() {
   document.querySelectorAll("[data-result-matrix]").forEach((matrix) => updateResultMatrixBest(matrix));
 }
 
+function updatePairFilters(filters) {
+  const panel = filters.closest(".panel");
+  if (!panel) return;
+  const selected = filters.querySelector('[data-pair-category][aria-pressed="true"]');
+  const category = selected ? selected.dataset.pairCategory : "all";
+  const changedButton = filters.querySelector("[data-changed-only]");
+  const changedOnly = changedButton && changedButton.getAttribute("aria-pressed") === "true";
+  panel.querySelectorAll("[data-pair-row]").forEach((row) => {
+    const categoryMatch = category === "all" || row.dataset.category === category;
+    const changedMatch = !changedOnly || row.dataset.changed === "true";
+    row.hidden = !(categoryMatch && changedMatch);
+  });
+}
+
+function selectPairCategory(button) {
+  const filters = button.closest("[data-pair-filters]");
+  if (!filters) return;
+  filters.querySelectorAll("[data-pair-category]").forEach((item) => {
+    const active = item === button;
+    item.setAttribute("aria-pressed", active ? "true" : "false");
+    item.classList.toggle("active", active);
+  });
+  updatePairFilters(filters);
+}
+
+function toggleChangedPairs(button) {
+  const filters = button.closest("[data-pair-filters]");
+  if (!filters) return;
+  const active = button.getAttribute("aria-pressed") !== "true";
+  button.setAttribute("aria-pressed", active ? "true" : "false");
+  button.classList.toggle("active", active);
+  updatePairFilters(filters);
+}
+
 function dragInsertBefore(container, dragging, target, clientX) {
   if (!container || !dragging || !target || dragging === target) return;
   const box = target.getBoundingClientRect();
@@ -2681,6 +3297,16 @@ function syncMatrixOrderFromFilters(filters) {
 }
 
 document.addEventListener("click", (event) => {
+  const pairCategory = event.target.closest("[data-pair-category]");
+  if (pairCategory) {
+    selectPairCategory(pairCategory);
+    return;
+  }
+  const changedOnly = event.target.closest("[data-changed-only]");
+  if (changedOnly) {
+    toggleChangedPairs(changedOnly);
+    return;
+  }
   const methodFilter = event.target.closest(".method-filter[data-method-group]");
   if (methodFilter) {
     if (methodFilter.dataset.dragJustEnded === "true") {
