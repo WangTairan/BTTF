@@ -12,6 +12,9 @@ Comparison methods are isolated as separate method families, including RMC,
 Posnett, Dorn, Scalabrino, direct LLM scoring, and the paper-aligned Mi
 character-level CNN reproduction.
 
+The tracked result site is published through GitHub Pages at
+<https://wangtairan.github.io/Code-Readability/>.
+
 ## Repository structure
 
 ```text

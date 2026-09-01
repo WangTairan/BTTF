@@ -66,6 +66,10 @@ COGNASCORE_ML_METHODS = {
 }
 HIDDEN_METHODS: set[str] = set()
 HIDDEN_DATASETS: set[str] = set()
+INDEPENDENT_INTERFERENCE_DATASETS = (
+    "java_comparative_obfuscation",
+    "python_comparative_degradation",
+)
 
 
 @dataclass(frozen=True)
@@ -222,16 +226,22 @@ def reset_docs() -> None:
 
 
 def write_assets() -> None:
+    (DOCS_DIR / ".nojekyll").write_text("", encoding="utf-8")
     (DOCS_DIR / "assets" / "style.css").write_text(STYLE_CSS, encoding="utf-8")
     (DOCS_DIR / "assets" / "app.js").write_text(APP_JS, encoding="utf-8")
 
 
 def write_index(runs: list[Run]) -> None:
-    datasets = sorted({run.dataset for run in runs}, key=dataset_rank)
-    run_groups = sorted({run_group_key(run) for run in runs}, key=run_group_rank)
-    best_runs = best_runs_by_dataset(runs)
+    benchmark_runs = [
+        run for run in runs if run.dataset not in INDEPENDENT_INTERFERENCE_DATASETS
+    ]
+    datasets = sorted({run.dataset for run in benchmark_runs}, key=dataset_rank)
+    run_groups = sorted(
+        {run_group_key(run) for run in benchmark_runs}, key=run_group_rank
+    )
+    best_runs = best_runs_by_dataset(benchmark_runs)
     by_cell: dict[tuple[tuple[str, str | None], str], list[Run]] = {}
-    for run in runs:
+    for run in benchmark_runs:
         by_cell.setdefault((run_group_key(run), run.dataset), []).append(run)
 
     header = "".join(
@@ -276,8 +286,84 @@ def write_index(runs: list[Run]) -> None:
         </table>
       </div>
     </section>
+    {render_interference_overview()}
     """
     write_page(DOCS_DIR / "index.html", "Code Readability Results", body, current="Results")
+
+
+def render_interference_overview() -> str:
+    methods = (
+        (
+            "CognaScore ML",
+            ROOT
+            / "results"
+            / "experiments"
+            / "cognascore"
+            / "consensus18_6dataset_sampled_margin_nomic"
+            / "constructed_variants_nomic",
+            False,
+        ),
+        ("Dorn (retrained)", RESULTS_DIR / "dorn_retrained", True),
+        ("Posnett", RESULTS_DIR / "posnett", True),
+        ("Scalabrino", RESULTS_DIR / "scalabrino", True),
+        (
+            "Mi ConvNetCR (reproduced)",
+            RESULTS_DIR / "mi_convnet_cr_reproduction",
+            True,
+        ),
+        ("LOC", RESULTS_DIR / "loc_baseline", True),
+    )
+    values: dict[tuple[str, str], float] = {}
+    for label, root, paired in methods:
+        for dataset in INDEPENDENT_INTERFERENCE_DATASETS:
+            path = root / dataset / ("paired_summary.json" if paired else "summary.json")
+            if not path.is_file():
+                continue
+            data = json.loads(path.read_text(encoding="utf-8"))
+            value = as_float(data.get("overall", {}).get("changed_only_score_decrease_rate"))
+            if value is not None:
+                values[(label, dataset)] = value
+
+    best = {
+        dataset: max(
+            (value for (label, key), value in values.items() if key == dataset),
+            default=None,
+        )
+        for dataset in INDEPENDENT_INTERFERENCE_DATASETS
+    }
+    rows = []
+    for label, _, _ in methods:
+        cells = []
+        for dataset in INDEPENDENT_INTERFERENCE_DATASETS:
+            value = values.get((label, dataset))
+            if value is None:
+                cells.append('<td><span class="missing">Not available</span></td>')
+                continue
+            class_name = "result-link best" if value == best[dataset] else "result-link"
+            cells.append(
+                f'<td><a class="{class_name}" href="datasets/{slugify(dataset)}.html">'
+                f'<strong>{value * 100:.1f}%</strong>'
+                '<span>changed-pair response</span></a></td>'
+            )
+        rows.append(f"<tr><th>{escape(label)}</th>{''.join(cells)}</tr>")
+
+    return f"""
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Controlled experiments</p>
+          <h2>Independent Readability Interferences</h2>
+          <p class="muted wide">Each transformed class is compared with its matched original. Values are the percentages of source-changing transformations assigned a lower readability score.</p>
+        </div>
+      </div>
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead><tr><th>Method</th><th><a href="datasets/java_comparative_obfuscation.html">Java</a></th><th><a href="datasets/python_comparative_degradation.html">Python</a></th></tr></thead>
+          <tbody>{''.join(rows)}</tbody>
+        </table>
+      </div>
+    </section>
+    """
 
 
 def best_runs_by_dataset(runs: list[Run]) -> set[str]:
