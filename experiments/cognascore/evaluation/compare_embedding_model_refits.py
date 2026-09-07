@@ -11,7 +11,6 @@ import argparse
 import json
 import math
 from pathlib import Path
-from statistics import mean
 from typing import Any
 
 import numpy as np
@@ -147,6 +146,10 @@ def main() -> None:
         "folds": args.folds,
         "seed": args.seed,
         "ridge_alpha": args.ridge_alpha,
+        "dataset_average": (
+            "Unweighted arithmetic mean of the six dataset-specific Spearman "
+            "correlations; each dataset contributes equally."
+        ),
         "results": results,
     }
     args.output.mkdir(parents=True, exist_ok=True)
@@ -222,7 +225,7 @@ def load_model_frame(
 
 def evaluate_model(model: Any, frames: dict[str, pd.DataFrame]) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
-    values = []
+    values: list[float] = []
     for dataset, frame in frames.items():
         prediction = model.predict(frame[list(SELECTED_FEATURES)].to_numpy(float))
         value = spearman(
@@ -231,7 +234,7 @@ def evaluate_model(model: Any, frames: dict[str, pd.DataFrame]) -> dict[str, Any
         metrics[dataset] = {"n": len(frame), "spearman": value}
         if math.isfinite(value):
             values.append(value)
-    metrics["macro_average"] = mean(values)
+    metrics["unweighted_average"] = sum(values) / len(values)
     return metrics
 
 
@@ -298,7 +301,7 @@ def leave_one_dataset_out(
 
 def correlation_metrics(frame: pd.DataFrame) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
-    values = []
+    values: list[float] = []
     for dataset, group in frame.groupby("dataset", sort=False):
         value = spearman(
             group["prediction"].astype(float).tolist(),
@@ -307,7 +310,7 @@ def correlation_metrics(frame: pd.DataFrame) -> dict[str, Any]:
         metrics[str(dataset)] = {"n": len(group), "spearman": value}
         if math.isfinite(value):
             values.append(value)
-    metrics["macro_average"] = mean(values)
+    metrics["unweighted_average"] = sum(values) / len(values)
     return metrics
 
 
@@ -340,8 +343,8 @@ def print_summary(results: dict[str, Any]) -> None:
         python = result["constructed"]["python_comparative_degradation"]["overall"]
         print(
             f"{model}\t"
-            f"{result['pooled_cross_validation']['macro_average']:.6f}\t"
-            f"{result['leave_one_dataset_out']['macro_average']:.6f}\t"
+            f"{result['pooled_cross_validation']['unweighted_average']:.6f}\t"
+            f"{result['leave_one_dataset_out']['unweighted_average']:.6f}\t"
             f"{java['changed_only_score_decrease_rate']:.6f}\t"
             f"{python['changed_only_score_decrease_rate']:.6f}",
             flush=True,

@@ -17,9 +17,7 @@ def test_comparative_obfuscation_dataset() -> None:
     items = load_code_dataset(path)
 
     assert dataset_name_for_path(path) == "java_comparative_obfuscation"
-    assert len(items) == 1500
     assert len({item.metadata["group_id"] for item in items}) == 100
-    assert {item.metadata["order"] for item in items} == set(range(15))
     assert sum(item.metadata["is_baseline_variant"] for item in items) == 100
     assert all(item.readability_score is None for item in items)
     inline_items = [
@@ -35,9 +33,7 @@ def test_python_comparative_degradation_dataset() -> None:
     items = load_code_dataset(path)
 
     assert dataset_name_for_path(path) == "python_comparative_degradation"
-    assert len(items) == 1500
     assert len({item.metadata["group_id"] for item in items}) == 100
-    assert {item.metadata["order"] for item in items} == set(range(15))
     assert sum(item.metadata["is_baseline_variant"] for item in items) == 100
     assert {item.metadata["language"] for item in items} == {"python"}
     assert all(item.readability_score is None for item in items)

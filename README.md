@@ -19,7 +19,7 @@ The tracked result site is published through GitHub Pages at
 
 ```text
 datasets/              Input datasets and dataset-specific notes
-experiments/           Model-development and paper-analysis scripts
+experiments/           Frozen-model evaluation and paper figures
 figures/               Reproducible paper figures and their source data
 scripts/               End-to-end maintenance commands
 src/datasets/          Stable dataset adapters
@@ -34,8 +34,9 @@ bib/local_papers/      Local reading copies of papers (ignored by Git)
 ```
 
 Reusable data loading, feature production, and frozen scoring live under
-`src/`; feature selection, sweeps, ablations, and paper-figure generation live
-under `experiments/`.
+`src/`; frozen-model evaluation, ablations, and paper-figure generation live
+under `experiments/`. Exploratory screening and feature-replacement scripts
+have been removed; the frozen feature configuration and ranking evidence remain.
 
 ## Installation
 
@@ -127,27 +128,6 @@ serialized pipeline and a readable manifest containing the ordered features,
 imputation and scaling values, Ridge parameters, and training-data hashes.
 Its 18-feature list is fitted on the six continuous-score development datasets.
 
-Research-only selection code is isolated under `experiments/cognascore/`.
-The retained five-model consensus implementation can reproduce or extend the
-selection analysis. Exploratory runs must use a separate output directory and
-cannot overwrite the frozen scorer.
-
-```bash
-python -m experiments.cognascore.selection.consensus_selection \
-  --select-top 30 --candidate-limit 220 \
-  --c 0.08 --ridge-alpha 200 --stability-rounds 200 \
-  --fit-dataset mbjp --fit-dataset buse --fit-dataset dorn \
-  --fit-dataset scalabrino --fit-dataset schnappinger \
-  --fit-dataset jetbrains \
-  --final-embedding-model nomic-ai/nomic-embed-text-v1.5 \
-  -o results/experiments/cognascore/selection_sandbox
-```
-
-This is a development experiment, not the production feature extractor. It
-runs independent screens for the five embedding-model instantiations,
-aggregates their canonical feature rankings, filters redundant candidates, and
-fits the final Ridge model with one chosen embedding instantiation.
-
 Materialize the retained scorer from existing feature tables:
 
 ```bash
@@ -156,9 +136,7 @@ python -m src.methods.cognascore.runners.supervised_ridge
 
 The frozen ML runner fits one dataset-balanced model on MBJP, Buse, Dorn,
 Scalabrino, Schnappinger, and the continuous JetBrains human-vote fraction,
-then writes predictions for every registered report dataset. Selection
-experiments remain separate so exploratory results cannot silently replace the
-frozen scorer.
+then writes predictions for every registered report dataset. The ordered feature list remains fixed in the retained configuration.
 
 The retained Java and Python independent-interference evaluations are
 reproduced together with:
@@ -223,7 +201,8 @@ Generate the six-dataset feature-count sensitivity figure:
 python -m experiments.cognascore.figures.plot_feature_count_sensitivity
 ```
 
-The script writes both the PDF and its plotted CSV data to `figures/`.
+The script renders the retained CSV curve and writes the PDF and plotted CSV
+to `figures/`; feature-count searches are no longer included.
 
 Generate the normalized human-label distribution figure:
 

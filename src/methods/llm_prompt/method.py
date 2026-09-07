@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import Callable, Sequence
 
-from src.services.llm import batch_chat_prompts, chat
+from src.services.llm import batch_chat_prompts, chat_with_metadata
 
 
 STRUCTURED_RETRY_LIMIT = 2
@@ -37,9 +37,18 @@ def llm_prompt_engineering_score(code: str, model_name: str = "gpt41-nano") -> d
     last_error = None
 
     for _ in range(STRUCTURED_RETRY_LIMIT):
-        response = chat(model_name, prompt)
+        response_record = chat_with_metadata(model_name, prompt)
+        response = str(response_record["content"])
         try:
-            return validate_llm_readability_payload(extract_json_object(response))
+            result = validate_llm_readability_payload(extract_json_object(response))
+            result["raw_response"] = response
+            result["response_metadata"] = {
+                key: value
+                for key, value in response_record.items()
+                if key not in {"content", "api_response"}
+            }
+            result["api_response"] = response_record["api_response"]
+            return result
         except Exception as exc:
             last_error = exc
 
@@ -64,7 +73,9 @@ def llm_prompt_engineering_scores(
     results = []
     for code, response in zip(codes, responses):
         try:
-            results.append(validate_llm_readability_payload(extract_json_object(response)))
+            result = validate_llm_readability_payload(extract_json_object(response))
+            result["raw_response"] = response
+            results.append(result)
         except Exception:
             results.append(llm_prompt_engineering_score(code, model_name=model_name))
     return results

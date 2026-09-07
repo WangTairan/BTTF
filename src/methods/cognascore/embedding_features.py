@@ -782,10 +782,6 @@ def _effective_rank_features(x: np.ndarray, weights: np.ndarray) -> tuple[float,
     return float(math.exp(entropy)), float(probabilities[0])
 
 
-def _cluster_weights(labels: np.ndarray, weights: np.ndarray) -> list[float]:
-    return [float(np.sum(weights[labels == label])) for label in sorted(set(int(label) for label in labels))]
-
-
 def _safe_silhouette(x: np.ndarray, labels: np.ndarray) -> float:
     if len(set(int(label) for label in labels)) < 2 or len(set(int(label) for label in labels)) >= len(x):
         return 0.0
@@ -831,7 +827,3 @@ def _normalized_entropy(probabilities: np.ndarray) -> float:
         return 0.0
     entropy = -float(np.sum(probabilities * np.log(probabilities)))
     return entropy / math.log(len(probabilities))
-
-
-def _slug_float(value: float) -> str:
-    return f"{value:g}".replace(".", "_")

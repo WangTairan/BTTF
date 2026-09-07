@@ -561,21 +561,6 @@ def _method_body_interval(node, tokens: list[TokenPosition]) -> tuple[int, int] 
     return open_index + 1, close_index - 1
 
 
-def _parenthesized_interval(tokens: list[TokenPosition], index: int) -> tuple[int, int] | None:
-    open_index = next((i for i in range(index, len(tokens)) if tokens[i].value == "("), None)
-    if open_index is None:
-        return None
-    depth = 0
-    for close_index, token in enumerate(tokens[open_index:], start=open_index):
-        if token.value == "(":
-            depth += 1
-        elif token.value == ")":
-            depth -= 1
-            if depth == 0:
-                return open_index, close_index
-    return None
-
-
 def _node_interval(node, tokens: list[TokenPosition]) -> tuple[int, int] | None:
     token_index = _token_index_at_node(tokens, node)
     if token_index is None:

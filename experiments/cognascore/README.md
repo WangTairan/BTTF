@@ -6,26 +6,22 @@ CognaScore release. Stable feature production and scoring remain under
 
 ## Directory structure
 
-- `selection/`: candidate screening and five-model consensus ranking.
-- `evaluation/`: fixed-feature CV/LODO, five-model refits, and paired
+- `evaluation/`: fixed-feature CV/LODO, ablations, five-model refits, and paired
   controlled-interference evaluation.
-- `analysis/`: post-hoc diagnostics that never modify a frozen model.
-- `auxiliary/`: reproducible semantic-anchor and comment-threshold studies.
-- `figures/`: scripts used to produce publication figures.
+- `auxiliary/`: semantic-anchor corpus verification and embedding maintenance.
+- `figures/`: rendering of retained publication curve data.
 - `configs/`: the frozen feature list and selection evidence.
 
 ## Final model development
 
-- `selection/feature_selection.py`: L1 stability screening shared by selection
-  tools.
-- `selection/selection_policy.py`: deterministic exclusions for invalid or discarded
-  candidate features.
-- `selection/consensus_selection.py`: five-embedding-model consensus ranking,
-  correlation filtering, and Ridge fitting.
 - `evaluation/cross_validate_fixed.py`: pooled grouped 10-fold evaluation of the frozen
   18-feature list.
 - `evaluation/leave_one_dataset_out.py`: train on five datasets and evaluate on
   the sixth.
+- `evaluation/ablate_final_model.py`: remove the code-level or complete
+  embedding-derived family, or independently remove the embedding-geometry or
+  clustering subfamily, without reselection, and rerun the canonical pooled
+  10-fold, LODO, and held-out Java/Python controlled-interference protocols.
 - `evaluation/compare_embedding_model_refits.py`: independently refit the same
   18-feature Ridge for all five embedding models and compare coefficients,
   pooled CV, LODO, and controlled-interference responses.
@@ -34,20 +30,31 @@ CognaScore release. Stable feature production and scoring remain under
 
 The feature list is fixed before the CV and LODO scripts run. Their output
 metadata explicitly records that selection is not repeated inside each fold.
-The production tables retain 197 candidates per embedding-model instantiation.
-Before stability screening, `selection/selection_policy.py` excludes 16 theory-rejected
-features: three unstable/redundant cluster-size variability measurements, ten
-absolute vertical-position measurements, and three language-specific
-punctuation diagnostics. The resulting 181 candidates are ranked; retaining
-the excluded columns supports transparent appendix reporting and ablation
-without allowing them into the formal model-selection procedure.
+Whenever benchmark results are summarized across datasets, the six
+dataset-specific correlations are averaged with equal weight, matching the
+main benchmark table. Controlled-interference results instead pool all changed
+pairs directly and do not average category-level percentages.
+The final-model group ablation can be reproduced with:
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
+  python3 \
+  -m experiments.cognascore.evaluation.ablate_final_model
+```
+
+Exploratory selection, feature-addition/replacement searches, post-hoc analyses,
+and comment-threshold probes have been removed. The frozen feature list and
+ranking evidence remain in `configs/`. All four causal-LM surprisal features
+and their production pipeline remain under `src/methods/cognascore/`.
 
 ## Controlled experiments
 
 `evaluation/evaluate_constructed_variants.py` performs independent, paired interference
 tests for both the Java and Python constructed datasets. Every transformed
 class is compared with the same original, and inapplicable unchanged variants
-are separated from changed-pair response rates. Rebuild Nomic features and
+are separated from changed-pair response rates. Overall results pool all
+changed pairs directly; categories are retained only as diagnostic breakdowns
+and are never averaged with equal category weights. Rebuild Nomic features and
 evaluate both datasets sequentially with:
 
 ```bash
@@ -64,18 +71,12 @@ PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
   datasets/constructed/java-comparative-obfuscation-class-100
 ```
 
-## Figures and diagnostics
+## Figures and semantic anchors
 
-- `figures/plot_feature_count_sensitivity.py`: publication feature-count
-  sensitivity figure.
-- `analysis/analyze_human_rating_reliability.py`: human-rating agreement
-  diagnostics.
-- `analysis/analyze_constructed_feature_impacts.py`: feature-level response
-  diagnostics for the paired interference datasets.
-- `auxiliary/comment_threshold_stability.py`: repeated, six-dataset validation
-  of the model-specific comment-to-code threshold without readability labels.
-- `auxiliary/embed_semantic_anchor_corpus.py`: reproducible mathematical and
-  application-code anchor embeddings used by the short-identifier experiment.
+- `figures/plot_feature_count_sensitivity.py`: render the retained CSV curve;
+  no feature search or model refitting is performed.
+- `auxiliary/materialize_semantic_anchor_corpus.py`: verify or rebuild the frozen corpus.
+- `auxiliary/embed_semantic_anchor_corpus.py`: fill missing anchor embeddings.
 
-Generated outputs belong under `results/experiments/cognascore/`; only final
+Generated outputs belong under `results/experiments/cognascore/`; final
 method artifacts belong under `frozen_models/`.

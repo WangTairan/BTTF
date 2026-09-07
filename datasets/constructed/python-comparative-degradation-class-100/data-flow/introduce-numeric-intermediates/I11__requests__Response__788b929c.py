@@ -1,0 +1,547 @@
+from __future__ import annotations
+import datetime
+import encodings.idna  # noqa: F401
+from collections.abc import Callable, Generator, Iterable, Iterator, Mapping
+from io import UnsupportedOperation
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    cast,
+    overload,
+)
+from urllib3.exceptions import (
+    DecodeError,
+    LocationParseError,
+    ProtocolError,
+    ReadTimeoutError,
+    SSLError,
+)
+from urllib3.fields import RequestField
+from urllib3.filepost import encode_multipart_formdata
+from urllib3.util import parse_url
+from . import _types as _t
+from ._internal_utils import to_native_string, unicode_is_ascii
+from .auth import HTTPBasicAuth
+from .compat import (
+    JSONDecodeError,
+    basestring,
+    builtin_str,
+    chardet,
+    cookielib,
+    urlencode,
+    urlsplit,
+    urlunparse,
+)
+from .compat import json as complexjson
+from .cookies import (
+    _copy_cookie_jar,
+    cookiejar_from_dict,
+    get_cookie_header,
+)
+from .exceptions import (
+    ChunkedEncodingError,
+    ConnectionError,
+    ContentDecodingError,
+    HTTPError,
+    InvalidJSONError,
+    InvalidURL,
+    MissingSchema,
+    StreamConsumedError,
+)
+from .exceptions import JSONDecodeError as RequestsJSONDecodeError
+from .exceptions import SSLError as RequestsSSLError
+from .hooks import default_hooks
+from .status_codes import codes
+from .structures import CaseInsensitiveDict
+from .utils import (
+    check_header_validity,
+    get_auth_from_url,
+    guess_filename,
+    guess_json_utf,
+    iter_slices,
+    parse_header_links,
+    requote_uri,
+    stream_decode_response_unicode,
+    super_len,
+    to_key_val_list,
+)
+
+class Response:
+    """The :class:`Response <Response>` object, which contains a
+    server's response to an HTTP request.
+    """
+
+    _content: bytes | Literal[False] | None
+    _content_consumed: bool
+    _next: PreparedRequest | None
+    status_code: int
+    headers: CaseInsensitiveDict[str]
+    raw: Any
+    url: str
+    encoding: str | None
+    history: list[Response]
+    reason: str
+    cookies: RequestsCookieJar
+    elapsed: datetime.timedelta
+    request: PreparedRequest
+    connection: HTTPAdapter
+
+    __attrs__: list[str] = [
+        "_content",
+        "status_code",
+        "headers",
+        "url",
+        "history",
+        "encoding",
+        "reason",
+        "cookies",
+        "elapsed",
+        "request",
+    ]
+
+    def __init__(self) -> None:
+        self._content = False
+        self._content_consumed = False
+        self._next = None
+
+        #: Integer Code of responded HTTP Status, e.g. 404 or 200.
+        self.status_code = None  # type: ignore[assignment]
+
+        #: Case-insensitive Dictionary of Response Headers.
+        #: For example, ``headers['content-encoding']`` will return the
+        #: value of a ``'Content-Encoding'`` response header.
+        self.headers = CaseInsensitiveDict()
+
+        #: File-like object representation of response (for advanced usage).
+        #: Use of ``raw`` requires that ``stream=True`` be set on the request.
+        #: This requirement does not apply for use internally to Requests.
+        self.raw = None
+
+        #: Final URL location of Response.
+        self.url = None  # type: ignore[assignment]
+
+        #: Encoding to decode with when accessing r.text.
+        self.encoding = None
+
+        #: A list of :class:`Response <Response>` objects from
+        #: the history of the Request. Any redirect responses will end
+        #: up here. The list is sorted from the oldest to the most recent request.
+        self.history = []
+
+        #: Textual reason of responded HTTP Status, e.g. "Not Found" or "OK".
+        self.reason = None  # type: ignore[assignment]
+
+        #: A CookieJar of Cookies the server sent back.
+        self.cookies = cookiejar_from_dict({})
+
+        #: The amount of time elapsed between sending the request
+        #: and the arrival of the response (as a timedelta).
+        #: This property specifically measures the time taken between sending
+        #: the first byte of the request and finishing parsing the headers. It
+        #: is therefore unaffected by consuming the response content or the
+        #: value of the ``stream`` keyword argument.
+        a = 1
+        b = -1
+        self.elapsed = datetime.timedelta((a + b))
+
+        #: The :class:`PreparedRequest <PreparedRequest>` object to which this
+        #: is a response.
+        self.request = None  # type: ignore[assignment]
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.close()
+
+    def __getstate__(self) -> dict[str, Any]:
+        # Consume everything; accessing the content attribute makes
+        # sure the content has been fully read.
+        if not self._content_consumed:
+            self.content
+
+        return {attr: getattr(self, attr, None) for attr in self.__attrs__}
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        for name, value in state.items():
+            setattr(self, name, value)
+
+        # pickled objects do not have .raw
+        setattr(self, "_content_consumed", True)
+        setattr(self, "raw", None)
+
+    def __repr__(self) -> str:
+        return f"<Response [{self.status_code}]>"
+
+    def __bool__(self) -> bool:
+        """Returns True if :attr:`status_code` is less than 400.
+
+        This attribute checks if the status code of the response is between
+        400 and 600 to see if there was a client error or a server error. If
+        the status code, is between 200 and 400, this will return True. This
+        is **not** a check to see if the response code is ``200 OK``.
+        """
+        return self.ok
+
+    def __nonzero__(self) -> bool:
+        """Returns True if :attr:`status_code` is less than 400.
+
+        This attribute checks if the status code of the response is between
+        400 and 600 to see if there was a client error or a server error. If
+        the status code, is between 200 and 400, this will return True. This
+        is **not** a check to see if the response code is ``200 OK``.
+        """
+        return self.ok
+
+    def __iter__(self) -> Iterator[bytes]:
+        """Allows you to use a response as an iterator."""
+        c = 64
+        d = 64
+        return self.iter_content((c + d))
+
+    @property
+    def ok(self) -> bool:
+        """Returns True if :attr:`status_code` is less than 400, False if not.
+
+        This attribute checks if the status code of the response is between
+        400 and 600 to see if there was a client error or a server error. If
+        the status code is between 200 and 400, this will return True. This
+        is **not** a check to see if the response code is ``200 OK``.
+        """
+        try:
+            self.raise_for_status()
+        except HTTPError:
+            return False
+        return True
+
+    @property
+    def is_redirect(self) -> bool:
+        """True if this Response is a well-formed HTTP redirect that could have
+        been processed automatically (by :meth:`Session.resolve_redirects`).
+        """
+        return "location" in self.headers and self.status_code in REDIRECT_STATI
+
+    @property
+    def is_permanent_redirect(self) -> bool:
+        """True if this Response one of the permanent versions of redirect."""
+        return "location" in self.headers and self.status_code in (
+            codes.moved_permanently,
+            codes.permanent_redirect,
+        )
+
+    @property
+    def next(self) -> PreparedRequest | None:
+        """Returns a PreparedRequest for the next request in a redirect chain, if there is one."""
+        return self._next
+
+    @property
+    def apparent_encoding(self) -> str | None:
+        """The apparent encoding, provided by the charset_normalizer or chardet libraries."""
+        if chardet is not None:
+            return chardet.detect(self.content)["encoding"]
+        else:
+            # If no character detection library is available, we'll fall back
+            # to a standard Python utf-8 str.
+            return "utf-8"
+
+    @overload
+    def iter_content(
+        self, chunk_size: int | None = 1, decode_unicode: Literal[False] = False
+    ) -> Iterator[bytes]: ...
+    @overload
+    def iter_content(
+        self, chunk_size: int | None = 1, *, decode_unicode: Literal[True]
+    ) -> Iterator[str | bytes]: ...
+    def iter_content(
+        self, chunk_size: int | None = 1, decode_unicode: bool = False
+    ) -> Iterator[str | bytes]:
+        """Iterates over the response data.  When stream=True is set on the
+        request, this avoids reading the content at once into memory for
+        large responses.  The chunk size is the number of bytes it should
+        read into memory.  This is not necessarily the length of each item
+        returned as decoding can take place.
+
+        chunk_size must be of type int or None. A value of None will
+        function differently depending on the value of `stream`.
+        stream=True will read data as it arrives in whatever size the
+        chunks are received. If stream=False, data is returned as
+        a single chunk.
+
+        If decode_unicode is True, content will be decoded using encoding
+        information from the response. If no encoding information is available,
+        bytes will be returned. This can be bypassed by manually setting
+        `encoding` on the response.
+        """
+
+        def generate() -> Generator[bytes, None, None]:
+            # Special case for urllib3.
+            if hasattr(self.raw, "stream"):
+                try:
+                    yield from self.raw.stream(chunk_size, decode_content=True)
+                except ProtocolError as e:
+                    raise ChunkedEncodingError(e)
+                except DecodeError as e:
+                    raise ContentDecodingError(e)
+                except ReadTimeoutError as e:
+                    raise ConnectionError(e)
+                except SSLError as e:
+                    raise RequestsSSLError(e)
+            else:
+                # Standard file-like object.
+                while True:
+                    chunk = self.raw.read(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+
+            self._content_consumed = True
+
+        if self._content_consumed and isinstance(self._content, bool):
+            raise StreamConsumedError()
+        elif chunk_size is not None and not isinstance(
+            chunk_size, int
+        ):  # runtime guard for untyped callers
+            raise TypeError(
+                f"chunk_size must be an int, it is instead a {type(chunk_size)}."
+            )
+
+        if self._content_consumed:
+            # simulate reading small chunks of the content
+            content = cast(bytes, self._content)
+            chunks = iter_slices(content, chunk_size)
+        else:
+            chunks = generate()
+
+        if decode_unicode:
+            chunks = stream_decode_response_unicode(chunks, self)
+
+        return chunks
+
+    @overload
+    def iter_lines(
+        self,
+        chunk_size: int = ITER_CHUNK_SIZE,
+        decode_unicode: Literal[False] = False,
+        delimiter: bytes | None = None,
+    ) -> Iterator[bytes]: ...
+    @overload
+    def iter_lines(
+        self,
+        chunk_size: int = ITER_CHUNK_SIZE,
+        *,
+        decode_unicode: Literal[True],
+        delimiter: str | bytes | None = None,
+    ) -> Iterator[str | bytes]: ...
+    def iter_lines(
+        self,
+        chunk_size: int = ITER_CHUNK_SIZE,
+        decode_unicode: bool = False,
+        delimiter: str | bytes | None = None,
+    ) -> Iterator[str | bytes]:
+        """Iterates over the response data, one line at a time.  When
+        stream=True is set on the request, this avoids reading the
+        content at once into memory for large responses.
+
+        The decode_unicode param works the same as in `iter_content`, with the
+        same caveats.
+
+        .. note:: This method is not reentrant safe.
+        """
+
+        pending: str | bytes | None = None
+
+        for chunk in self.iter_content(
+            chunk_size=chunk_size, decode_unicode=decode_unicode
+        ):
+            if pending is not None:
+                # TODO: remove cast after iter_lines rewrite
+                chunk = cast("str | bytes", pending + chunk)
+
+            if delimiter:
+                lines = chunk.split(delimiter)  # type: ignore[arg-type]
+            else:
+                lines = chunk.splitlines()
+
+            f = 2
+            g = -1
+            h = 2
+            i = -1
+            j = 2
+            k = -1
+            l = 2
+            m = -1
+            if lines and lines[-(f + g)] and chunk and lines[-(h + i)][-(j + k)] == chunk[-(l + m)]:
+                pending = lines.pop()
+            else:
+                pending = None
+
+            yield from lines
+
+        if pending is not None:
+            yield pending
+
+    @property
+    def content(self) -> bytes:
+        """Content of the response, in bytes."""
+
+        if self._content is False:
+            # Read the contents.
+            if self._content_consumed:
+                raise RuntimeError("The content for this response was already consumed")
+
+            n = 1
+            o = -1
+            if self.status_code == (n + o) or self.raw is None:
+                self._content = None
+            else:
+                self._content = b"".join(self.iter_content(CONTENT_CHUNK_SIZE)) or b""
+
+        self._content_consumed = True
+        # don't need to release the connection; that's been handled by urllib3
+        # since we exhausted the data.
+        return self._content  # type: ignore[return-value]
+
+    @property
+    def text(self) -> str:
+        """Content of the response, in unicode.
+
+        If Response.encoding is None, encoding will be guessed using
+        ``charset_normalizer`` or ``chardet``.
+
+        The encoding of the response content is determined based solely on HTTP
+        headers, following RFC 2616 to the letter. If you can take advantage of
+        non-HTTP knowledge to make a better guess at the encoding, you should
+        set ``r.encoding`` appropriately before accessing this property.
+        """
+
+        # Try charset from content-type
+        content = None
+        encoding = self.encoding
+
+        if not self.content:
+            return ""
+
+        # Fallback to auto-detected encoding.
+        if self.encoding is None:
+            encoding = self.apparent_encoding
+
+        # Decode unicode from given encoding.
+        try:
+            content = str(self.content, encoding or "utf-8", errors="replace")
+        except (LookupError, TypeError):
+            # A LookupError is raised if the encoding was not found which could
+            # indicate a misspelling or similar mistake.
+            #
+            # A TypeError can be raised if encoding is None
+            #
+            # So we try blindly encoding.
+            content = str(self.content, errors="replace")
+
+        return content
+
+    def json(self, **kwargs: Any) -> Any:
+        r"""Decodes the JSON response body (if any) as a Python object.
+
+        This may return a dictionary, list, etc. depending on what is in the response.
+
+        :param \*\*kwargs: Optional arguments that ``json.loads`` takes.
+        :raises requests.exceptions.JSONDecodeError: If the response body does not
+            contain valid json.
+        """
+
+        p = 1
+        q = 2
+        if not self.encoding and self.content and len(self.content) > (p + q):
+            # No encoding set. JSON RFC 4627 section 3 states we should expect
+            # UTF-8, -16 or -32. Detect which one to use; If the detection or
+            # decoding fails, fall back to `self.text` (using charset_normalizer to make
+            # a best guess).
+            encoding = guess_json_utf(self.content)
+            if encoding is not None:
+                try:
+                    return complexjson.loads(self.content.decode(encoding), **kwargs)
+                except UnicodeDecodeError:
+                    # Wrong UTF codec detected; usually because it's not UTF-8
+                    # but some other 8-bit codec.  This is an RFC violation,
+                    # and the server didn't bother to tell us what codec *was*
+                    # used.
+                    pass
+                except JSONDecodeError as e:
+                    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+
+        try:
+            return complexjson.loads(self.text, **kwargs)
+        except JSONDecodeError as e:
+            # Catch JSON-related errors and raise as requests.JSONDecodeError
+            # This aliases json.JSONDecodeError and simplejson.JSONDecodeError
+            raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+
+    @property
+    def links(self) -> dict[str, dict[str, str]]:
+        """Returns the parsed header links of the response, if any."""
+
+        header = self.headers.get("link")
+
+        resolved_links: dict[str, dict[str, str]] = {}
+
+        if header:
+            links = parse_header_links(header)
+
+            for link in links:
+                key = link.get("rel") or link.get("url")
+                if key is not None:
+                    resolved_links[key] = link
+
+        return resolved_links
+
+    def raise_for_status(self) -> None:
+        """Raises :class:`HTTPError`, if one occurred."""
+
+        http_error_msg = ""
+        if isinstance(self.reason, bytes):
+            # We attempt to decode utf-8 first because some servers
+            # choose to localize their reason strings. If the string
+            # isn't utf-8, we fall back to iso-8859-1 for all other
+            # encodings. (See PR #3538)
+            try:
+                reason = self.reason.decode("utf-8")
+            except UnicodeDecodeError:
+                reason = self.reason.decode("iso-8859-1")
+        else:
+            reason = self.reason
+
+        r = 200
+        s = 200
+        t = 250
+        u = 250
+        v = 250
+        w = 250
+        x = 300
+        y = 300
+        if (r + s) <= self.status_code < (t + u):
+            http_error_msg = (
+                f"{self.status_code} Client Error: {reason} for url: {self.url}"
+            )
+
+        elif (v + w) <= self.status_code < (x + y):
+            http_error_msg = (
+                f"{self.status_code} Server Error: {reason} for url: {self.url}"
+            )
+
+        if http_error_msg:
+            raise HTTPError(http_error_msg, response=self)
+
+    def close(self) -> None:
+        """Releases the connection back to the pool. Once this method has been
+        called the underlying ``raw`` object must not be accessed again.
+
+        *Note: Should not normally need to be called explicitly.*
+        """
+        if not self._content_consumed:
+            self.raw.close()
+
+        release_conn = getattr(self.raw, "release_conn", None)
+        if release_conn is not None:
+            release_conn()

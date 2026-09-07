@@ -26,14 +26,17 @@ from src.methods.cognascore.feature_schema import namespaced_feature
 from src.methods.cognascore.paths import (
     BASE_FEATURE_ROOT,
     EMBEDDING_FEATURE_ROOT,
+    LLM_FEATURE_ROOT,
     TRAINED_MODEL_ROOT,
 )
+from src.methods.cognascore.llm_surprisal import DEFAULT_CAUSAL_LM
 from src.methods.cognascore.results import model_slug
 from src.methods.cognascore.modeling import BoundedRidge, TrainingRangeClipper
 
 
 EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
 EMBEDDING_SLUG = model_slug(EMBEDDING_MODEL)
+LLM_FEATURE_SLUG = model_slug(DEFAULT_CAUSAL_LM)
 ALL_DATASETS = (
     "scalabrino",
     "schnappinger",
@@ -237,6 +240,7 @@ def feature_category_counts_for(selected_features: list[str]) -> dict[str, int]:
         "compression": sum(1 for feature in selected_features if feature.startswith("compression__")),
         "embedding_derived": sum(1 for feature in selected_features if feature.startswith("embedding__")),
         "semantic_context": sum(1 for feature in selected_features if feature.startswith("semantic__")),
+        "causal_lm": sum(1 for feature in selected_features if feature.startswith("llm__")),
     }
 
 
@@ -261,6 +265,7 @@ def load_combined_features(
     feature_root: Path,
     embedding_feature_root: Path,
     selected_features: list[str],
+    llm_feature_root: Path = LLM_FEATURE_ROOT,
 ) -> pd.DataFrame:
     base_path = feature_root / dataset / EMBEDDING_SLUG / "features.csv"
     embedding_path = embedding_feature_root / dataset / EMBEDDING_SLUG / "features.csv"
@@ -297,6 +302,35 @@ def load_combined_features(
             f"Feature identity mismatch for {dataset}: "
             f"base={len(base_features)}, embedding={len(embedding_features)}, merged={len(merged)}"
         )
+    if any(feature.startswith("llm__") for feature in selected_features):
+        llm_path = llm_feature_root / dataset / LLM_FEATURE_SLUG / "features.csv"
+        llm = pd.read_csv(llm_path)
+        llm_features = llm.rename(
+            columns={
+                column: namespaced_feature("llm", column)
+                for column in llm.columns
+                if column not in id_columns
+            }
+        ).copy()
+        llm_features["_feature_row_occurrence"] = llm_features.groupby(
+            ["dataset", "task_id"]
+        ).cumcount()
+        llm_features = llm_features.drop(columns=["readability_score"])
+        merged["_feature_row_occurrence"] = merged.groupby(
+            ["dataset", "task_id"]
+        ).cumcount()
+        before = len(merged)
+        merged = merged.merge(
+            llm_features,
+            on=merge_columns,
+            how="inner",
+            validate="one_to_one",
+        ).drop(columns=["_feature_row_occurrence"])
+        if len(merged) != before or len(merged) != len(llm_features):
+            raise ValueError(
+                f"LLM feature identity mismatch for {dataset}: "
+                f"combined={before}, llm={len(llm_features)}, merged={len(merged)}"
+            )
     missing = [feature for feature in selected_features if feature not in merged.columns]
     if missing:
         raise KeyError(f"Missing selected features for {dataset}: {missing}")

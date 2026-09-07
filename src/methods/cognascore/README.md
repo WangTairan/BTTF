@@ -7,8 +7,8 @@ adaptive cluster structure.
 
 The retained CognaScore model is a Ridge predictor over 18 frozen features.
 
-Feature selection and ablation code is intentionally outside this package in
-`experiments/cognascore/selection/` and `experiments/cognascore/evaluation/`.
+Frozen-model evaluation and ablation code lives in
+`experiments/cognascore/evaluation/`. Exploratory selection scripts have been removed.
 
 ## Package structure
 
@@ -21,6 +21,8 @@ Feature selection and ablation code is intentionally outside this package in
 - `embedding_cache.py`: persistent SQLite embedding cache;
 - `embedding_features.py`: embedding geometry and adaptive clustering;
 - `feature_schema.py`: stable ML feature namespaces;
+- `llm_surprisal.py`: cached causal-code-LM surprisal features and lexical
+  identifier alignment;
 - `semantic_context.py`: the retained short-identifier semantic features;
 - `runners/`: stable extraction, cache, validation, and score materialization
   commands;
@@ -66,8 +68,8 @@ ML-facing columns use explicit namespaces:
 - `embedding__` for embedding geometry and clustering features;
 - `semantic__` for short-identifier semantic-context features.
 
-Five-model consensus selection runs five separate screens over the same
-canonical feature names; it does not concatenate model-specific columns into
+The retained five-model consensus ranking was produced by five separate screens over the same
+canonical feature names; it did not concatenate model-specific columns into
 one enlarged training matrix. Exact feature counts are recorded in generated
 table metadata so documentation cannot drift when the candidate schema changes.
 
@@ -171,6 +173,37 @@ The second form rebuilds all feature tables from existing vector caches without
 running an embedding model. Set `BASE_ONLY=1` only for an intentional base-only
 refresh.
 
+## Causal-LM surprisal features
+
+This family is generated independently from the frozen model. It uses the
+Apache-2.0 base model `Qwen/Qwen2.5-Coder-0.5B` and derives four values from one
+teacher-forced token-loss trace: code perplexity, bits-per-byte, upper-tail
+local surprisal, and identifier excess surprisal. Long sources use overlapping
+windows, while each target token contributes exactly once. Results are cached
+by source SHA-256 and the resolved model/configuration fingerprint.
+
+These are standalone feature computations, independent of masking experiments.
+The LM receives the original source, including comments and string literals.
+The feature-local lexical helpers blank comments/strings only in a temporary,
+character-offset-preserving copy used to locate identifiers (C-like code and
+Python fragment fallback; normal Java/Python paths use tokenizers). A separate
+boolean overlap mask selects existing token losses for identifier excess
+surprisal. Neither mask changes LM inputs or uses RMC masking or constructed
+dataset interventions. The other three features aggregate the full loss trace.
+
+The production script pins model revision
+`8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301`.
+
+Run the six human-rated datasets with:
+
+```bash
+bash scripts/run_llm_surprisal_six_datasets.sh
+```
+
+Restarting the command reuses every completed source hash. Outputs are written
+below `artifacts/cognascore/features/llm/`; the family is not automatically
+included in the frozen model or formal feature selection.
+
 ## CognaScore ML
 
 The stable materializer is:
@@ -188,7 +221,6 @@ predictions under:
 results/methods/cognascore_ml_consensus18_6dataset_sampled_margin/<dataset>/<embedding-model>/summary.json
 ```
 
-The ranking and selection experiment that produced the frozen list lives in
-`experiments/cognascore/selection/consensus_selection.py`. Keeping it outside the stable
-runner prevents a new exploratory selection from silently changing the
-reported model.
+The frozen feature list and ranking evidence remain under
+`experiments/cognascore/configs/`; exploratory ranking and replacement scripts
+have been removed.

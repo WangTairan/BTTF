@@ -9,6 +9,7 @@ from typing import Any
 
 from src.datasets import load_code_dataset
 from src.experiments.registry import DATASETS, method_output_key
+from src.experiments.paths import safe_path_part
 
 from .evaluate_constructed_variants import summarize_paired_variants
 
@@ -22,6 +23,7 @@ METHOD_RESULT_KEYS = {
     "scalabrino": method_output_key("scalabrino"),
     "dorn": method_output_key("dorn"),
     "mi_convnet_cr": method_output_key("mi_convnet_cr"),
+    "llm": method_output_key("llm"),
     "loc": "loc_baseline",
 }
 
@@ -32,6 +34,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS, required=True)
     parser.add_argument("--method", choices=tuple(METHOD_RESULT_KEYS), required=True)
+    parser.add_argument(
+        "--model",
+        help="Configured model key for methods stored in model-specific result directories.",
+    )
     parser.add_argument("--results-root", type=Path, default=Path("results/methods"))
     return parser.parse_args()
 
@@ -39,7 +45,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     method_key = METHOD_RESULT_KEYS[args.method]
-    summary_path = args.results_root / method_key / args.dataset / "summary.json"
+    result_dir = args.results_root / method_key / args.dataset
+    if args.method == "llm":
+        if not args.model:
+            raise SystemExit("--model is required when --method llm")
+        result_dir /= safe_path_part(args.model)
+    elif args.model:
+        raise SystemExit("--model is only valid when --method llm")
+    summary_path = result_dir / "summary.json"
     if not summary_path.is_file():
         raise SystemExit(f"Missing method result summary: {summary_path}")
 

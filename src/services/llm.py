@@ -60,6 +60,13 @@ MODELS = {
 }
 
 
+def supports_batch_api(model_name: str) -> bool:
+    """Return whether the configured provider supports our remote batch path."""
+    if model_name not in MODELS:
+        raise ValueError(f"Unknown model: {model_name}")
+    return MODELS[model_name]["provider"] in ("openai", "groq")
+
+
 _openai_client = None
 _groq_client = None
 _openrouter_client = None
@@ -250,24 +257,78 @@ def chat(model_name: str, prompt: str, **kwargs: Any) -> str:
     )
 
 
-@retry(
-    retry=retry_if_not_exception_type(MissingAPIKeyError),
-    stop=stop_after_attempt(10),
-    wait=wait_exponential(multiplier=5, min=1, max=90),
-)
+def chat_with_metadata(model_name: str, prompt: str, **kwargs: Any) -> dict[str, Any]:
+    """Return response text together with the complete serializable API response."""
+    return chat_messages_with_metadata(
+        model_name,
+        [{"role": "user", "content": prompt}],
+        **kwargs,
+    )
+
+
 def chat_messages(
     model_name: str,
     messages: Sequence[dict[str, Any]],
     **kwargs: Any,
 ) -> str:
-    provider, _, body = _build_chat_body(
+    return str(chat_messages_with_metadata(model_name, messages, **kwargs)["content"])
+
+
+@retry(
+    retry=retry_if_not_exception_type(MissingAPIKeyError),
+    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=5, min=1, max=90),
+)
+def chat_messages_with_metadata(
+    model_name: str,
+    messages: Sequence[dict[str, Any]],
+    **kwargs: Any,
+) -> dict[str, Any]:
+    provider, requested_model, body = _build_chat_body(
         model_name,
         messages,
         **kwargs,
     )
     client = _get_client(provider)
     response = client.chat.completions.create(**body)
-    return _message_content(response)
+    return {
+        "content": _message_content(response),
+        "provider": provider,
+        "configured_model": model_name,
+        "requested_model": requested_model,
+        "response_id": _obj_get(response, "id"),
+        "response_model": _obj_get(response, "model"),
+        "created": _obj_get(response, "created"),
+        "finish_reason": _first_finish_reason(response),
+        "usage": _serializable_value(_obj_get(response, "usage")),
+        "request_parameters": _serializable_value(
+            {key: value for key, value in body.items() if key != "messages"}
+        ),
+        "api_response": _serializable_value(response),
+    }
+
+
+def _first_finish_reason(response: Any) -> Any:
+    choices = _obj_get(response, "choices", ())
+    if not choices:
+        return None
+    return _obj_get(choices[0], "finish_reason")
+
+
+def _serializable_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _serializable_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_serializable_value(item) for item in value]
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        return _serializable_value(model_dump(mode="json"))
+    to_dict = getattr(value, "to_dict", None)
+    if callable(to_dict):
+        return _serializable_value(to_dict())
+    return str(value)
 
 
 def batch_chat(

@@ -3,40 +3,6 @@
 This directory contains semantic-feature checks that do not use readability
 labels and never refit the CognaScore readability model.
 
-## Comment-to-code threshold stability
-
-Each repetition draws 50 comment-bearing programs from the upper half of human
-readability scores within each of the six datasets. Sampling is stratified,
-with unavailable quota redistributed deterministically. A same-program
-comment/code pair is a weak positive; a
-comment borrowed from a different program in the same dataset is a weak
-negative. Restricting mismatches to the same dataset prevents language or
-dataset identity from making the negative task artificially easy.
-
-```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-python3 \
-  -m experiments.cognascore.auxiliary.comment_threshold_stability
-```
-
-The default experiment repeats the draw 200 times from base seed `20260828`.
-It writes the per-repeat thresholds and every sampled pair. Same-program
-pairing is explicitly treated as a reproducible proxy for relevance, not as a
-replacement for human annotation.
-
-Pass `--min-readability-percentile 0` to reproduce the unfiltered diagnostic.
-The selected Nomic threshold is versioned in `comment_threshold.json`. The
-constructed probe refuses to run if that value differs from the newly
-generated stability median.
-
-To probe both the handcrafted and resampled thresholds on 20 fixed groups from
-the constructed non-informative-comment interference, run:
-
-```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-python3 \
-  -m experiments.cognascore.auxiliary.comment_constructed_probe
-```
 
 ## Reproducible mathematical/application anchors
 

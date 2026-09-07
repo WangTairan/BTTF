@@ -1,17 +1,13 @@
-# Research experiments
+# Retained research experiments
 
-This directory contains exploratory and paper-analysis code. Nothing here is
-required to extract CognaScore features or apply a frozen CognaScore model.
+Stable feature production and scoring remain under `src/`.
 
-- `cognascore/selection/`: feature screening and consensus ranking.
-- `cognascore/evaluation/`: pooled CV, LODO, embedding-model refits, and
-  controlled-interference evaluation.
-- `cognascore/analysis/`: post-hoc feature-impact and annotation-reliability
-  diagnostics.
-- `cognascore/auxiliary/`: self-contained semantic-anchor and comment-threshold
-  experiments.
-- `cognascore/figures/`: publication-figure generation.
+- `cognascore/evaluation/`: fixed-feature CV, LODO, ablations, embedding-model refits, and controlled-interference evaluation.
+- `cognascore/configs/`: frozen feature configuration and ranking evidence.
+- `cognascore/auxiliary/`: semantic-anchor corpus verification and embedding maintenance.
+- `cognascore/figures/`: rendering of retained publication curve data.
 - `dorn/`: evaluation of the reconstructed Dorn baseline.
 
-Stable dataset adapters remain in `src/datasets/`. Stable CognaScore feature
-production and scoring commands remain in `src/methods/cognascore/`.
+Exploratory screening, feature-addition/replacement searches, post-hoc analysis,
+and comment-threshold probes have been removed. The four causal-LM features,
+their extraction runner, tests, and cached tables are retained.

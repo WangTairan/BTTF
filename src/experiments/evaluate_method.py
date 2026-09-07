@@ -50,6 +50,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, help="Run at most this many items.")
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument(
+        "--require-llm-audit-record",
+        action="store_true",
+        help=(
+            "With --method llm --skip-existing, reuse a result only when it "
+            "contains the raw response, response metadata, usage, and complete "
+            "serializable API response."
+        ),
+    )
+    parser.add_argument(
         "--prune-retired",
         action="store_true",
         help=(
@@ -135,7 +144,11 @@ def main() -> None:
 
 
 def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir: Path) -> Path:
-    from src.methods.llm_prompt import llm_prompt_engineering_scores
+    from src.methods.llm_prompt import (
+        llm_prompt_engineering_score,
+        llm_prompt_engineering_scores,
+    )
+    from src.services.llm import supports_batch_api
 
     rows_by_task: dict[str, dict[str, Any]] = {}
     pending: list[tuple[int, DatasetItem, Path]] = []
@@ -147,9 +160,15 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
         row = None
         if args.skip_existing:
             exact = reusable_by_task.get(item.task_id)
-            if exact is not None and result_source_sha256(exact) == source_hash:
+            if (
+                exact is not None
+                and result_source_sha256(exact) == source_hash
+                and llm_result_is_reusable(exact, args.require_llm_audit_record)
+            ):
                 row = clone_result_identity(exact, item, source_hash)
-            elif source_hash in reusable_by_hash:
+            elif source_hash in reusable_by_hash and llm_result_is_reusable(
+                reusable_by_hash[source_hash], args.require_llm_audit_record
+            ):
                 row = clone_result_identity(reusable_by_hash[source_hash], item, source_hash)
         if row is not None:
             output_path.write_text(
@@ -161,7 +180,45 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
         else:
             pending.append((index, item, output_path))
 
-    if pending:
+    if pending and not supports_batch_api(args.model):
+        print(
+            f"Running LLM requests with per-item checkpoints: "
+            f"{len(pending)} pending / {len(items)} total",
+            flush=True,
+        )
+        for index, item, output_path in pending:
+            progress.running(index, item.task_id)
+            source_hash = item_source_sha256(item)
+            try:
+                result = llm_prompt_engineering_score(item.content, model_name=args.model)
+                score = normalize_score(result.get("score"))
+                row = {
+                    "task_id": item.task_id,
+                    "readability_score": item.readability_score,
+                    "method": args.method,
+                    "source_sha256": source_hash,
+                    "score": score,
+                    "result": result,
+                    "metadata": item.metadata,
+                }
+            except Exception as exc:
+                row = {
+                    "task_id": item.task_id,
+                    "readability_score": item.readability_score,
+                    "method": args.method,
+                    "source_sha256": source_hash,
+                    "score": None,
+                    "error": repr(exc),
+                    "metadata": item.metadata,
+                }
+            output_path.write_text(
+                json.dumps(row, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            rows_by_task[item.task_id] = row
+            progress.writing(index, item.task_id)
+
+    elif pending:
         print(f"Submitting LLM batch: {len(pending)} pending / {len(items)} total", flush=True)
         codes = [item.content for _, item, _ in pending]
         batch_state_path = result_dir / ".batch_state.json"
@@ -202,6 +259,22 @@ def run_llm_batch(args: argparse.Namespace, items: list[DatasetItem], result_dir
     if args.prune_retired:
         prune_retired_results(result_dir, items)
     return write_summary(result_dir, args, rows)
+
+
+def llm_result_is_reusable(row: dict[str, Any], require_audit_record: bool) -> bool:
+    if not require_audit_record:
+        return True
+    result = row.get("result")
+    if not isinstance(result, dict):
+        return False
+    metadata = result.get("response_metadata")
+    return (
+        isinstance(result.get("raw_response"), str)
+        and bool(result["raw_response"])
+        and isinstance(metadata, dict)
+        and "usage" in metadata
+        and isinstance(result.get("api_response"), dict)
+    )
 
 
 def load_items(path: Path) -> Iterable[DatasetItem]:
@@ -266,6 +339,10 @@ def prune_retired_results(run_dir: Path, items: list[DatasetItem]) -> None:
 
 
 def validate_method_dataset(args: argparse.Namespace) -> None:
+    if args.require_llm_audit_record and args.method != "llm":
+        raise SystemExit("--require-llm-audit-record is only valid with --method llm.")
+    if args.require_llm_audit_record and not args.skip_existing:
+        raise SystemExit("--require-llm-audit-record requires --skip-existing.")
     if not is_method_dataset_supported(args.method, args.dataset):
         raise SystemExit(f"{args.method} does not support dataset {args.dataset}.")
 
