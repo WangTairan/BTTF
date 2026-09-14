@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "readability-data"
+version = "0.18.0"
+description = "Reproducible source-level degradation for complete Java and Python classes"
+requires-python = ">=3.10"
+dependencies = [
+  "tree-sitter==0.25.2",
+  "tree-sitter-java==0.23.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "ruff==0.16.7"]
+
+[project.scripts]
+readability-data = "readability_data.cli:main"
+readability-experiments = "readability_experiments.cli:main"
+readability-deepseek = "readability_experiments.deepseek_cli:main"
+readability-groq = "readability_experiments.groq_cli:main"
+readability-benchmarks = "readability_experiments.benchmark_eval.cli:main"
+readability-benchmark-pilot = "readability_experiments.benchmark_eval.pilot:main"
+readability-static-validation = "readability_experiments.benchmark_eval.static_cli:main"
+readability-sample-repair-tasks = "readability_experiments.benchmark_eval.sample_cli:main"
+readability-prevalidate-repair-tasks = "readability_experiments.benchmark_eval.prevalidation_cli:main"
+readability-lightweight-build = "readability_experiments.lightweight_eval.build_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["readability_data*", "readability_experiments*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["data", ".git", ".venv"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["F", "I"]

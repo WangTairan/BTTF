@@ -5,8 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
-PYCACHE="${PYTHONPYCACHEPREFIX:-/tmp/readability_pycache}"
+PYTHON_BIN="${PYTHON_BIN:-python}"
+PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/cognascore_pycache}"
 
 if [[ ! -f frozen_models/dorn_retrained/model.json ]]; then
   echo "Missing frozen_models/dorn_retrained/model.json; refusing implicit retraining." >&2

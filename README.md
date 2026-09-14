@@ -1,224 +1,185 @@
-# CognaScore: Code Readability Research Suite
+# CognaScore
 
-This repository contains CognaScore and a reproducible evaluation suite for
-code-readability research. CognaScore represents source code with typed
-cognitive chunks, conventional code measurements, embedding-space geometry,
-and adaptive clustering summaries.
+A research toolkit for code readability. CognaScore combines typed code chunks,
+code-level measurements, embedding geometry, and adaptive clustering in a
+fixed 18-feature Ridge model. The repository also includes comparison methods,
+independent Java/Python interference datasets, and reproducible evaluations.
 
-The retained CognaScore model uses data-driven stability screening and a Ridge
-predictor over 18 frozen features.
+The `v1.0.0-embedding-only` milestone freezes the code-level and embedding-derived
+18-feature model; causal-LLM features remain auxiliary experiments for the next
+major version.
 
-Comparison methods are isolated as separate method families, including RMC,
-Posnett, Dorn, Scalabrino, direct LLM scoring, and the paper-aligned Mi
-character-level CNN reproduction.
+[Interactive results](https://wangtairan.github.io/Code-Readability/)
 
-The tracked result site is published through GitHub Pages at
-<https://wangtairan.github.io/Code-Readability/>.
-
-## Repository structure
+## Repository layout
 
 ```text
-datasets/              Input datasets and dataset-specific notes
-experiments/           Frozen-model evaluation and paper figures
-figures/               Reproducible paper figures and their source data
-scripts/               End-to-end maintenance commands
-src/datasets/          Stable dataset adapters
-src/experiments/       Shared evaluation, metrics, paths, and registry
-src/methods/           Stable method and feature-production code
-src/site/              Static result-site generator
-docs/                  Generated, tracked result site
-artifacts/             Rebuildable embedding and feature caches
-results/               Method results and experiment analyses
-models/                Downloaded third-party model weights
-bib/local_papers/      Local reading copies of papers (ignored by Git)
+src/datasets/               Dataset adapters
+src/methods/                CognaScore and comparison methods
+src/experiments/            Shared evaluation runners and metrics
+src/site/                   Result-site generator
+experiments/cognascore/     Model configuration, ranking evidence, and evaluation
+experiments/dorn/           Dorn baseline evaluation
+tools/source_interference/ Java/Python dataset generation and downstream tasks
+datasets/                  Human-rated and constructed datasets
+frozen_models/             Fitted predictors and manifests
+figures/                   Paper figures and plotting scripts
+scripts/                   Pipeline and maintenance commands
+docs/                      GitHub Pages result site
+artifacts/                 Source corpora, embeddings, features, and caches
+results/                   Predictions and experiment reports
+models/                    Downloaded model weights
 ```
-
-Reusable data loading, feature production, and frozen scoring live under
-`src/`; frozen-model evaluation, ablations, and paper-figure generation live
-under `experiments/`. Exploratory screening and feature-replacement scripts
-have been removed; the frozen feature configuration and ranking evidence remain.
 
 ## Installation
 
-Python 3.11 is recommended.
+Use Python 3.11 and run commands from the repository root:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-Embedding models are downloaded to `models/` on first use or through the
-CognaScore download runner. Generated vectors live under `artifacts/`, not
-beside the model weights. Large artifacts and results are intentionally not
-versioned.
+To match the statistical-library versions recorded by the frozen model, use
+`python -m pip install -r requirements-reproduction.txt` instead.
 
-## Datasets
+The requirements include an editable installation of the source-interference
+tool. Model weights, source checkouts, and generated caches are stored locally
+and excluded from Git.
 
-The six established development/evaluation datasets are MBJP, Buse,
-Scalabrino, JetBrains, Dorn, and Schnappinger. Additional registered
-datasets are retained as first-class evaluation datasets:
+The released Scalabrino and Dorn feature implementations also require a JDK
+with `java` and `javac` available on `PATH`. LLM runners require provider credentials.
 
-- `java_comparative_obfuscation`: 14 independently applied interference types
-  paired with the same 100 original Java classes for fine-grained response
-  analysis, including local data-flow and control-flow transformations.
-- `python_comparative_degradation`: the same 14 independent interference
-  categories applied to 100 production Python classes sampled equally from
-  Django, Flask, Requests, and attrs.
+## Datasets and methods
 
-Their canonical paths, labels, metrics, and reconstruction command are
-documented in [`datasets/README.md`](datasets/README.md). Dataset adapters
-return a common `DatasetItem` representation and are registered in
-[`src/experiments/registry.py`](src/experiments/registry.py).
+The six human-rated datasets are MBJP, Buse, Scalabrino, Dorn, Schnappinger,
+and JetBrains. The two constructed datasets contain independent interferences
+applied to Java and Python classes. Dataset paths, targets, and evaluation
+metrics are listed in [datasets/README.md](datasets/README.md).
 
-## CognaScore pipeline
+Comparison methods include Posnett, Scalabrino, the reconstructed Dorn model,
+the Mi ConvNetCR reproduction, direct LLM scoring, LOC, and RMC. Each method
+has its own implementation and README under `src/methods/`.
 
-The stable feature pipeline has three persistent stages:
+## Feature production
 
-1. extract base, visual, chunk, type-inventory, and compression features;
-2. cache chunk embeddings once per embedding model;
-3. derive embedding-geometry and adaptive-clustering tables from the cache.
+The pipeline extracts code-level features, caches chunk embeddings, and derives
+embedding geometry and adaptive-clustering features. Embedding vectors are
+content-addressed; incremental updates reuse existing vectors and completed
+feature rows. Schema and build versions control feature-table rebuilds.
 
-To refresh sources after changing the extractor, then rebuild and validate all
-five embedding-model feature tables, run:
+Download model weights before the first embedding run:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  bash scripts/refresh_cognascore_after_extractor_change.sh
+python -m src.methods.cognascore.runners.download_embedding_model
 ```
 
-Source references are atomically replaced by default. Existing vectors are
-content-addressed and reused; vectors no longer referenced by any current task
-may remain in SQLite but cannot enter a feature row. Embedding-derived tables
-carry a build version, so the first run after an algorithm/schema change is a
-full rebuild and an interrupted run resumes from its checkpoints.
-
-If embeddings and source references are already current, rebuild feature
-tables without recomputing vectors:
+Refresh source references and update all five models on the six human-rated
+datasets, plus Nomic on the constructed datasets:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  bash scripts/rebuild_cognascore_feature_tables.sh
+bash scripts/refresh_cognascore_after_extractor_change.sh
 ```
 
-Use `BASE_ONLY=1` only when intentionally rebuilding the model-independent
-tables while leaving the existing embedding-derived tables untouched.
+Rebuild feature tables from current embedding caches:
 
-Validate existing tables directly:
+```bash
+bash scripts/rebuild_cognascore_feature_tables.sh
+```
+
+For the full five-model comparison, include both constructed datasets:
+
+```bash
+INCLUDE_CONSTRUCTED_ALL_MODELS=1 bash scripts/refresh_cognascore_after_extractor_change.sh
+```
+
+This remains sequential and reuses cached vectors. Set the same flag on the
+rebuild script when only feature tables need updating.
+
+Validate existing tables:
 
 ```bash
 python -m src.methods.cognascore.runners.validate_feature_tables \
   --embedding-model nomic-ai/nomic-embed-text-v1.5
 ```
 
-See [`src/methods/cognascore/README.md`](src/methods/cognascore/README.md) for
-the feature schema and stable runners.
+[CognaScore documentation](src/methods/cognascore/README.md) describes the
+feature schema, supported models, and individual runners.
 
-## Model development and frozen scores
+## Model and evaluation
 
-Materialize the final CognaScore ML model and all report datasets:
+The frozen model is in
+`frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/`.
+Its manifest records the ordered features, preprocessing, coefficients,
+software versions, and provenance.
+
+Evaluate the fixed feature schema using pooled 10-fold CV, LODO, ablations,
+and independent fits for the five embedding models:
+
+```bash
+python -m experiments.cognascore.evaluation.cross_validate_fixed
+python -m experiments.cognascore.evaluation.leave_one_dataset_out
+python -m experiments.cognascore.evaluation.ablate_final_model
+python -m experiments.cognascore.evaluation.compare_embedding_model_refits
+```
+
+The six dataset-specific Spearman correlations receive equal weight in
+benchmark averages. Interference response rates pool changed original–variant
+pairs directly. Each evaluation records its training datasets and protocol.
+
+Fit the fixed schema and write predictions with:
 
 ```bash
 python -m src.methods.cognascore.runners.supervised_ridge
 ```
 
-The complete frozen model is written under
-`frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/`. It includes the exact
-serialized pipeline and a readable manifest containing the ordered features,
-imputation and scaling values, Ridge parameters, and training-data hashes.
-Its 18-feature list is fitted on the six continuous-score development datasets.
+Replacing an existing fitted artifact requires `--overwrite-artifact`.
 
-Materialize the retained scorer from existing feature tables:
+## Constructed datasets
+
+Update only changed source hashes for one dataset:
 
 ```bash
-python -m src.methods.cognascore.runners.supervised_ridge
-```
-
-The frozen ML runner fits one dataset-balanced model on MBJP, Buse, Dorn,
-Scalabrino, Schnappinger, and the continuous JetBrains human-vote fraction,
-then writes predictions for every registered report dataset. The ordered feature list remains fixed in the retained configuration.
-
-The retained Java and Python independent-interference evaluations are
-reproduced together with:
-
-```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  bash scripts/run_constructed_variants_nomic.sh
-```
-
-After replacing or extending one constructed dataset, update only changed
-source hashes with:
-
-```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  bash scripts/update_constructed_nomic_incremental.sh \
+bash scripts/update_constructed_nomic_incremental.sh \
   datasets/constructed/java-comparative-obfuscation-class-100
 ```
 
-The updater runs base extraction, source-reference/embedding maintenance, and
-embedding-feature derivation sequentially. Unchanged source hashes reuse their
-existing rows, while retired task IDs are removed from the rebuilt tables.
-
-Run the locally supported comparison methods (Posnett transfer, Dorn, and
-LOC) and produce their paired summaries with:
+Update and evaluate both datasets sequentially:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  bash scripts/run_constructed_baselines.sh
+bash scripts/run_constructed_variants_nomic.sh
+bash scripts/run_constructed_baselines.sh
 ```
 
-The released Scalabrino implementation is excluded from this two-language
-runner because its parser accepts Java only; its Java evaluation remains a
-separate reproducible run. The API-based LLM baseline is also excluded from
-this default evaluation.
-
-## Comparison methods
-
-The shared evaluator supports deterministic and direct-scoring comparison
-methods:
+Generate separate reproduction copies from local source corpora:
 
 ```bash
-python -m src.experiments.evaluate_method \
-  datasets/scalabrino/dataset --method posnett
-
-python -m src.experiments.evaluate_method \
-  datasets/scalabrino/dataset --method scalabrino
+bash scripts/generate_constructed_datasets.sh
 ```
 
-Method-specific instructions are in [`src/methods/README.md`](src/methods/README.md).
+Generation writes to `artifacts/source_interference/reproductions/` by default.
+Source requirements, interference definitions, and downstream-task commands
+are in [the tool documentation](tools/source_interference/README.md).
 
-## Result site and paper figures
-
-Generate the tracked result site:
-
-```bash
-python -m src.site.build
-```
-
-Generate the six-dataset feature-count sensitivity figure:
+## Figures and result site
 
 ```bash
 python -m experiments.cognascore.figures.plot_feature_count_sensitivity
+python figures/plot_readability_label_distributions.py
+python figures/plot_chunk_clustering_motivation.py
+python -m src.site.build
 ```
 
-The script renders the retained CSV curve and writes the PDF and plotted CSV
-to `figures/`; feature-count searches are no longer included.
-
-Generate the normalized human-label distribution figure:
+## Maintenance
 
 ```bash
-python figures/plot_readability_label_distributions.py
+bash scripts/check_release.sh
 ```
 
-This figure uses each dataset's documented rating scale; JetBrains contributes
-its readable-vote fraction rather than its majority-vote binary label.
+The check runs compilation, shell syntax checks, regression tests, and
+frozen-model checksum verification. It does not rebuild datasets or embeddings.
+Auxiliary semantic-anchor and causal-LM feature tools remain available under
+`experiments/cognascore/auxiliary/` and `src/methods/cognascore/`.
 
-## Reproducibility notes
-
-- `artifacts/` contains rebuildable intermediate data and is ignored by Git.
-- `results/` contains method and experiment results and is ignored by Git.
-- `models/` contains downloaded model weights and is ignored by Git.
-- `docs/` and `figures/` are publication artifacts and may be versioned.
-- local paper PDFs under `bib/` are ignored; citation metadata may be tracked.
-- commands fail on missing dependencies, incomplete caches, and schema
-  mismatches rather than silently falling back.
+See [RELEASING.md](RELEASING.md) for the release checklist and artifact boundaries.

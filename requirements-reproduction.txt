@@ -1,0 +1,6 @@
+# Statistical-library versions recorded by the frozen Nomic model manifest.
+# Install from the repository root using Python 3.11.
+-r requirements.txt
+numpy==2.4.1
+pandas==3.0.2
+scikit-learn==1.8.0

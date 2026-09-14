@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
-PYCACHE="${PYTHONPYCACHEPREFIX:-/tmp/readability_pycache}"
+PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/cognascore_pycache}"
 
 DATASET_PATHS=(
   "datasets/constructed/java-comparative-obfuscation-class-100"
@@ -23,7 +23,7 @@ for index in "${!DATASET_PATHS[@]}"; do
 done
 
 echo "Evaluating the frozen CognaScore model on both paired datasets."
-PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN:-python3}" \
+PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN:-python}" \
   -m experiments.cognascore.evaluation.evaluate_constructed_variants
 
 echo "Constructed-dataset feature and evaluation pipeline complete."

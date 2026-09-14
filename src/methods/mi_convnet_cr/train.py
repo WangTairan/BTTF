@@ -9,7 +9,6 @@ import math
 from pathlib import Path
 import random
 from statistics import mean
-from typing import Iterable
 
 import numpy as np
 

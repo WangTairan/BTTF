@@ -8,7 +8,7 @@ adaptive cluster structure.
 The retained CognaScore model is a Ridge predictor over 18 frozen features.
 
 Frozen-model evaluation and ablation code lives in
-`experiments/cognascore/evaluation/`. Exploratory selection scripts have been removed.
+`experiments/cognascore/evaluation/`.
 
 ## Package structure
 
@@ -33,9 +33,7 @@ Frozen-model evaluation and ablation code lives in
 Java snippets are first parsed directly. Member fragments are retried inside a
 synthetic enclosing class, and structurally truncated Java snippets use the
 bounded lexical path. C, C++, and CUDA always use the explicit C-like lexical
-extractor and are never passed to the Java parser. Missing parsers and invalid
-feature/cache state raise explicit errors; the pipeline does not silently
-substitute another embedding model or clustering family.
+extractor. Parser, schema, and cache validation run before feature production.
 
 Extractor hygiene rules bound individual chunk strings and summarize large
 array initializers so pathological snippets cannot dominate embedding work.
@@ -57,9 +55,7 @@ Every dataset receives the same schema:
 The embedding families are evaluated over four chunk views: `all`,
 `only_identifier`, `semantic_core`, and `structural_core`. Clustering uses
 OPTICS, HDBSCAN, automatically selected K-means, and automatically thresholded
-agglomerative clustering. Fixed-radius DBSCAN sweeps, fixed-K sweeps, graph
-features, `NORMAL`, and junk features are not part of the produced feature
-tables.
+agglomerative clustering.
 
 ML-facing columns use explicit namespaces:
 
@@ -68,10 +64,8 @@ ML-facing columns use explicit namespaces:
 - `embedding__` for embedding geometry and clustering features;
 - `semantic__` for short-identifier semantic-context features.
 
-The retained five-model consensus ranking was produced by five separate screens over the same
-canonical feature names; it did not concatenate model-specific columns into
-one enlarged training matrix. Exact feature counts are recorded in generated
-table metadata so documentation cannot drift when the candidate schema changes.
+The five-model consensus ranking uses separate screens over the same canonical
+feature names. Feature counts are recorded in generated table metadata.
 
 ## Supported embedding models
 
@@ -97,14 +91,15 @@ artifact is stored at:
 artifacts/cognascore/calibration/<embedding-model>/comment_relevance.json
 ```
 
-The threshold is never fitted on a readability benchmark. Each comment is
+Each comment is
 aligned to its most similar non-comment semantic chunk, since a local comment
 need not describe an entire class. Four features summarize these alignments:
 their mean and minimum, the fraction below the calibrated threshold, and the
 mean similarity deficit.
-Feature extraction fails loudly when the calibration embeddings are missing.
+Calibration embeddings are required for feature production.
 
-Download models explicitly when desired:
+Download required models before the first embedding run; existing weights are
+reused on subsequent runs:
 
 ```bash
 python -m src.methods.cognascore.runners.download_embedding_model \
@@ -156,13 +151,16 @@ python -m src.methods.cognascore.runners.validate_feature_tables \
   --embedding-model nomic-ai/nomic-embed-text-v1.5
 ```
 
-The repository-level scripts run the same process over all registered datasets
-and all five embedding models:
+The repository-level scripts run the same process over the six human-rated
+datasets for all five models, and the constructed datasets for Nomic:
 
 ```bash
 bash scripts/refresh_cognascore_after_extractor_change.sh
 bash scripts/rebuild_cognascore_feature_tables.sh
 ```
+
+Set `INCLUDE_CONSTRUCTED_ALL_MODELS=1` on either script to include the constructed
+datasets for all five models, as required by the full embedding-model comparison.
 
 The refresh command atomically replaces the selected datasets' source
 references while retaining reusable text-keyed vectors. The feature builder
@@ -182,14 +180,9 @@ local surprisal, and identifier excess surprisal. Long sources use overlapping
 windows, while each target token contributes exactly once. Results are cached
 by source SHA-256 and the resolved model/configuration fingerprint.
 
-These are standalone feature computations, independent of masking experiments.
 The LM receives the original source, including comments and string literals.
-The feature-local lexical helpers blank comments/strings only in a temporary,
-character-offset-preserving copy used to locate identifiers (C-like code and
-Python fragment fallback; normal Java/Python paths use tokenizers). A separate
-boolean overlap mask selects existing token losses for identifier excess
-surprisal. Neither mask changes LM inputs or uses RMC masking or constructed
-dataset interventions. The other three features aggregate the full loss trace.
+Identifier alignment uses lexical offsets to select token losses for identifier
+excess surprisal. The other three features aggregate the full loss trace.
 
 The production script pins model revision
 `8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301`.
@@ -221,6 +214,5 @@ predictions under:
 results/methods/cognascore_ml_consensus18_6dataset_sampled_margin/<dataset>/<embedding-model>/summary.json
 ```
 
-The frozen feature list and ranking evidence remain under
-`experiments/cognascore/configs/`; exploratory ranking and replacement scripts
-have been removed.
+The frozen feature list and ranking evidence are under
+`experiments/cognascore/configs/`.

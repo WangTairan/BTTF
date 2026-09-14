@@ -13,11 +13,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "models",
         nargs="*",
-        choices=COGNASCORE_EMBEDDING_MODELS,
         help="Embedding model names. Defaults to all supported CognaScore embedding models.",
     )
     parser.add_argument("--cache-dir", type=Path, default=COGNASCORE_DEFAULT_CACHE_DIR)
-    return parser.parse_args()
+    args = parser.parse_args()
+    unknown = [model for model in args.models if model not in COGNASCORE_EMBEDDING_MODELS]
+    if unknown:
+        parser.error(f"Unsupported embedding models: {', '.join(unknown)}")
+    return args
 
 
 def main() -> None:

@@ -42,7 +42,6 @@ from src.methods.rmc.scoring import (
     score_task_result,
 )
 from src.site.labels import (
-    DATASET_ORDER,
     METHOD_ORDER,
     dataset_label,
     dataset_rank,
@@ -1301,7 +1300,6 @@ def write_run_pages(runs: list[Run]) -> None:
 
 
 def run_config_items(run: Run) -> list[tuple[str, str]]:
-    data = run.data
     items = [
         ("Method", method_label(run.method)),
         ("Dataset", dataset_label(run.dataset)),

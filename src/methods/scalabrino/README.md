@@ -38,7 +38,8 @@ class before scoring.
 The package also exposes metric extraction through the official jar entry point:
 
 ```bash
-java -cp rsm.jar it.unimol.readability.metric.runnable.ExtractMetrics <file.java>
+java -cp src/methods/scalabrino/official_tool/rsm.jar \
+  it.unimol.readability.metric.runnable.ExtractMetrics path/to/file.java
 ```
 
 Use `scalabrino_metrics(code)` from Python to obtain the extracted

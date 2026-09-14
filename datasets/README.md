@@ -17,8 +17,8 @@ evaluation metrics are registered in `src/experiments/registry.py`.
 ## Independent interference datasets
 
 The Java and Python constructed datasets each contain 100 original production
-classes and 14 interference types applied independently to every original.
-Their 1,500 rows comprise 100 originals and 1,400 attempted transformations.
+classes and 13 interference types applied independently to every original.
+Their 1,400 rows comprise 100 originals and 1,300 attempted transformations.
 Manifest order is an identifier, not a scalar severity label. Evaluation
 compares every source-changing transformation directly with its matched
 original and excludes inapplicable, unchanged pairs from changed-only rates.
@@ -28,3 +28,8 @@ layout, data flow, and control flow. The Java sources are balanced across
 Apache Kafka, Google Guava, Netty, and Spring Framework; the Python sources are
 balanced across Django, Flask, Requests, and attrs. Every manifest records
 content hashes and construction provenance for incremental recomputation.
+
+The generator is maintained in `tools/source_interference/` in this repository.
+Both generation and evaluation use these canonical datasets; there is no second
+copy in the tool package. See its README for syntax-validation guarantees and
+commands for constructing a separate reproduction copy.

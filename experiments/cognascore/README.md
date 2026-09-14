@@ -2,7 +2,7 @@
 
 This directory contains the reproducible analyses retained for the final
 CognaScore release. Stable feature production and scoring remain under
-`src/methods/cognascore/`; nothing here can silently replace the frozen model.
+`src/methods/cognascore/`.
 
 ## Directory structure
 
@@ -12,7 +12,7 @@ CognaScore release. Stable feature production and scoring remain under
 - `figures/`: rendering of retained publication curve data.
 - `configs/`: the frozen feature list and selection evidence.
 
-## Final model development
+## Model evaluation
 
 - `evaluation/cross_validate_fixed.py`: pooled grouped 10-fold evaluation of the frozen
   18-feature list.
@@ -21,7 +21,7 @@ CognaScore release. Stable feature production and scoring remain under
 - `evaluation/ablate_final_model.py`: remove the code-level or complete
   embedding-derived family, or independently remove the embedding-geometry or
   clustering subfamily, without reselection, and rerun the canonical pooled
-  10-fold, LODO, and held-out Java/Python controlled-interference protocols.
+  10-fold, LODO, and Java/Python controlled-interference protocols.
 - `evaluation/compare_embedding_model_refits.py`: independently refit the same
   18-feature Ridge for all five embedding models and compare coefficients,
   pooled CV, LODO, and controlled-interference responses.
@@ -37,8 +37,7 @@ pairs directly and do not average category-level percentages.
 The final-model group ablation can be reproduced with:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-  python3 \
+  python \
   -m experiments.cognascore.evaluation.ablate_final_model
 ```
 
@@ -58,7 +57,6 @@ and are never averaged with equal category weights. Rebuild Nomic features and
 evaluate both datasets sequentially with:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
   bash scripts/run_constructed_variants_nomic.sh
 ```
 
@@ -66,7 +64,6 @@ For an updated single constructed dataset, use the hash-aware incremental
 pipeline:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
   bash scripts/update_constructed_nomic_incremental.sh \
   datasets/constructed/java-comparative-obfuscation-class-100
 ```

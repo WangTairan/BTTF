@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/.."
+
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
 if [[ ! -f frozen_models/dorn_retrained/model.json ]]; then
   "$PYTHON_BIN" -m src.methods.dorn.train

@@ -6,11 +6,11 @@ ignored by Git except for this file.
 ```text
 methods/                 Final CognaScore and comparison-method summaries
 experiments/cognascore/  Final cross-validation and constructed-dataset analyses
+experiments/source_interference/  Downstream API responses, usage records, and analyses
 ```
 
-The retained CognaScore ML results correspond to the frozen 18-feature model.
-Historical feature searches and superseded frozen models are intentionally not
-kept here. CognaScore Compact remains a separate, unchanged method route.
+Canonical CognaScore ML evaluations use the frozen 18-feature representation.
+Experiment reports are organized by run.
 
 Publication figures derived from these results live in the tracked `figures/`
 directory. The generated visualization site lives in the tracked `docs/`

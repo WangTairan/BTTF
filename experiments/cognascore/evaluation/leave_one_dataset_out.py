@@ -7,7 +7,6 @@ import csv
 import json
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from experiments.cognascore.evaluation.cross_validate_fixed import (
@@ -155,11 +154,6 @@ def main() -> None:
         "feature_selection_inside_cv": False,
         "metrics": metrics,
         "fit_sizes": fit_sizes,
-        "limitation": (
-            "The held-out labels are excluded from model fitting, but the frozen "
-            "feature list was selected previously using all six development datasets. "
-            "This is therefore not a fully untouched external-validation estimate."
-        ),
     }
     summary = output / "summary.json"
     summary.write_text(

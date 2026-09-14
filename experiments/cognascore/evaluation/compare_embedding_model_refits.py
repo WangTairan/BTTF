@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from experiments.cognascore.evaluation.cross_validate_fixed import fold_assignments
+from experiments.cognascore.evaluation.metrics import unweighted_spearman_average
 from experiments.cognascore.evaluation.evaluate_constructed_variants import (
     prediction_rows,
     summarize_paired_variants,
@@ -225,16 +225,15 @@ def load_model_frame(
 
 def evaluate_model(model: Any, frames: dict[str, pd.DataFrame]) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
-    values: list[float] = []
     for dataset, frame in frames.items():
         prediction = model.predict(frame[list(SELECTED_FEATURES)].to_numpy(float))
         value = spearman(
             prediction.tolist(), frame["readability_score"].astype(float).tolist()
         )
         metrics[dataset] = {"n": len(frame), "spearman": value}
-        if math.isfinite(value):
-            values.append(value)
-    metrics["unweighted_average"] = sum(values) / len(values)
+    metrics["unweighted_average"] = unweighted_spearman_average(
+        metrics, CORE_DATASETS, value_key="spearman"
+    )
     return metrics
 
 
@@ -301,16 +300,15 @@ def leave_one_dataset_out(
 
 def correlation_metrics(frame: pd.DataFrame) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
-    values: list[float] = []
     for dataset, group in frame.groupby("dataset", sort=False):
         value = spearman(
             group["prediction"].astype(float).tolist(),
             group["readability_score"].astype(float).tolist(),
         )
         metrics[str(dataset)] = {"n": len(group), "spearman": value}
-        if math.isfinite(value):
-            values.append(value)
-    metrics["unweighted_average"] = sum(values) / len(values)
+    metrics["unweighted_average"] = unweighted_spearman_average(
+        metrics, CORE_DATASETS, value_key="spearman"
+    )
     return metrics
 
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import math
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +18,7 @@ from typing import Any, Mapping, Sequence
 import pandas as pd
 
 from experiments.cognascore.evaluation.cross_validate_fixed import fit_model
+from experiments.cognascore.evaluation.metrics import unweighted_spearman_average
 from experiments.cognascore.evaluation.evaluate_constructed_variants import (
     prediction_rows,
     summarize_paired_variants,
@@ -397,22 +397,11 @@ def dataset_values(prefix: str, metrics: Mapping[str, Mapping[str, Any]]) -> dic
 
 
 def unweighted_dataset_average(metrics: Mapping[str, Mapping[str, Any]]) -> float:
-    values: list[float] = []
-    for dataset in DATASETS:
-        value = metric_value(metrics[dataset])
-        if math.isfinite(value):
-            values.append(value)
-    return sum(values) / len(values) if values else float("nan")
+    return unweighted_spearman_average(metrics, DATASETS)
 
 
 def metric_value(record: Mapping[str, Any]) -> float:
-    if "value" in record:
-        return float(record["value"])
-    if "mcc_training_fold_threshold" in record:
-        return float(record["mcc_training_fold_threshold"])
-    if "mcc_fixed_target_midpoint_0_5" in record:
-        return float(record["mcc_fixed_target_midpoint_0_5"])
-    raise KeyError(f"No primary metric in record: {record}")
+    return float(record["value"])
 
 
 def write_rows(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:

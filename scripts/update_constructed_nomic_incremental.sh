@@ -16,8 +16,8 @@ if [[ ! -f "${DATASET}/manifest.jsonl" || ! -f "${DATASET}/provenance.json" ]]; 
   exit 2
 fi
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
-PYCACHE="${PYTHONPYCACHEPREFIX:-/tmp/readability_pycache}"
+PYTHON_BIN="${PYTHON_BIN:-python}"
+PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/cognascore_pycache}"
 DEVICE="${DEVICE:-cpu}"
 BATCH_SIZE="${BATCH_SIZE:-64}"
 MAX_LENGTH="${MAX_LENGTH:-256}"

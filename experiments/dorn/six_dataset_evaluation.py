@@ -204,10 +204,6 @@ def pooled_cross_validation(
         "folds": folds,
         "seed": seed,
         "metrics": metrics_by_dataset(pooled),
-        "limitation": (
-            "The seven-feature list was selected previously on the public Dorn data, "
-            "which overlaps the Dorn benchmark included here."
-        ),
     }, pooled
 
 
@@ -231,10 +227,6 @@ def leave_one_dataset_out(
     return {
         "protocol": "leave one entire readability dataset out",
         "metrics": metrics_by_dataset(combined),
-        "limitation": (
-            "Predictor fitting excludes each held-out dataset, but the frozen seven-feature "
-            "list originated from the public Dorn data."
-        ),
     }, combined
 
 

@@ -14,8 +14,6 @@ import numpy as np
 import pandas as pd
 import sklearn
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import make_pipeline
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -46,10 +44,8 @@ ALL_DATASETS = (
     "jetbrains",
 )
 TRAIN_DATASETS = ("mbjp", "buse", "dorn", "scalabrino", "schnappinger", "jetbrains")
-EXTERNAL_DATASETS: tuple[str, ...] = ()
 SCORE_MODEL_NAME = "consensus18_6dataset_sampled_margin_nomic"
 METHOD_KEY = "cognascore_ml_consensus18_6dataset_sampled_margin"
-TRAINING_DROP_MIDDLE = 0.0
 
 SELECTED_FEATURES = [
     "base__operator_density",
@@ -157,11 +153,8 @@ def main() -> None:
         dataset: load_combined_features(dataset, args.feature_root, args.embedding_feature_root, selected_features)
         for dataset in sorted(set((*train_datasets, *report_datasets)))
     }
-    missing_train = [dataset for dataset in train_datasets if dataset not in frames]
-    if missing_train:
-        raise SystemExit(f"Unknown training datasets: {missing_train}")
     train = pd.concat([frames[name] for name in train_datasets], ignore_index=True)
-    fit_mask = training_middle_keep_mask(train, TRAINING_DROP_MIDDLE)
+    fit_mask = np.ones(len(train), dtype=bool)
     ridge = fit_ridge(train, fit_mask, args.ridge_alpha, selected_features)
     coefficients = ridge_coefficients(ridge, selected_features)
     binary_training_dataset = any(
@@ -351,26 +344,7 @@ def regression_target(frame: pd.DataFrame) -> np.ndarray:
     return values
 
 
-def training_middle_keep_mask(frame: pd.DataFrame, drop_middle: float) -> np.ndarray:
-    if not 0.0 <= drop_middle < 1.0:
-        raise ValueError("drop_middle must be in [0, 1).")
-    keep = np.ones(len(frame), dtype=bool)
-    if drop_middle <= 0.0:
-        return keep
-    for _, indices in frame.groupby("dataset").groups.items():
-        labels = frame.loc[indices, "readability_score"].astype(float).to_numpy(dtype=float)
-        unique = set(labels.tolist())
-        if unique.issubset({0.0, 1.0}):
-            continue
-        threshold = float(np.median(labels))
-        distances = np.abs(labels - threshold)
-        cutoff = float(np.quantile(distances, drop_middle))
-        keep[np.asarray(list(indices), dtype=int)] = distances > cutoff
-    return keep
-
-
 def dataset_balanced_sample_weight(frame: pd.DataFrame, eligible_mask: np.ndarray) -> np.ndarray:
-    eligible = pd.Series(eligible_mask, index=frame.index)
     counts = frame.loc[eligible_mask].groupby("dataset")["task_id"].transform("count").astype(float)
     count_by_index = pd.Series(0.0, index=frame.index)
     count_by_index.loc[eligible_mask] = counts
@@ -512,8 +486,6 @@ def write_summary(
             "training_datasets": list(training_datasets),
             "training_sample_count": int(training_sample_count),
             "training_pool_sample_count": int(training_pool_sample_count),
-            "training_drop_middle": TRAINING_DROP_MIDDLE,
-            "training_drop_middle_scope": "none",
             "target": (
                 "per-dataset rank-percentile readability for the six continuous datasets"
             ),
@@ -527,10 +499,6 @@ def write_summary(
             "selected_features": selected_features,
             "standardized_coefficients": coefficients,
             "frozen_model_artifact": str(model_artifact),
-            "limitations": (
-                "The feature list and final Ridge fit use the same six-dataset "
-                "development pool."
-            ),
         },
     }
     output_dir = output_root / method / dataset / EMBEDDING_SLUG
@@ -840,14 +808,7 @@ def best_binary_threshold(
 
 
 def dataset_path(dataset: str) -> str:
-    return {
-        "scalabrino": "datasets/scalabrino/dataset",
-        "schnappinger": "datasets/schnappinger",
-        "dorn": "datasets/dorn/dataset",
-        "buse": "datasets/buse",
-        "mbjp": "datasets/mbjp_dev_dataset/readability_dataset.json",
-        "jetbrains": "datasets/jetbrains",
-    }.get(dataset, dataset)
+    return str(DATASETS[dataset].path)
 
 
 if __name__ == "__main__":

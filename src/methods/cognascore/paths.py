@@ -1,4 +1,4 @@
-"""Canonical local paths for CognaScore artifacts and research results."""
+"""Repository-relative paths for CognaScore artifacts and research results."""
 
 from pathlib import Path
 

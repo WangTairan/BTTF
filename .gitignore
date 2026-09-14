@@ -3,6 +3,7 @@
 Thumbs.db
 .vscode/
 .idea/
+.github/modernize/
 *.swp
 *.swo
 
@@ -25,18 +26,17 @@ dist/
 *.egg-info/
 
 # Generated artifacts, method results, and historical run data
-artifacts/**
-!artifacts/README.md
-results/**
-!results/README.md
-output_history/
-output_*/
-backups/
+/artifacts/*
+!/artifacts/README.md
+/results/*
+!/results/README.md
 wandb/
 runs/
 
 # Local model/download caches
-models/
+/models/
+# Bundled UML website examples are not inputs to the class-level adapter.
+/datasets/schnappinger/argoUML/sourcefiles/www/models/
 .cache/
 *.safetensors
 *.ckpt
@@ -44,10 +44,15 @@ models/
 *.pth
 *.onnx
 *.bin
+!/frozen_models/**/*.pt
+!/frozen_models/**/*.pth
 
 # Locally retained papers; the tracked bibliography contains citations only
 bib/**/*.pdf
 bib/local_papers/
+
+# Local manuscript drafts retained alongside the source-generation tool.
+tools/source_interference/notes/
 
 # Temporary files
 *.tmp
@@ -58,7 +63,3 @@ tmp/
 temp/
 .env
 .env.*
-
-# Keep the generated GitHub Pages visualization tracked.
-!docs/
-!docs/**

@@ -26,10 +26,11 @@
   "granularity": "class",
   "input": {
     "java_file_count": 100,
-    "manifest": "<USER_HOME>/Desktop/readability/data/base/java-readable-class-100/manifest.jsonl",
+    "manifest": "artifacts/source_interference/data/base/java-readable-class-100/manifest.jsonl",
     "manifest_sha256": "99eb3c0207065fd36fbb202ef2bb54bae84ab8d4227f5a8af46d155a08e2a63f",
     "policy": "all recursively discovered Java files; no sampling",
-    "root": "<USER_HOME>/Desktop/readability/data/base/java-readable-class-100/source-original"
+    "root": "artifacts/source_interference/data/base/java-readable-class-100/source-original",
+    "path_base": "repository-root"
   },
   "interference_count": 13,
   "interferences": [

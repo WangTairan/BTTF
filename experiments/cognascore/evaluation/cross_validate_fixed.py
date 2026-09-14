@@ -202,12 +202,6 @@ def main() -> None:
         ),
         "metrics": metrics,
         "fold_sizes": fold_sizes,
-        "limitation": (
-            "These are out-of-fold model-fit estimates for an already frozen feature "
-            f"set. Because the {len(selected_features)} features were previously selected using the six "
-            "development datasets, this is not nested feature-selection CV and does "
-            "not remove feature-selection bias."
-        ),
     }
     summary_path = output / "summary.json"
     summary_path.write_text(

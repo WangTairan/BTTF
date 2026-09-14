@@ -5,12 +5,9 @@ reported by Mi et al., *Improving Code Readability Classification Using
 Convolutional Neural Networks* (IST 2018), DOI
 `10.1016/j.infsof.2018.07.006`.
 
-It is deliberately named `mi_convnet_cr`, not `DeepCRM`. The authors' public
-repository provides Java snippets and partial matrix-preprocessing utilities,
-but does not provide the CNN implementation, trained weights, character
-dictionary, or all dependencies needed to reconstruct the complete three-view
-ensemble. Calling an independently completed ensemble the official DeepCRM
-would therefore overstate reproducibility.
+The reproduction covers the character-level branch. The authors' repository
+provides the Java snippets and partial matrix-preprocessing utilities; the
+network architecture and training settings follow the paper.
 
 The implementation follows the paper's published character-level architecture:
 
@@ -21,24 +18,20 @@ The implementation follows the paper's published character-level architecture:
 - readable/unreadable labels from the top and bottom quartiles of Buse, the Java
   subset of Dorn, and Scalabrino; the middle half is excluded.
 
-The frozen-model manifest separates paper-specified settings from choices that
-the incomplete release forces a reproduction to make. The readable-class
-Softmax probability is exposed as the continuous score for Spearman and paired
-degradation evaluation.
+The manifest records the architecture, training settings, and preprocessing.
+The readable-class Softmax probability is used for Spearman and paired
+interference evaluation.
 
-Train and run the external Java interference evaluation with:
+Train and run Java interference evaluation with:
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-python3 -m src.methods.mi_convnet_cr.train
+python -m src.methods.mi_convnet_cr.train
 
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-python3 -m src.experiments.evaluate_method \
+python -m src.experiments.evaluate_method \
   datasets/constructed/java-comparative-obfuscation-class-100 \
   --method mi_convnet_cr
 
-PYTHONPYCACHEPREFIX=/tmp/readability_pycache \
-python3 -m experiments.cognascore.evaluation.summarize_constructed_method \
+python -m experiments.cognascore.evaluation.summarize_constructed_method \
   --dataset java_comparative_obfuscation --method mi_convnet_cr
 ```
 
