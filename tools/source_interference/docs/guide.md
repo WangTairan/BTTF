@@ -1,7 +1,7 @@
 # Source-interference tool: detailed guide
 
 This guide covers source generation and optional downstream experiments, not
-CognaScore feature selection. Dataset generation refuses existing output paths;
+primary-model feature selection. Dataset generation refuses existing output paths;
 use a separate output directory for reproduction. Source checkouts and local
 workspaces are not included in Git. See `tools/source_interference/README.md`
 for storage boundaries and prerequisites.
@@ -467,7 +467,7 @@ same DeepSeek runner and uses standalone official tests for automatic scoring:
 python -m readability_experiments.deepseek_cli run \
   --input artifacts/source_interference/data/experiments/agent-readability-lightweight/dataset/tasks.jsonl \
   --output-root results/experiments/source_interference/deepseek-lightweight \
-  --models deepseek-v4-pro \
+  --models deepseek-flash \
   --validation-timeout-seconds 30
 ```
 
@@ -475,7 +475,9 @@ python -m readability_experiments.deepseek_cli run \
 
 The runner reads `DEEPSEEK_API_KEY` from the environment and calls only the
 official `https://api.deepseek.com/chat/completions` endpoint. Supported model
-IDs are `deepseek-v4-pro` and `deepseek-v4-flash`.
+IDs are `deepseek-flash` (V4.1 Flash) and the transitional
+`deepseek-v4-pro` identifier. The latter is currently routed by the provider
+to V4.1 Flash pending a future V4.1 Pro release.
 
 ```bash
 python -m readability_experiments.deepseek_cli smoke
@@ -528,19 +530,18 @@ in `evaluation-logs/`.
 python -m readability_experiments.deepseek_cli run \
   --input artifacts/source_interference/data/experiments/agent-readability/dynamic-qualified/pilot/tasks.jsonl \
   --output-root results/experiments/source_interference/deepseek \
-  --models deepseek-v4-pro
+  --models deepseek-flash
 ```
 
-For the lower-cost DeepSeek V4 Flash run on the complete lightweight repair
-dataset, use the provider's stable API model ID `deepseek-v4-flash`.  This
-configuration disables thinking to match the existing V4 Pro experiment and
-stores the run separately:
+For a DeepSeek V4.1 Flash run on the complete lightweight repair dataset, use
+the provider's current API model ID `deepseek-flash`. This configuration
+disables thinking and stores the run separately:
 
 ```bash
 python -m readability_experiments.deepseek_cli run \
   --input artifacts/source_interference/data/experiments/agent-readability-lightweight/full-dataset/tasks.jsonl \
-  --output-root results/experiments/source_interference/deepseek-v4-flash \
-  --models deepseek-v4-flash \
+  --output-root results/experiments/source_interference/deepseek-v4.1-flash \
+  --models deepseek-flash \
   --thinking disabled \
   --reasoning-effort low \
   --max-tokens 30000 \

@@ -1,4 +1,4 @@
-"""Contract between independent source generation and CognaScore evaluation."""
+"""Contract between independent source generation and model evaluation."""
 
 import json
 from pathlib import Path

@@ -1,185 +1,86 @@
-# CognaScore
+# Code Readability Prediction
 
-A research toolkit for code readability. CognaScore combines typed code chunks,
-code-level measurements, embedding geometry, and adaptive clustering in a
-fixed 18-feature Ridge model. The repository also includes comparison methods,
-independent Java/Python interference datasets, and reproducible evaluations.
+Reproduction package for an interpretable code-readability model built from
+traditional code measurements, embedding-space organization, and causal-LM
+predictability. The repository contains the frozen models, datasets, selection
+evidence, evaluation code, controlled transformations, and figure sources used
+in the paper.
 
-The `v1.0.0-embedding-only` milestone freezes the code-level and embedding-derived
-18-feature model; causal-LLM features remain auxiliary experiments for the next
-major version.
+## Repository map
 
-[Interactive results](https://wangtairan.github.io/Code-Readability/)
+| Location | Contents |
+| --- | --- |
+| [`src/methods/readability_model/`](src/methods/readability_model/) | Feature extraction and Ridge prediction |
+| [`experiments/main/readability_model/`](experiments/main/readability_model/) | Selection, benchmark evaluation, robustness, ablation, and uncertainty analyses |
+| [`experiments/baselines/`](experiments/baselines/) | Published and reproduced comparison methods |
+| [`experiments/supplementary/`](experiments/supplementary/) | Paper-reported semantic-anchor and comment diagnostics |
+| [`tools/source_interference/`](tools/source_interference/) | Controlled Java/Python transformations and the repair probe |
+| [`datasets/`](datasets/) | Human-rated, controlled-interference, and pinned repair datasets |
+| [`frozen_models/`](frozen_models/) | Final 11-feature model, 18-feature predecessor, and fitted baselines |
+| [`figures/`](figures/) | Publication figures, plotting scripts, and retained plotting data |
 
-## Repository layout
+The reference final model uses OpenCoder-1.5B-Base predictability features and
+Jina Embeddings v2 Base Code. The separately selected 18-feature
+embedding-only predecessor also uses Jina. Historical artifact directories
+retain the `cognascore/` namespace solely to preserve provenance.
 
-```text
-src/datasets/               Dataset adapters
-src/methods/                CognaScore and comparison methods
-src/experiments/            Shared evaluation runners and metrics
-src/site/                   Result-site generator
-experiments/cognascore/     Model configuration, ranking evidence, and evaluation
-experiments/dorn/           Dorn baseline evaluation
-tools/source_interference/ Java/Python dataset generation and downstream tasks
-datasets/                  Human-rated and constructed datasets
-frozen_models/             Fitted predictors and manifests
-figures/                   Paper figures and plotting scripts
-scripts/                   Pipeline and maintenance commands
-docs/                      GitHub Pages result site
-artifacts/                 Source corpora, embeddings, features, and caches
-results/                   Predictions and experiment reports
-models/                    Downloaded model weights
-```
+## Setup
 
-## Installation
-
-Use Python 3.11 and run commands from the repository root:
+Use Python 3.11 from the repository root:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-reproduction.txt
 ```
 
-To match the statistical-library versions recorded by the frozen model, use
-`python -m pip install -r requirements-reproduction.txt` instead.
+Install `requirements-llm.txt` only when regenerating causal-LM feature tables.
+Some baselines require a JDK, and the direct-LLM baseline requires provider
+credentials. Installation and release checks do not call external APIs.
 
-The requirements include an editable installation of the source-interference
-tool. Model weights, source checkouts, and generated caches are stored locally
-and excluded from Git.
-
-The released Scalabrino and Dorn feature implementations also require a JDK
-with `java` and `javac` available on `PATH`. LLM runners require provider credentials.
-
-## Datasets and methods
-
-The six human-rated datasets are MBJP, Buse, Scalabrino, Dorn, Schnappinger,
-and JetBrains. The two constructed datasets contain independent interferences
-applied to Java and Python classes. Dataset paths, targets, and evaluation
-metrics are listed in [datasets/README.md](datasets/README.md).
-
-Comparison methods include Posnett, Scalabrino, the reconstructed Dorn model,
-the Mi ConvNetCR reproduction, direct LLM scoring, LOC, and RMC. Each method
-has its own implementation and README under `src/methods/`.
-
-## Feature production
-
-The pipeline extracts code-level features, caches chunk embeddings, and derives
-embedding geometry and adaptive-clustering features. Embedding vectors are
-content-addressed; incremental updates reuse existing vectors and completed
-feature rows. Schema and build versions control feature-table rebuilds.
-
-Download model weights before the first embedding run:
-
-```bash
-python -m src.methods.cognascore.runners.download_embedding_model
-```
-
-Refresh source references and update all five models on the six human-rated
-datasets, plus Nomic on the constructed datasets:
-
-```bash
-bash scripts/refresh_cognascore_after_extractor_change.sh
-```
-
-Rebuild feature tables from current embedding caches:
-
-```bash
-bash scripts/rebuild_cognascore_feature_tables.sh
-```
-
-For the full five-model comparison, include both constructed datasets:
-
-```bash
-INCLUDE_CONSTRUCTED_ALL_MODELS=1 bash scripts/refresh_cognascore_after_extractor_change.sh
-```
-
-This remains sequential and reuses cached vectors. Set the same flag on the
-rebuild script when only feature tables need updating.
-
-Validate existing tables:
-
-```bash
-python -m src.methods.cognascore.runners.validate_feature_tables \
-  --embedding-model nomic-ai/nomic-embed-text-v1.5
-```
-
-[CognaScore documentation](src/methods/cognascore/README.md) describes the
-feature schema, supported models, and individual runners.
-
-## Model and evaluation
-
-The frozen model is in
-`frozen_models/cognascore/consensus18_6dataset_sampled_margin_nomic/`.
-Its manifest records the ordered features, preprocessing, coefficients,
-software versions, and provenance.
-
-Evaluate the fixed feature schema using pooled 10-fold CV, LODO, ablations,
-and independent fits for the five embedding models:
-
-```bash
-python -m experiments.cognascore.evaluation.cross_validate_fixed
-python -m experiments.cognascore.evaluation.leave_one_dataset_out
-python -m experiments.cognascore.evaluation.ablate_final_model
-python -m experiments.cognascore.evaluation.compare_embedding_model_refits
-```
-
-The six dataset-specific Spearman correlations receive equal weight in
-benchmark averages. Interference response rates pool changed original–variant
-pairs directly. Each evaluation records its training datasets and protocol.
-
-Fit the fixed schema and write predictions with:
-
-```bash
-python -m src.methods.cognascore.runners.supervised_ridge
-```
-
-Replacing an existing fitted artifact requires `--overwrite-artifact`.
-
-## Constructed datasets
-
-Update only changed source hashes for one dataset:
-
-```bash
-bash scripts/update_constructed_nomic_incremental.sh \
-  datasets/constructed/java-comparative-obfuscation-class-100
-```
-
-Update and evaluate both datasets sequentially:
-
-```bash
-bash scripts/run_constructed_variants_nomic.sh
-bash scripts/run_constructed_baselines.sh
-```
-
-Generate separate reproduction copies from local source corpora:
-
-```bash
-bash scripts/generate_constructed_datasets.sh
-```
-
-Generation writes to `artifacts/source_interference/reproductions/` by default.
-Source requirements, interference definitions, and downstream-task commands
-are in [the tool documentation](tools/source_interference/README.md).
-
-## Figures and result site
-
-```bash
-python -m experiments.cognascore.figures.plot_feature_count_sensitivity
-python figures/plot_readability_label_distributions.py
-python figures/plot_chunk_clustering_motivation.py
-python -m src.site.build
-```
-
-## Maintenance
+## Verify the release
 
 ```bash
 bash scripts/check_release.sh
+git diff --check
 ```
 
-The check runs compilation, shell syntax checks, regression tests, and
-frozen-model checksum verification. It does not rebuild datasets or embeddings.
-Auxiliary semantic-anchor and causal-LM feature tools remain available under
-`experiments/cognascore/auxiliary/` and `src/methods/cognascore/`.
+This verifies imports, documented commands, feature contracts, dataset tools,
+and frozen-model checksums without downloading model weights or overwriting
+publication results.
 
-See [RELEASING.md](RELEASING.md) for the release checklist and artifact boundaries.
+## Reproduce the main analyses
+
+```bash
+python -m experiments.main.readability_model.evaluation.cross_validate_fixed \
+  --selected-features-metadata \
+  experiments/main/readability_model/configs/consensus11_6dataset_three_llm_opencoder_jina.json
+
+python -m experiments.main.readability_model.evaluation.leave_one_dataset_out \
+  --selected-features-metadata \
+  experiments/main/readability_model/configs/consensus11_6dataset_three_llm_opencoder_jina.json
+
+python -m experiments.main.readability_model.evaluation.ablate_final_representation \
+  --selected-features-metadata \
+  experiments/main/readability_model/configs/consensus11_6dataset_three_llm_opencoder_jina.json
+
+python -m experiments.main.readability_model.evaluation.evaluate_constructed_variants
+```
+
+These evaluations require locally generated feature tables under `artifacts/`.
+Generation is documented in the [method README](src/methods/readability_model/README.md).
+Dataset provenance and immutable inputs are documented in
+[`datasets/README.md`](datasets/README.md).
+
+The repair-probe input is archived under
+[`datasets/recent_repository_completion/`](datasets/recent_repository_completion/pytest_python/README.md)
+and can be verified without fetching its upstream repository:
+
+```bash
+python scripts/local_recent_completion_dataset.py verify
+```
+
+Generated caches, downloaded weights, and complete result directories are not
+tracked. Compact-model searches, obsolete intermediate feature budgets,
+debugging probes, and the former result website are intentionally excluded
+from this reproduction release.

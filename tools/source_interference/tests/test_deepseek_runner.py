@@ -32,7 +32,7 @@ class _Response:
         return json.dumps(
             {
                 "id": "response-1",
-                "model": "deepseek-v4-flash",
+                "model": "deepseek-flash",
                 "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
                 "usage": {
                     "prompt_tokens": 3,
@@ -47,16 +47,16 @@ class DeepSeekRunnerTests(unittest.TestCase):
     def test_response_deployment_alias_maps_to_requested_model(self) -> None:
         self.assertEqual(
             _requested_model({"model": "deepseek-flash"}),
-            "deepseek-v4-flash",
+            "deepseek-flash",
         )
         self.assertEqual(
             _requested_model(
                 {
                     "model": "deepseek-flash",
-                    "requested_model": "deepseek-v4-flash",
+                    "requested_model": "deepseek-flash",
                 }
             ),
-            "deepseek-v4-flash",
+            "deepseek-flash",
         )
 
     def test_length_finish_is_retried_once_and_retained(self) -> None:
@@ -111,7 +111,7 @@ class DeepSeekRunnerTests(unittest.TestCase):
         response, length_history, transport_history = _chat_with_length_retry(
             client,
             prompt="p",
-            model="deepseek-v4-flash",
+            model="deepseek-flash",
             max_tokens=30000,
             thinking="disabled",
             reasoning_effort="low",
@@ -161,7 +161,7 @@ class DeepSeekRunnerTests(unittest.TestCase):
         self, mocked
     ) -> None:
         response = DeepSeekClient(api_key="secret-test-key").chat(
-            "hello", "deepseek-v4-flash"
+            "hello", "deepseek-flash"
         )
         self.assertEqual(response.content, "ok")
         request = mocked.call_args.args[0]
@@ -229,7 +229,7 @@ class DeepSeekRunnerTests(unittest.TestCase):
                     "usage": {},
                     "response_id": "r1",
                     # The API returns this deployment name for requests made with
-                    # the documented deepseek-v4-flash alias.
+                    # the documented V4.1 Flash identifier.
                     "model": "deepseek-flash",
                 }
             )
@@ -241,7 +241,7 @@ class DeepSeekRunnerTests(unittest.TestCase):
                     "--resume-run",
                     str(store.directory),
                     "--models",
-                    "deepseek-v4-flash",
+                    "deepseek-flash",
                 ]
             )
             result = run_tasks(args)

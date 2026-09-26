@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.methods.cognascore.member_access_features import member_access_features
+from src.methods.readability_model.member_access_features import member_access_features
 
 
 class MemberAccessFeaturesTest(unittest.TestCase):

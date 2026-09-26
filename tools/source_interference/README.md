@@ -2,7 +2,7 @@
 
 This package constructs Java and Python readability-interference datasets and
 provides optional downstream behavior-prediction and code-repair experiments.
-It is maintained alongside CognaScore, but does not import its feature extractor
+It is maintained alongside the primary readability model, but does not import its feature extractor
 or fit its readability predictor.
 
 ## Organization
@@ -70,7 +70,7 @@ runs as part of this command.
 
 | Content | Repository-relative location |
 | --- | --- |
-| Formal Java/Python datasets used by CognaScore | `datasets/constructed/` |
+| Formal Java/Python datasets used by the primary model | `datasets/constructed/` |
 | Upstream checkouts and prepared source corpus | `artifacts/source_interference/data/raw/`, `data/base/` inside that workspace |
 | Downstream tasks, benchmarks, and validation workspaces | `artifacts/source_interference/data/` |
 | API run records, responses, and usage | `results/experiments/source_interference/` |
@@ -89,11 +89,93 @@ the root `.gitignore`; they are not submodules.
 bash scripts/check_release.sh
 ```
 
-This runs the CognaScore, integration, and tool tests without rebuilding study
+This runs the primary-model, integration, and tool tests without rebuilding study
 datasets or calling APIs. Detailed downstream commands and validation limits
 are documented in [the guide](docs/guide.md). Provider runners require the
 appropriate credentials and explicit task inputs; these optional experiments
 do not run during installation or release checks.
+
+The recent-repository completion pilot uses one pinned September 2026
+production change from Apache Commons Collections and one from pytest. It
+replaces the recently changed method body with the same hole before applying
+each interference, then retains a pair only when the repository's focused
+native tests pass with the gold completion and fail with the hole. Repository
+checkouts and build caches remain under `artifacts/source_interference/`:
+
+```bash
+bash scripts/build_recent_completion_pilot.sh
+```
+
+The pilot builder performs no model request. It writes the validated task
+manifest, native-test evidence, and report under
+`artifacts/source_interference/data/experiments/recent-repository-completion/`.
+
+For the expanded study, discover 25 recent Java functions and 25 recent
+Python functions before running native validation. Each manifest row records
+both a method-body span and a recently changed statement span, together with
+the pinned repository commit, source hash, completion hashes, origin commits,
+and focused test paths:
+
+```bash
+bash scripts/discover_recent_completion_targets.sh
+```
+
+This command only builds the immutable candidate manifest. It does not modify
+either checkout, run repository tests, construct interference variants, or
+call a language model.
+
+Validate the candidates incrementally with the repositories' focused native
+tests:
+
+```bash
+bash scripts/validate_recent_completion_holes.sh
+```
+
+For each target, the unchanged source must pass, both validation-hole variants
+must remain syntactically valid, and a hole is retained only when its focused
+tests fail. `PER_LANGUAGE=1` performs a two-repository smoke test; the default
+checks the complete manifest. Results and logs are checkpointed under
+`native-validation/`, so restarting does not repeat completed targets.
+The retained `balanced_targets.jsonl` contains the newest 25 qualified targets
+per language; all passing candidates remain available in
+`qualified_targets.jsonl` for later expansion.
+
+Run a small Python-only solvability screen with the official DeepSeek API:
+
+```bash
+LIMIT_TARGETS=5 bash scripts/run_recent_completion_python_pilot.sh
+```
+
+The model receives the pinned source file with one
+`<READABILITY_HOLE>` but receives neither the original completion nor the
+tests. Method-body and statement completions are scored separately by
+reinserting the response and running the hidden focused pytest command. The
+default pilot deliberately uses the shortest five validated Python targets;
+it is a pipeline and solvability check, not an estimate of full-corpus
+accuracy. Full provider responses, reasoning, token usage, normalized
+completions, and native-test logs are saved under `results/experiments/`.
+
+The original-versus-interference experiment requires a second native
+validation stage; the 48 original Python holes alone are not the final task
+count. Build the paired manifest before making API requests:
+
+```bash
+bash scripts/build_recent_completion_python_variants.sh
+```
+
+Each of the 13 independently applied interferences is retained for a hole only
+when it changes the model-visible context, the transformed source passes after
+restoring its transformed completion, and the corresponding transformed hole
+fails the same focused test command. Inapplicable, hidden-only, duplicate, and
+test-breaking variants do not become model tasks. The resulting `tasks.jsonl`
+contains the original condition and every natively qualified perturbation.
+
+The completed Python task input is also committed as a pinned local dataset:
+[`datasets/recent_repository_completion/pytest_python/`](../../datasets/recent_repository_completion/pytest_python/).
+It contains the pytest source snapshot, 507 task records, provenance and
+checksums. Ordinary model evaluation uses this archive rather than repeating
+discovery or fetching the upstream repository. Restore it offline with
+`python scripts/local_recent_completion_dataset.py restore`.
 
 For tool development, install `tools/source_interference[dev]`. Its Ruff
 configuration checks unused/undefined names and import order; formatting uses

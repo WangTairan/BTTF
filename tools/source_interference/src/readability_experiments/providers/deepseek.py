@@ -9,7 +9,10 @@ from dataclasses import dataclass
 from typing import Any
 
 OFFICIAL_BASE_URL = "https://api.deepseek.com"
-OFFICIAL_MODELS = ("deepseek-v4-pro", "deepseek-v4-flash")
+# `deepseek-flash` is the documented API identifier for V4.1 Flash. The
+# provider still accepts `deepseek-v4-pro`, but currently routes it to V4.1
+# Flash pending a future V4.1 Pro release.
+OFFICIAL_MODELS = ("deepseek-flash", "deepseek-v4-pro")
 DEFAULT_THINKING = "enabled"
 DEFAULT_REASONING_EFFORT = "high"
 # The current V4 documentation does not publish a numeric default.  Repair

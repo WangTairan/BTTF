@@ -27,6 +27,11 @@ readability-static-validation = "readability_experiments.benchmark_eval.static_c
 readability-sample-repair-tasks = "readability_experiments.benchmark_eval.sample_cli:main"
 readability-prevalidate-repair-tasks = "readability_experiments.benchmark_eval.prevalidation_cli:main"
 readability-lightweight-build = "readability_experiments.lightweight_eval.build_cli:main"
+readability-recent-completion-build = "readability_experiments.repository_completion.builder:main"
+readability-recent-completion-discover = "readability_experiments.repository_completion.discovery:main"
+readability-recent-completion-validate = "readability_experiments.repository_completion.validate_manifest:main"
+readability-recent-completion-tasks = "readability_experiments.repository_completion.tasks:main"
+readability-recent-completion-variants = "readability_experiments.repository_completion.variants:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

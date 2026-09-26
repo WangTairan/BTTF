@@ -1,6 +1,6 @@
 # Code readability model papers
 
-This file records a selective reading list for CognaScore-related baselines and
+This file records a selective reading list for code-readability baselines and
 competitors. Local PDF copies, when available, live in the ignored
 `bib/local_papers/` directory and are not part of the public repository.
 

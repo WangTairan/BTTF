@@ -1,0 +1,96 @@
+{
+  "name": "consensus18_6dataset_sampled_margin",
+  "status": "frozen",
+  "frozen_at": "2026-09-24",
+  "selection_note": "The frozen 18-feature model with the handcrafted short-identifier context gate replaced by a reproducible mathematical-versus-application margin estimated from pinned open-source anchor snippets. Raw margin and raw distance variants are excluded; the normalized distance variant remains an ablation only.",
+  "model_artifact": "frozen_models/cognascore/consensus18_6dataset_sampled_margin_jina/jinaai-jina-embeddings-v2-base-code",
+  "embedding_model": "jinaai/jina-embeddings-v2-base-code",
+  "serialized_model_sha256": "4f4202933deaf23c35a39020e5743a6a97733456ea2686bc0e3dea0c6a878b80",
+  "selection_evidence": {
+    "protocol": "five-model L1 stability consensus",
+    "embedding_models": 5,
+    "datasets": 6,
+    "rows": 1100,
+    "candidate_features_per_model": 181,
+    "pre_exclusion_candidate_features_per_model": 197,
+    "stability_rounds": 200,
+    "stability_sample_fraction": 0.7,
+    "correlation_threshold": 0.9,
+    "all_selected_active_model_count": 5,
+    "ranking_artifact": "experiments/main/readability_model/configs/evidence/consensus18_5model_full_ranking.csv",
+    "selected_rank_artifact": "experiments/main/readability_model/configs/evidence/consensus18_selected_ranks.csv",
+    "selected_consensus_ranks": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11,
+      12,
+      13,
+      15,
+      16,
+      18,
+      19,
+      20,
+      23
+    ],
+    "theory_driven_exclusions": {
+      "cluster_size_variability": {
+        "reason": "Excluded because these view/algorithm combinations produced unstable or redundant cluster-size variability signals.",
+        "features": [
+          "embedding__only_identifier__optics_cluster_size_cv",
+          "embedding__structural_core__optics_cluster_size_cv",
+          "embedding__semantic_core__auto_kmeans_cluster_size_cv"
+        ]
+      },
+      "absolute_vertical_position": {
+        "reason": "Excluded because absolute vertical location within a snippet is presentation- and truncation-dependent rather than a portable readability construct.",
+        "features": [
+          "base__visual_identifier_y_mean",
+          "base__visual_identifier_y_std",
+          "base__visual_keyword_y_mean",
+          "base__visual_keyword_y_std",
+          "base__visual_operator_y_mean",
+          "base__visual_operator_y_std",
+          "base__visual_period_y_mean",
+          "base__scalabrino_visual_comment_y_mean",
+          "base__scalabrino_visual_number_y_mean",
+          "base__chunk_y_mean"
+        ]
+      },
+      "punctuation_diagnostics": {
+        "reason": "Retained for diagnostic and ablation analyses but excluded from formal selection because they depend on language-specific punctuation conventions.",
+        "features": [
+          "base__visual_period_density",
+          "base__visual_period_y_std",
+          "base__scalabrino_visual_comma_dft_energy"
+        ]
+      }
+    }
+  },
+  "selected_features": [
+    "base__operator_density",
+    "base__source_text_entropy",
+    "base__expression_complexity",
+    "base__longest_line_length",
+    "embedding__structural_core__auto_kmeans_pattern_count",
+    "embedding__only_identifier__embedding_dispersion",
+    "base__mean_indentation_change",
+    "embedding__structural_core__optics_pattern_mixing",
+    "embedding__structural_core__embedding_dispersion",
+    "base__regex_prevalence",
+    "embedding__structural_core__auto_agglo_pattern_mixing",
+    "semantic__short_identifier_prevalence",
+    "semantic__short_identifier_mathematical_context",
+    "base__bitwise_prevalence",
+    "embedding__structural_core__optics_unclustered_ratio",
+    "base__identifier_length_variation",
+    "base__decision_density",
+    "base__operator_character_share"
+  ]
+}

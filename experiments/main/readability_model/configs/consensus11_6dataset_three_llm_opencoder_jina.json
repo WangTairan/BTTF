@@ -1,0 +1,45 @@
+{
+  "name": "consensus11_6dataset_three_llm_opencoder_jina",
+  "status": "frozen",
+  "frozen_at": "2026-09-25",
+  "model_artifact": "frozen_models/cognascore/consensus11_6dataset_three_llm_opencoder_jina/jinaai-jina-embeddings-v2-base-code",
+  "embedding_model": "jinaai/jina-embeddings-v2-base-code",
+  "llm_feature_model": "infly/OpenCoder-1.5B-Base",
+  "training": {
+    "datasets": [
+      "mbjp",
+      "buse",
+      "dorn",
+      "scalabrino",
+      "schnappinger",
+      "jetbrains"
+    ],
+    "ridge_alpha": 200.0,
+    "seed": 42,
+    "target": "per-dataset rank-percentile readability; original binary values when applicable",
+    "sample_weight": "inverse dataset size"
+  },
+  "selection_evidence": {
+    "protocol": "three causal-LM feature tables crossed with five embedding-model instantiations; 200-round L1 stability selection and canonical-feature consensus",
+    "ranking_artifact": "experiments/main/readability_model/configs/evidence/consensus11_three_llm_full_ranking.csv",
+    "ranking_artifact_sha256": "ab89e6211c49d4d3f396cc749ccd50884d3a7dcc4fe1cfc9f5a35379968e5786",
+    "selected_rule": "first 11 positions of the fixed consensus ranking",
+    "reference_instantiation_rule": "highest pooled cross-validation average among all 15 causal-LM and embedding-model pairings",
+    "constructed_datasets_used": false,
+    "feature_selection_inside_cv": false
+  },
+  "serialized_model_sha256": "e832c826c3e1bf12aedc062210e4852618f67696484c1eb3c014a23dc25d66af",
+  "selected_features": [
+    "base__operator_density",
+    "llm__literal_tail_difficulty",
+    "llm__identifier_onset_difficulty",
+    "embedding__structural_core__auto_kmeans_pattern_count",
+    "base__decision_density",
+    "base__expression_complexity",
+    "base__longest_line_length",
+    "llm__assignment_value_difficulty",
+    "llm__declaration_difficulty_variation",
+    "llm__short_identifier_context_dependence",
+    "embedding__only_identifier__embedding_dispersion"
+  ]
+}

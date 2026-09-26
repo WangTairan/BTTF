@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from collections import Counter
 
-from experiments.cognascore.auxiliary.materialize_semantic_anchor_corpus import (
+from experiments.supplementary.semantic_anchors.materialize_semantic_anchor_corpus import (
     ALGORITHM_VERSION,
     SAMPLES_PER_SOURCE,
     verify,

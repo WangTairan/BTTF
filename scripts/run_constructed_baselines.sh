@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 PYTHON_BIN="${PYTHON_BIN:-python}"
-PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/cognascore_pycache}"
+PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/readability_model_pycache}"
 
 if [[ ! -f frozen_models/dorn_retrained/model.json ]]; then
   echo "Missing frozen_models/dorn_retrained/model.json; refusing implicit retraining." >&2
@@ -43,7 +43,7 @@ for index in "${!DATASET_PATHS[@]}"; do
 
   for method in posnett dorn loc; do
     PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
-      -m experiments.cognascore.evaluation.summarize_constructed_method \
+      -m experiments.main.readability_model.evaluation.summarize_constructed_method \
       --dataset "${dataset_key}" \
       --method "${method}"
   done

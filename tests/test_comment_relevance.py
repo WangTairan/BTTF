@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from src.methods.cognascore.comment_relevance import select_balanced_threshold
-from src.methods.cognascore.embedding_features import (
+from src.methods.readability_model.comment_relevance import select_balanced_threshold
+from src.methods.readability_model.embedding_features import (
     _comment_code_relevance_features,
 )
 

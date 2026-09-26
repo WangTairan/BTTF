@@ -20,19 +20,21 @@ from .providers.deepseek import (
     DeepSeekClient,
     DeepSeekTransientAPIError,
 )
+from .repository_completion.tasks import EXPECTED_KIND as REPOSITORY_COMPLETION_KIND
+from .repository_completion.validator import RepositoryCompletionValidator
 from .results import RunStore
 
 _DYNAMIC_PATCH_KINDS = {
     "external_patch_validation",
     "lightweight_patch_validation",
     "lightweight_completion_validation",
+    REPOSITORY_COMPLETION_KIND,
 }
 DEFAULT_REQUEST_RETRIES = 5
 DEFAULT_RETRY_BACKOFF_SECONDS = 1.0
 _RESPONSE_MODEL_ALIASES = {
-    # DeepSeek currently returns these shorter deployment names even when the
-    # request uses the documented stable V4 aliases.
-    "deepseek-flash": "deepseek-v4-flash",
+    # Preserve compatibility with old provider responses that used the
+    # deployment name instead of the requested public API identifier.
     "deepseek-pro": "deepseek-v4-pro",
 }
 
@@ -54,6 +56,12 @@ def _patch_validator(
     timeout_seconds: float,
     run_regression_tests: bool,
 ):
+    if expected_kind == REPOSITORY_COMPLETION_KIND:
+        return RepositoryCompletionValidator(
+            run_directory,
+            workspace=workspace,
+            timeout_seconds=timeout_seconds,
+        )
     if expected_kind == "external_patch_validation":
         return ExternalPatchValidator(
             workspace,
@@ -599,6 +607,14 @@ def run_tasks(args: argparse.Namespace) -> dict[str, object]:
         "lightweight_patch_validation",
         "lightweight_completion_validation",
     }
+    if expected_kinds == {REPOSITORY_COMPLETION_KIND}:
+        correctness_definition = "pinned_repository_focused_tests_passed"
+    elif lightweight_only:
+        correctness_definition = "official_standalone_tests_passed"
+    elif not args.trigger_tests_only:
+        correctness_definition = "trigger_tests_passed_and_no_new_regression_failures"
+    else:
+        correctness_definition = "released_trigger_tests_passed"
     configuration = {
         "provider": "DeepSeek official API",
         "endpoint": "https://api.deepseek.com/chat/completions",
@@ -615,15 +631,7 @@ def run_tasks(args: argparse.Namespace) -> dict[str, object]:
         "external_validation": not args.skip_external_validation,
         "validation_timeout_seconds": args.validation_timeout_seconds,
         "regression_tests": not args.trigger_tests_only,
-        "correctness_definition": (
-            "official_standalone_tests_passed"
-            if lightweight_only
-            else (
-                "trigger_tests_passed_and_no_new_regression_failures"
-                if not args.trigger_tests_only
-                else "released_trigger_tests_passed"
-            )
-        ),
+        "correctness_definition": correctness_definition,
         "input": args.input.as_posix(),
     }
     if args.resume_run is not None:

@@ -19,15 +19,11 @@ for directory in ("experiments", "src/methods", "tools/source_interference"):
         if "notes" not in path.parts and "build" not in path.parts
     )
 
-# The site builder deliberately regenerates tracked HTML, rather than exposing
-# an argparse CLI. Its module is checked separately without executing it.
-BUILD_MODULE = "src.site.build"
 MODULES = sorted(
     {
         module
         for document in DOCUMENTS
         for module in re.findall(r"python\s+-m\s+([\w.]+)", document.read_text())
-        if module != BUILD_MODULE
     }
 )
 TOOL_PROJECT = tomllib.loads(
@@ -64,8 +60,9 @@ def test_documented_module_help(module, tmp_path):
 @pytest.mark.parametrize(
     "script",
     (
-        "figures/plot_readability_label_distributions.py",
-        "figures/plot_chunk_clustering_motivation.py",
+        "figures/scripts/plot_readability_label_distributions.py",
+        "figures/scripts/plot_chunk_clustering_motivation.py",
+        "figures/scripts/plot_identifier_surprisal_motivation.py",
     ),
 )
 def test_documented_direct_figure_command(script, tmp_path):
@@ -91,19 +88,15 @@ def test_documented_shell_scripts_exist():
             assert (ROOT / script).is_file(), f"{document}: missing {script}"
 
 
-def test_site_builder_entry_point_exists():
-    assert (ROOT / "src/site/build.py").is_file()
-
-
 def test_default_model_download_arguments_do_not_require_model_names(monkeypatch):
-    from src.methods.cognascore.runners.download_embedding_model import parse_args
+    from src.methods.readability_model.runners.download_embedding_model import parse_args
 
     monkeypatch.setattr(sys, "argv", ["download_embedding_model"])
     assert parse_args().models == []
 
 
 def test_model_download_arguments_reject_unknown_names(monkeypatch):
-    from src.methods.cognascore.runners.download_embedding_model import parse_args
+    from src.methods.readability_model.runners.download_embedding_model import parse_args
 
     monkeypatch.setattr(sys, "argv", ["download_embedding_model", "unknown-model"])
     with pytest.raises(SystemExit) as error:

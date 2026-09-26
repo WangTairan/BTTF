@@ -8,7 +8,7 @@ from statistics import mean
 
 from src.datasets import load_code_dataset
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
-from src.methods.cognascore.dataset_io import item_source_sha256
+from src.methods.readability_model.dataset_io import item_source_sha256
 
 
 DATASETS: dict[str, Path] = {

@@ -1,19 +1,15 @@
 # Methods
 
-Stable readability methods and their materialization runners live here:
+The primary method is [`readability_model/`](readability_model/): code-level,
+embedding-derived, and causal-LM feature construction plus fixed Ridge scoring.
 
-- `cognascore/`: typed cognitive chunks, conventional code features,
-  embedding geometry, adaptive clustering, and the frozen CognaScore model;
-- `rmc/`: Recursive Masking Complexity and its dataset runners;
-- `posnett/`: the deterministic Posnett readability formula;
-- `scalabrino/`: wrapper around the released Scalabrino implementation;
-- `dorn/`: paper-aligned retraining of the Dorn feature model using the
-  released metric extractor and public Dorn ARFF;
-- `mi_convnet_cr/`: independently reconstructed character-level CNN from
-  Mi et al. (2018), kept distinct from the unreleased full DeepCRM model;
-- `llm_prompt/`: direct LLM readability scoring baseline;
-- `loc_baseline/`: lines-of-code baseline.
+Comparison methods are independent implementations:
 
-All comparison methods are kept separate from CognaScore. Exploratory feature
-selection, sweeps, probes, and ablations belong under `experiments/`, not in a
-method package's stable runner directory.
+- [`posnett/`](posnett/) and [`loc_baseline/`](loc_baseline/): fixed formulas;
+- [`scalabrino/`](scalabrino/) and [`dorn/`](dorn/): released-tool wrappers or
+  paper-aligned reconstruction;
+- [`mi_convnet_cr/`](mi_convnet_cr/): reconstructed character CNN;
+- [`llm_prompt/`](llm_prompt/): direct API scoring.
+
+Each method has its own README. Feature screening and benchmark evaluation
+belong under `experiments/`, not inside a production method package.

@@ -1,22 +1,18 @@
 # Frozen models
 
-This directory contains versioned fitted predictors and their manifests.
+This directory contains the fitted predictors needed to reproduce the paper.
+Each primary model directory contains `model.joblib` and a portable
+`model.json` manifest with feature order, preprocessing statistics,
+coefficients, training provenance, and the serialized-model checksum.
 
-Each CognaScore model directory contains:
+Primary artifacts retain the historical `cognascore/` storage namespace:
 
-- `model.joblib`: the exact fitted scikit-learn pipeline;
-- `model.json`: a portable manifest with the ordered feature list, preprocessing
-  statistics, linear coefficients, intercept, and training provenance.
+- `consensus11_6dataset_three_llm_opencoder_jina/`: final 11-feature model,
+  using OpenCoder-1.5B-Base and Jina Embeddings v2 Base Code;
+- `consensus18_6dataset_sampled_margin_jina/`: independently selected
+  18-feature embedding-only predecessor using Jina; and
+- `dorn_retrained/` and `mi_convnet_cr/`: fitted comparison methods.
 
-The retained CognaScore publication model is
-`cognascore/consensus18_6dataset_sampled_margin_nomic/`. The Dorn and Mi baseline
-artifacts are retained in separate directories.
-
-Refit and replace the CognaScore artifact from current feature tables:
-
-```bash
-python -m src.methods.cognascore.runners.supervised_ridge --overwrite-artifact
-```
-
-The command writes the fitted pipeline and an updated manifest. The canonical
-configuration records the checksum used by the regression tests.
+The corresponding feature specifications and selection evidence are under
+`experiments/main/readability_model/configs/`. Obsolete 23-feature, compact,
+and superseded reference instantiations are not part of the release.

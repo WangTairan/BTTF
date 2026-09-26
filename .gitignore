@@ -30,6 +30,7 @@ dist/
 !/artifacts/README.md
 /results/*
 !/results/README.md
+/docs/
 wandb/
 runs/
 
@@ -50,6 +51,9 @@ runs/
 # Locally retained papers; the tracked bibliography contains citations only
 bib/**/*.pdf
 bib/local_papers/
+
+# Raw survey export contains pseudonymous session and demographic fields.
+/datasets/jetbrains/raw_data.csv
 
 # Local manuscript drafts retained alongside the source-generation tool.
 tools/source_interference/notes/

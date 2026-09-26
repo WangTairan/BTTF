@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 PYTHON_BIN="${PYTHON_BIN:-python}"
-PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/cognascore_pycache}"
+PYCACHE="${PYTHONPYCACHEPREFIX:-${TMPDIR:-/tmp}/readability_model_pycache}"
 DEVICE="${DEVICE:-cpu}"
 
 echo "[1/3] Training and freezing the Mi ConvNetCR reproduction."
@@ -23,6 +23,6 @@ PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
 
 echo "[3/3] Summarizing paired interference responses."
 PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
-  -m experiments.cognascore.evaluation.summarize_constructed_method \
+  -m experiments.main.readability_model.evaluation.summarize_constructed_method \
   --dataset java_comparative_obfuscation \
   --method mi_convnet_cr

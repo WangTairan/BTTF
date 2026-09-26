@@ -1,0 +1,281 @@
+{
+  "artifact_format_version": 1,
+  "created_at_utc": "2026-09-26T02:36:52.541569+00:00",
+  "name": "consensus18_6dataset_sampled_margin_jina",
+  "embedding_model": "jinaai/jina-embeddings-v2-base-code",
+  "llm_feature_model": null,
+  "serialized_model": "model.joblib",
+  "serialized_model_sha256": "4f4202933deaf23c35a39020e5743a6a97733456ea2686bc0e3dea0c6a878b80",
+  "libraries": {
+    "python_model_format": "joblib",
+    "scikit_learn": "1.8.0",
+    "numpy": "2.4.1",
+    "pandas": "3.0.2"
+  },
+  "training": {
+    "datasets": [
+      "mbjp",
+      "buse",
+      "dorn",
+      "scalabrino",
+      "schnappinger",
+      "jetbrains"
+    ],
+    "sample_count": 1100,
+    "sample_count_by_dataset": {
+      "buse": 100,
+      "dorn": 360,
+      "jetbrains": 119,
+      "mbjp": 17,
+      "scalabrino": 200,
+      "schnappinger": 304
+    },
+    "row_identity_sha256": "20fcecdaa52e5cb915ad2666d884a349b9655238f24a841787d84c32ae5928e4",
+    "target": "per-dataset rank-percentile readability for continuous datasets; original 0/1 labels for binary datasets",
+    "sample_weight": "inverse dataset size, normalized over the pooled training set",
+    "feature_sources": [
+      {
+        "dataset": "mbjp",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/mbjp/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "a159e2fa0869320293b1eb31030661ece1650e183127862f9a47cb1815bacea5"
+      },
+      {
+        "dataset": "mbjp",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/mbjp/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "4dbb84d4749e371b48a6e688070c952e4c0b824df084a3d1c993534072a96da1"
+      },
+      {
+        "dataset": "buse",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/buse/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "965aa05b6f48920e2f3c4fc5be8c896a081aae9e921052a88661efce9b2a263d"
+      },
+      {
+        "dataset": "buse",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/buse/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "5b9ccadf1e78aad707619f0778b0ee22aca85e6a825062c97064700e405eeff1"
+      },
+      {
+        "dataset": "dorn",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/dorn/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "fb7563595be03604aedcbd54b90ce165994eda666a1eba5f657ee514e93e0c6c"
+      },
+      {
+        "dataset": "dorn",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/dorn/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "abdf7d3ec27def55c58cd2102e0f7ea19622b8018067d7716014d88b428d62f3"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/scalabrino/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "79f9b737b77d1b9a5a4254d6c376be361c277874083fcc3bc0b3ece4a8c29ab6"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/scalabrino/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "8412282d3438a0c57076aff9279361027ca4408dcf45ada2a9b98a9d96bad4a1"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/schnappinger/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "76ef88e07c83db355a52e279cf1256bfae8ab14ba9d0cdc1bdbc211f7324f211"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/schnappinger/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "310158e5c197190049a432bd8e69d4a2cf5c7b5f54a3a836f6ca365c51edbd73"
+      },
+      {
+        "dataset": "jetbrains",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/jetbrains/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "63308dc074c7c3f0246458b1dd1cbd6b9124370ed0e0c18dc75a73bd7c74dd69"
+      },
+      {
+        "dataset": "jetbrains",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/jetbrains/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "8b87958ea4a256a517565a0fd0436db30c6bd95906d8fb8aa29dabfd48c75514"
+      }
+    ]
+  },
+  "features": {
+    "count": 18,
+    "ordered_names": [
+      "base__operator_density",
+      "base__source_text_entropy",
+      "base__expression_complexity",
+      "base__longest_line_length",
+      "embedding__structural_core__auto_kmeans_pattern_count",
+      "embedding__only_identifier__embedding_dispersion",
+      "base__mean_indentation_change",
+      "embedding__structural_core__optics_pattern_mixing",
+      "embedding__structural_core__embedding_dispersion",
+      "base__regex_prevalence",
+      "embedding__structural_core__auto_agglo_pattern_mixing",
+      "semantic__short_identifier_prevalence",
+      "semantic__short_identifier_mathematical_context",
+      "base__bitwise_prevalence",
+      "embedding__structural_core__optics_unclustered_ratio",
+      "base__identifier_length_variation",
+      "base__decision_density",
+      "base__operator_character_share"
+    ],
+    "category_counts": {
+      "base": 10,
+      "compression": 0,
+      "embedding_derived": 6,
+      "semantic_context": 2,
+      "causal_lm": 0
+    }
+  },
+  "pipeline": {
+    "steps": [
+      "median_imputation",
+      "training_range_clipping",
+      "standardization",
+      "bounded_ridge"
+    ],
+    "ridge_alpha": 200.0,
+    "seed": 42,
+    "imputer_statistics": [
+      3.1291666666666664,
+      4.659684241323777,
+      0.0,
+      83.0,
+      2.0,
+      0.6707055869502792,
+      1.0889328063241106,
+      0.7718967834324175,
+      0.560372330394932,
+      0.0,
+      0.5902078848478707,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.5745014526745555,
+      0.0526315789473684,
+      0.11460941847523645
+    ],
+    "training_feature_min": [
+      0.0,
+      2.924860141215032,
+      -4.718498871295094,
+      23.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -0.2878971364644537,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "training_feature_max": [
+      13.461538461538462,
+      5.529494601192723,
+      3.4011973816621555,
+      778.0,
+      16.0,
+      1.0,
+      22.666666666666668,
+      1.0,
+      1.0,
+      0.1666666666666666,
+      1.0,
+      1.0,
+      0.4407597282055653,
+      0.2238805970149253,
+      0.8556701030927835,
+      2.1671634348837574,
+      1.5714285714285714,
+      0.4107142857142857
+    ],
+    "scaler_mean": [
+      3.3852357155729114,
+      4.589348052979083,
+      -0.15827350530410522,
+      95.60363636363637,
+      3.2845454545454547,
+      0.6218022442885911,
+      1.481782359989807,
+      0.5429481583967289,
+      0.4739592850030143,
+      0.0002593319754015809,
+      0.45943800148182984,
+      0.08902412834965102,
+      0.03124884155428696,
+      0.0022007579784576875,
+      0.10643725243193891,
+      0.5956782652571969,
+      0.11492132328623439,
+      0.12270757914507524
+    ],
+    "scaler_scale": [
+      1.804973992692883,
+      0.4578755568910406,
+      1.105924123712608,
+      48.76113565549129,
+      4.2541890876391975,
+      0.21554644836215395,
+      1.580374604738594,
+      0.42051728742013206,
+      0.33184208008864696,
+      0.005378633289050081,
+      0.3823737377646732,
+      0.1636442748059051,
+      0.08889805239791018,
+      0.013202084719558537,
+      0.20378640674700277,
+      0.29501561393926634,
+      0.183333887975262,
+      0.06372278510519747
+    ],
+    "ridge_coefficients": [
+      -0.07813785674312498,
+      -0.040704017293279625,
+      -0.014045353489409822,
+      -0.034884833168644776,
+      -0.0392281322548986,
+      -0.03129027887973266,
+      -0.013122347788153313,
+      -0.01659682796761296,
+      -0.010646534591688094,
+      -0.0036240120578560557,
+      -0.0024450922182128756,
+      -0.007211127840099099,
+      -0.01726383139176485,
+      -0.016413784635336236,
+      -0.01624164007350569,
+      -0.01756768570189469,
+      -0.003646114198323234,
+      -0.023858701945313022
+    ],
+    "ridge_intercept": 0.49818175749082705,
+    "prediction_bounds": [
+      0.0,
+      1.0
+    ]
+  },
+  "classification": {
+    "direction": "score >= threshold means readable/high",
+    "threshold": null,
+    "calibration": null
+  }
+}

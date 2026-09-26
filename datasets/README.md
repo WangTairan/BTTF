@@ -33,3 +33,13 @@ The generator is maintained in `tools/source_interference/` in this repository.
 Both generation and evaluation use these canonical datasets; there is no second
 copy in the tool package. See its README for syntax-validation guarantees and
 commands for constructing a separate reproduction copy.
+
+## Recent repository-completion benchmark
+
+The Python masked-completion experiment is archived locally under
+[`recent_repository_completion/pytest_python/`](recent_repository_completion/pytest_python/).
+It contains the pinned pytest source snapshot, 507 original/perturbed task
+records, source checksums, upstream commit date and license, and focused native
+test commands. Use `python scripts/local_recent_completion_dataset.py restore`
+from the repository root to prepare its offline working copy; ordinary runs do
+not fetch the upstream repository.

@@ -1,0 +1,43 @@
+{
+  "builder_version": "repository-completion-interference-v3",
+  "eligible_base_hole_count": 48,
+  "language": "python",
+  "model_input_contains_gold_completion": false,
+  "model_input_contains_tests": false,
+  "original_task_count": 48,
+  "perturbed_task_count": 459,
+  "schema_version": 1,
+  "seed": 20260823,
+  "selected_base_hole_count": 48,
+  "source_manifest_verification": {
+    "manifest_sha256": "114924a4692ae5bd37aeb1394016cac352787a1ccead90c10e8532e4866696f3",
+    "repository_count": 2,
+    "span_count": 128,
+    "target_count": 64,
+    "verified": true
+  },
+  "status_counts": {
+    "gold_failed": 68,
+    "usable": 507
+  },
+  "target_count": 26,
+  "task_manifest_sha256": "353d48917a24bb0385d10dd6a34c1a9dc086d18d06ad61134f4b73ac01cb5d6e",
+  "usable_by_condition": {
+    "encode-integer-literals": 43,
+    "garble-identifiers": 19,
+    "inject-low-readability-unrelated-code": 48,
+    "inject-readable-unrelated-code": 48,
+    "inline-intermediate-variables": 25,
+    "insert-dead-branches": 48,
+    "introduce-numeric-intermediates": 43,
+    "invert-conditions": 48,
+    "lower-for-to-while": 43,
+    "mislead-identifiers": 19,
+    "original": 48,
+    "partially-compact-layout": 28,
+    "remove-comments": 28,
+    "shorten-identifiers": 19
+  },
+  "usable_task_count": 507,
+  "validated_candidate_count": 575
+}

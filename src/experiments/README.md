@@ -22,9 +22,11 @@ Passing `-o <root>` replaces `results/methods` while retaining this layout.
 
 Dataset keys, comparison-method output names, and overwrite/history policy are
 registered in `src/experiments/registry.py`. Deterministic comparison methods
-use stable paths and overwrite summaries on rerun; LLM and RMC configurations
-remain traceable. CognaScore's frozen materializers are maintained by its own
-stable runners, while model-development code lives under `experiments/`.
+use stable paths and overwrite summaries on rerun; direct-LLM configurations
+remain traceable. The primary model's frozen materializers are maintained by
+its own stable runners, while model-development code lives under
+`experiments/`.
 
-Binary datasets are evaluated with best-threshold MCC. Continuous datasets are
-evaluated with Spearman correlation.
+The current six-dataset readability benchmark uses continuous targets and
+dataset-specific Spearman correlations, including JetBrains' readable-vote
+fraction. Separate binary experiments may still report classification metrics.

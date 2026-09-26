@@ -1,0 +1,268 @@
+{
+  "artifact_format_version": 1,
+  "created_at_utc": "2026-09-25T02:44:09.503307+00:00",
+  "name": "consensus11_6dataset_three_llm_opencoder_jina",
+  "embedding_model": "jinaai/jina-embeddings-v2-base-code",
+  "llm_feature_model": "infly/OpenCoder-1.5B-Base",
+  "serialized_model": "model.joblib",
+  "serialized_model_sha256": "e832c826c3e1bf12aedc062210e4852618f67696484c1eb3c014a23dc25d66af",
+  "libraries": {
+    "python_model_format": "joblib",
+    "scikit_learn": "1.8.0",
+    "numpy": "2.4.1",
+    "pandas": "3.0.2"
+  },
+  "training": {
+    "datasets": [
+      "mbjp",
+      "buse",
+      "dorn",
+      "scalabrino",
+      "schnappinger",
+      "jetbrains"
+    ],
+    "sample_count": 1100,
+    "sample_count_by_dataset": {
+      "buse": 100,
+      "dorn": 360,
+      "jetbrains": 119,
+      "mbjp": 17,
+      "scalabrino": 200,
+      "schnappinger": 304
+    },
+    "row_identity_sha256": "20fcecdaa52e5cb915ad2666d884a349b9655238f24a841787d84c32ae5928e4",
+    "target": "per-dataset rank-percentile readability for continuous datasets; original 0/1 labels for binary datasets",
+    "sample_weight": "inverse dataset size, normalized over the pooled training set",
+    "feature_sources": [
+      {
+        "dataset": "mbjp",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/mbjp/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "a159e2fa0869320293b1eb31030661ece1650e183127862f9a47cb1815bacea5"
+      },
+      {
+        "dataset": "mbjp",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/mbjp/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "4dbb84d4749e371b48a6e688070c952e4c0b824df084a3d1c993534072a96da1"
+      },
+      {
+        "dataset": "mbjp",
+        "family": "llm",
+        "path": "artifacts/cognascore/features/llm/mbjp/infly-OpenCoder-1.5B-Base/features.csv",
+        "sha256": "092b4241e389a9f9fe251484e546136afa88e308cc828a0d172ee47ab35205d8"
+      },
+      {
+        "dataset": "buse",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/buse/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "965aa05b6f48920e2f3c4fc5be8c896a081aae9e921052a88661efce9b2a263d"
+      },
+      {
+        "dataset": "buse",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/buse/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "5b9ccadf1e78aad707619f0778b0ee22aca85e6a825062c97064700e405eeff1"
+      },
+      {
+        "dataset": "buse",
+        "family": "llm",
+        "path": "artifacts/cognascore/features/llm/buse/infly-OpenCoder-1.5B-Base/features.csv",
+        "sha256": "78fb78ab9121176bbcb91c7a80cdaf27078c815722f89383da9957bbc42fa683"
+      },
+      {
+        "dataset": "dorn",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/dorn/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "fb7563595be03604aedcbd54b90ce165994eda666a1eba5f657ee514e93e0c6c"
+      },
+      {
+        "dataset": "dorn",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/dorn/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "abdf7d3ec27def55c58cd2102e0f7ea19622b8018067d7716014d88b428d62f3"
+      },
+      {
+        "dataset": "dorn",
+        "family": "llm",
+        "path": "artifacts/cognascore/features/llm/dorn/infly-OpenCoder-1.5B-Base/features.csv",
+        "sha256": "ec20e2f0a47991df1dcf31ef211800b1179489569855ab101ff660981a7cc1b0"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/scalabrino/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "79f9b737b77d1b9a5a4254d6c376be361c277874083fcc3bc0b3ece4a8c29ab6"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/scalabrino/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "8412282d3438a0c57076aff9279361027ca4408dcf45ada2a9b98a9d96bad4a1"
+      },
+      {
+        "dataset": "scalabrino",
+        "family": "llm",
+        "path": "artifacts/cognascore/features/llm/scalabrino/infly-OpenCoder-1.5B-Base/features.csv",
+        "sha256": "1f40d31abdccc3ab789de7e27d23a997e810143e80f70054b957e7243daec31d"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/schnappinger/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "76ef88e07c83db355a52e279cf1256bfae8ab14ba9d0cdc1bdbc211f7324f211"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/schnappinger/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "310158e5c197190049a432bd8e69d4a2cf5c7b5f54a3a836f6ca365c51edbd73"
+      },
+      {
+        "dataset": "schnappinger",
+        "family": "llm",
+        "path": "artifacts/cognascore/features/llm/schnappinger/infly-OpenCoder-1.5B-Base/features.csv",
+        "sha256": "45adeea80af1af7bad6c45b01eaff1d7da0fcb7ef214b637d2b7f4281581b180"
+      },
+      {
+        "dataset": "jetbrains",
+        "family": "base",
+        "path": "artifacts/cognascore/features/base/jetbrains/nomic-ai-nomic-embed-text-v1.5/features.csv",
+        "sha256": "63308dc074c7c3f0246458b1dd1cbd6b9124370ed0e0c18dc75a73bd7c74dd69"
+      },
+      {
+        "dataset": "jetbrains",
+        "family": "embedding",
+        "path": "artifacts/cognascore/features/embedding/jetbrains/jinaai-jina-embeddings-v2-base-code/features.csv",
+        "sha256": "8b87958ea4a256a517565a0fd0436db30c6bd95906d8fb8aa29dabfd48c75514"
+      },
+      {
+        "dataset": "jetbrains",
+        "family": "llm",
+        "path": "artifacts/cognascore/features/llm/jetbrains/infly-OpenCoder-1.5B-Base/features.csv",
+        "sha256": "460093d10373bf0d659fbb1c8b49984bf4d2e4c40fd8d35aa21efd2fff5160c8"
+      }
+    ]
+  },
+  "features": {
+    "count": 11,
+    "ordered_names": [
+      "base__operator_density",
+      "llm__literal_tail_difficulty",
+      "llm__identifier_onset_difficulty",
+      "embedding__structural_core__auto_kmeans_pattern_count",
+      "base__decision_density",
+      "base__expression_complexity",
+      "base__longest_line_length",
+      "llm__assignment_value_difficulty",
+      "llm__declaration_difficulty_variation",
+      "llm__short_identifier_context_dependence",
+      "embedding__only_identifier__embedding_dispersion"
+    ],
+    "category_counts": {
+      "base": 4,
+      "compression": 0,
+      "embedding_derived": 2,
+      "semantic_context": 0,
+      "causal_lm": 5
+    }
+  },
+  "pipeline": {
+    "steps": [
+      "median_imputation",
+      "training_range_clipping",
+      "standardization",
+      "bounded_ridge"
+    ],
+    "ridge_alpha": 200.0,
+    "seed": 42,
+    "imputer_statistics": [
+      3.1291666666666664,
+      1.3119005439690077,
+      0.4064091286756043,
+      2.0,
+      0.0526315789473684,
+      0.0,
+      83.0,
+      0.2330253196590533,
+      0.3745240311775717,
+      0.12170414910010935,
+      0.6707055869502792
+    ],
+    "training_feature_min": [
+      0.0,
+      7.395234973728293e-06,
+      0.045505166079963,
+      0.0,
+      0.0,
+      -4.718498871295094,
+      23.0,
+      5.7504931167001386e-05,
+      0.0,
+      -0.5712041751800427,
+      0.0
+    ],
+    "training_feature_max": [
+      13.461538461538462,
+      8.747043814257864,
+      3.22795432683829,
+      16.0,
+      1.5714285714285714,
+      3.4011973816621555,
+      778.0,
+      3.0649687286144225,
+      1.820319702903825,
+      2.876484524521061,
+      1.0
+    ],
+    "scaler_mean": [
+      3.3852357155729114,
+      1.4710151270687823,
+      0.5230090008907298,
+      3.2845454545454547,
+      0.11492132328623439,
+      -0.15827350530410522,
+      95.60363636363637,
+      0.2820606711363052,
+      0.38035667811678514,
+      0.17921872666501576,
+      0.6218022442885911
+    ],
+    "scaler_scale": [
+      1.804973992692883,
+      1.0397937328586508,
+      0.3958604548497333,
+      4.2541890876391975,
+      0.183333887975262,
+      1.105924123712608,
+      48.76113565549129,
+      0.2569631288345419,
+      0.20781387215764852,
+      0.290694675503457,
+      0.21554644836215395
+    ],
+    "ridge_coefficients": [
+      -0.08218693796919634,
+      -0.049237489328150266,
+      -0.030485759918656916,
+      -0.05624423233078776,
+      -0.015593471589259849,
+      -0.030153675108674314,
+      -0.04386512398815799,
+      -0.023347629473275774,
+      -0.02336659805290206,
+      -0.028181842792500904,
+      -0.03718132719431248
+    ],
+    "ridge_intercept": 0.49798474283989486,
+    "prediction_bounds": [
+      0.0,
+      1.0
+    ]
+  },
+  "classification": {
+    "direction": "score >= threshold means readable/high",
+    "threshold": null,
+    "calibration": null
+  }
+}

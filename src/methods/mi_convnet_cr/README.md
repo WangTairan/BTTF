@@ -31,7 +31,7 @@ python -m src.experiments.evaluate_method \
   datasets/constructed/java-comparative-obfuscation-class-100 \
   --method mi_convnet_cr
 
-python -m experiments.cognascore.evaluation.summarize_constructed_method \
+python -m experiments.main.readability_model.evaluation.summarize_constructed_method \
   --dataset java_comparative_obfuscation --method mi_convnet_cr
 ```
 

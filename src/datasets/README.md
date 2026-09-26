@@ -22,7 +22,7 @@ Dataset-specific parsing lives here, separately from metric execution:
   through the same normalized `group_id` metadata field.
 
 `code.py` exposes `load_code_dataset`, the dispatcher used by cross-method
-code experiments and by CognaScore.
+code experiments and by the primary readability model.
 
 Add a dataset-specific adapter only when the shared JSONL schema is
 insufficient. Every adapter returns `DatasetItem` instances; runners configure

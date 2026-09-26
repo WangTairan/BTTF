@@ -16,7 +16,7 @@ from src.experiments.registry import (
 from src.experiments.paths import dataset_name_for_path, result_dir, safe_path_part
 from src.experiments.progress import DatasetProgress, batch_progress
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
-from src.methods.cognascore.dataset_io import item_source_sha256
+from src.methods.readability_model.dataset_io import item_source_sha256
 
 
 MethodFn = Callable[[DatasetItem], dict[str, Any]]

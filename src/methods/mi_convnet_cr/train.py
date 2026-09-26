@@ -13,7 +13,7 @@ from statistics import mean
 import numpy as np
 
 from src.datasets import DatasetItem, load_code_dataset
-from src.methods.cognascore.dataset_io import item_source_sha256
+from src.methods.readability_model.dataset_io import item_source_sha256
 
 from .model import MiConvNetCR, torch
 from .representation import (

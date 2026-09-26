@@ -6,6 +6,6 @@ cd "${SCRIPT_DIR}/.."
 
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
-"$PYTHON_BIN" -m experiments.dorn.six_dataset_evaluation \
+"$PYTHON_BIN" -m experiments.baselines.dorn.six_dataset_evaluation \
   --folds 10 \
   --ridge-alpha 200
