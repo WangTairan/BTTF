@@ -5,7 +5,7 @@ predictors. It does not contain benchmark-specific feature searches.
 
 | Area | Responsibility |
 | --- | --- |
-| `extractors/`, `feature_database.py` | Typed chunks and code-level features (`base__`, `compression__`) |
+| `extractors/`, `feature_database.py` | AST-labelled construct representations and code-level features (`base__`, `compression__`) |
 | `embedding_cache.py`, `embedding_features.py`, `semantic_context.py` | Reusable chunk vectors, geometry, clustering, and short-identifier context (`embedding__`, `semantic__`) |
 | `llm_features/` | Local causal-LM predictability measurements (`llm__`) |
 | `runners/` | Incremental feature production, validation, and Ridge materialization |

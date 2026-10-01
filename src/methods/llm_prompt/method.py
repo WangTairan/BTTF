@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import Callable, Sequence
 
-from src.services.llm import batch_chat_prompts, chat_with_metadata
+from src.services.llm import batch_chat_prompts_with_metadata, chat_with_metadata
 
 
 STRUCTURED_RETRY_LIMIT = 2
@@ -32,7 +32,7 @@ Code:
 """
 
 
-def llm_prompt_engineering_score(code: str, model_name: str = "gpt41-nano") -> dict:
+def llm_prompt_engineering_score(code: str, model_name: str = "dsv4-pro") -> dict:
     prompt = build_llm_readability_prompt(code)
     last_error = None
 
@@ -57,24 +57,32 @@ def llm_prompt_engineering_score(code: str, model_name: str = "gpt41-nano") -> d
 
 def llm_prompt_engineering_scores(
     codes: Sequence[str],
-    model_name: str = "gpt41-nano",
+    model_name: str = "dsv4-pro",
     *,
     state_path: Path | str | None = None,
     progress: Callable[[str, int, int], None] | None = None,
 ) -> list[dict]:
     prompts = [build_llm_readability_prompt(code) for code in codes]
-    responses = batch_chat_prompts(
+    response_records = batch_chat_prompts_with_metadata(
         model_name,
         prompts,
         state_path=state_path,
         metadata={"method": "llm_prompt", "model": model_name},
         progress=progress,
+        retry_failed_individually=False,
     )
     results = []
-    for code, response in zip(codes, responses):
+    for code, response_record in zip(codes, response_records):
+        response = str(response_record["content"])
         try:
             result = validate_llm_readability_payload(extract_json_object(response))
             result["raw_response"] = response
+            result["response_metadata"] = {
+                key: value
+                for key, value in response_record.items()
+                if key not in {"content", "api_response"}
+            }
+            result["api_response"] = response_record["api_response"]
             results.append(result)
         except Exception:
             results.append(llm_prompt_engineering_score(code, model_name=model_name))

@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Readability method to run.",
     )
-    parser.add_argument("--model", default="gpt41-nano", help="LLM model key for --method llm.")
+    parser.add_argument("--model", default="dsv4-pro", help="LLM model key for --method llm.")
     parser.add_argument(
         "-o",
         "--output",

@@ -9,6 +9,10 @@ from pathlib import Path
 from experiments.main.readability_model.evaluation.metrics import (
     unweighted_spearman_average,
 )
+from src.methods.readability_model.feature_schema import (
+    FINAL_FEATURE_DISPLAY_NAMES,
+    feature_display_name,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +75,13 @@ class PublicationContractTest(unittest.TestCase):
         with ranking.open(newline="", encoding="utf-8") as stream:
             ranked = [row["feature"] for row in csv.DictReader(stream)]
         self.assertEqual(ranked[:11], config["selected_features"])
+        self.assertEqual(
+            list(FINAL_FEATURE_DISPLAY_NAMES), config["selected_features"]
+        )
+        self.assertEqual(
+            manifest["features"]["display_names"],
+            [feature_display_name(name) for name in config["selected_features"]],
+        )
 
     def test_embedding_only_predecessor_and_selection_evidence(self):
         config = self.assert_frozen_config(
@@ -87,9 +98,20 @@ class PublicationContractTest(unittest.TestCase):
             "consensus11_three_llm_full_ranking.csv",
             "consensus18_5model_full_ranking.csv",
             "consensus18_selected_ranks.csv",
-            "llm_consensus_selected_ranks.csv",
         ):
             self.assertTrue((evidence / filename).is_file(), filename)
+
+        with (evidence / "consensus11_causal_lm_robustness.csv").open(
+            newline="", encoding="utf-8"
+        ) as stream:
+            robustness = list(csv.DictReader(stream))
+        self.assertEqual(len(robustness), 15)
+        self.assertTrue(
+            all(
+                row["expected_sign_agreement"] == row["expected_sign_total"] == "11"
+                for row in robustness
+            )
+        )
 
     def test_public_source_and_documentation_have_no_machine_specific_paths(self):
         prefixes = (

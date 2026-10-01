@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the typed-chunk extraction overview used in the paper.
+"""Render the AST-tagged snippet overview used in the paper.
 
 The displayed chunks are validated against the production Java extractor so
 that the conceptual figure cannot silently drift away from the implementation.
@@ -16,7 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "rmc_matplotlib"))
+os.environ.setdefault(
+    "MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "readability_model_matplotlib")
+)
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
@@ -215,7 +217,7 @@ def java_token_weight(token_type: Token) -> str:
 
 def draw_chunks(ax: plt.Axes) -> None:
     draw_panel_shell(ax, "#F2F8F5")
-    panel_heading(ax, "Typed chunks")
+    panel_heading(ax, "AST-tagged snippets")
 
     start = 0.78
     step = 0.105
@@ -280,7 +282,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=ROOT / "figures" / "publication" / "typed_chunk_extraction.pdf",
+        default=ROOT / "figures" / "publication" / "ast_labelled_representations.pdf",
     )
     args = parser.parse_args()
     plt.rcParams.update({

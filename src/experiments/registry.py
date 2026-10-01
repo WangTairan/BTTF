@@ -7,15 +7,15 @@ from pathlib import Path
 OUTPUT_POLICY_OVERWRITE = "overwrite"
 OUTPUT_POLICY_CONFIGURED_HISTORY = "configured_history"
 
-COGNASCORE_DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1.5"
-COGNASCORE_EMBEDDING_MODELS = (
-    COGNASCORE_DEFAULT_MODEL,
+READABILITY_MODEL_DEFAULT_EMBEDDING = "nomic-ai/nomic-embed-text-v1.5"
+READABILITY_MODEL_EMBEDDINGS = (
+    READABILITY_MODEL_DEFAULT_EMBEDDING,
     "jinaai/jina-embeddings-v2-base-code",
     "Qwen/Qwen3-Embedding-0.6B",
     "voyageai/voyage-4-nano",
     "Snowflake/snowflake-arctic-embed-m-v2.0",
 )
-COGNASCORE_DEFAULT_CACHE_DIR = Path("models")
+READABILITY_MODEL_CACHE_DIR = Path("models")
 
 
 @dataclass(frozen=True)
@@ -126,12 +126,6 @@ METHODS: dict[str, MethodSpec] = {
         output_policy=OUTPUT_POLICY_CONFIGURED_HISTORY,
         deterministic=False,
     ),
-    "rmc": MethodSpec(
-        key="rmc",
-        output_key="rmc",
-        output_policy=OUTPUT_POLICY_CONFIGURED_HISTORY,
-        deterministic=False,
-    ),
 }
 
 UNSUPPORTED_METHOD_DATASETS = {
@@ -141,7 +135,7 @@ UNSUPPORTED_METHOD_DATASETS = {
 
 
 def method_choices() -> tuple[str, ...]:
-    return tuple(key for key in METHODS if key != "rmc")
+    return tuple(METHODS)
 
 
 def method_output_key(method: str) -> str:

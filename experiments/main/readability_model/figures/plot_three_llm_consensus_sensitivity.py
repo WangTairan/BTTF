@@ -23,7 +23,7 @@ from experiments.main.readability_model.selection.screen_llm_features import (
     evaluate_features,
     load_matrices,
 )
-from src.experiments.registry import COGNASCORE_EMBEDDING_MODELS
+from src.experiments.registry import READABILITY_MODEL_EMBEDDINGS
 from src.methods.readability_model.paths import (
     BASE_FEATURE_ROOT,
     EMBEDDING_FEATURE_ROOT,
@@ -59,7 +59,7 @@ def main() -> None:
     frames = []
     for causal_lm in CAUSAL_LMS:
         loader_args = argparse.Namespace(
-            embedding_models=(COGNASCORE_EMBEDDING_MODELS[0],),
+            embedding_models=(READABILITY_MODEL_EMBEDDINGS[0],),
             llm_model=causal_lm,
             base_root=BASE_FEATURE_ROOT,
             embedding_root=EMBEDDING_FEATURE_ROOT,
@@ -68,7 +68,7 @@ def main() -> None:
         matrices, eligible, _, _ = load_matrices(loader_args)
         if not set(features).issubset(eligible):
             raise ValueError(f"Ranking includes ineligible features for {causal_lm}")
-        frames.append(matrices[COGNASCORE_EMBEDDING_MODELS[0]])
+        frames.append(matrices[READABILITY_MODEL_EMBEDDINGS[0]])
 
     rows: list[dict[str, object]] = []
     for k in range(1, args.max_k + 1):
@@ -90,7 +90,7 @@ def main() -> None:
 
     args.figure_output_dir.mkdir(parents=True, exist_ok=True)
     args.data_output_dir.mkdir(parents=True, exist_ok=True)
-    stem = "three_llm_consensus_feature_count_sensitivity_six_datasets"
+    stem = "feature_count_sensitivity_full_model"
     csv_path = args.data_output_dir / f"{stem}.csv"
     pdf_path = args.figure_output_dir / f"{stem}.pdf"
     rows = ensure_origin(rows)

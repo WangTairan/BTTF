@@ -14,8 +14,8 @@ in the paper.
 | [`experiments/main/readability_model/`](experiments/main/readability_model/) | Selection, benchmark evaluation, robustness, ablation, and uncertainty analyses |
 | [`experiments/baselines/`](experiments/baselines/) | Published and reproduced comparison methods |
 | [`experiments/supplementary/`](experiments/supplementary/) | Paper-reported semantic-anchor and comment diagnostics |
-| [`tools/source_interference/`](tools/source_interference/) | Controlled Java/Python transformations and the repair probe |
-| [`datasets/`](datasets/) | Human-rated, controlled-interference, and pinned repair datasets |
+| [`tools/source_interference/`](tools/source_interference/) | Controlled Java/Python readability transformations |
+| [`datasets/`](datasets/) | Human-rated and controlled-interference datasets |
 | [`frozen_models/`](frozen_models/) | Final 11-feature model, 18-feature predecessor, and fitted baselines |
 | [`figures/`](figures/) | Publication figures, plotting scripts, and retained plotting data |
 
@@ -71,14 +71,6 @@ These evaluations require locally generated feature tables under `artifacts/`.
 Generation is documented in the [method README](src/methods/readability_model/README.md).
 Dataset provenance and immutable inputs are documented in
 [`datasets/README.md`](datasets/README.md).
-
-The repair-probe input is archived under
-[`datasets/recent_repository_completion/`](datasets/recent_repository_completion/pytest_python/README.md)
-and can be verified without fetching its upstream repository:
-
-```bash
-python scripts/local_recent_completion_dataset.py verify
-```
 
 Generated caches, downloaded weights, and complete result directories are not
 tracked. Compact-model searches, obsolete intermediate feature budgets,

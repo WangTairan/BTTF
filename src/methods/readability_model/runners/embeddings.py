@@ -6,8 +6,8 @@ from pathlib import Path
 
 from src.datasets import DatasetItem
 from src.experiments.registry import (
-    COGNASCORE_DEFAULT_CACHE_DIR,
-    COGNASCORE_DEFAULT_MODEL,
+    READABILITY_MODEL_CACHE_DIR,
+    READABILITY_MODEL_DEFAULT_EMBEDDING,
     DATASETS,
 )
 
@@ -39,15 +39,15 @@ DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schn
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Materialize typed-chunk embeddings into SQLite.")
+    parser = argparse.ArgumentParser(description="Materialize AST-labelled construct embeddings into SQLite.")
     parser.add_argument(
         "datasets",
         nargs="*",
         type=Path,
         help="Dataset paths. Defaults to all current code datasets.",
     )
-    parser.add_argument("--embedding-model", default=COGNASCORE_DEFAULT_MODEL)
-    parser.add_argument("--models", type=Path, default=COGNASCORE_DEFAULT_CACHE_DIR)
+    parser.add_argument("--embedding-model", default=READABILITY_MODEL_DEFAULT_EMBEDDING)
+    parser.add_argument("--models", type=Path, default=READABILITY_MODEL_CACHE_DIR)
     parser.add_argument("--output", type=Path, default=EMBEDDING_CACHE_ROOT)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--device", default=None, help="cpu, cuda, mps, or auto.")

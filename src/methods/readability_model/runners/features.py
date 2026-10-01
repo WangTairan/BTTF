@@ -7,7 +7,7 @@ from pathlib import Path
 
 from src.datasets import load_code_dataset
 from src.experiments.paths import dataset_name_for_path
-from src.experiments.registry import COGNASCORE_DEFAULT_MODEL
+from src.experiments.registry import READABILITY_MODEL_DEFAULT_EMBEDDING
 
 from ..feature_database import (
     BASE_FEATURE_BUILD_VERSION,
@@ -67,7 +67,7 @@ def main() -> None:
     if args.limit is not None:
         items = items[: args.limit]
 
-    embedding_models = args.embedding_models or [COGNASCORE_DEFAULT_MODEL]
+    embedding_models = args.embedding_models or [READABILITY_MODEL_DEFAULT_EMBEDDING]
     source_hashes = {item.task_id: item_source_sha256(item) for item in items}
     reusable_rows, reusable_hashes = _load_reusable_rows(
         args.output,

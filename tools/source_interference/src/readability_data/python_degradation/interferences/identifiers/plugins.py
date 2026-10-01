@@ -49,17 +49,6 @@ class RenameIdentifiers(Interference):
             for n in ast.walk(tree)
             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
         ]
-        marker_scopes = _marker_scopes(tree, parents, set(context.protected_names))
-        scoped_to_markers = bool(marker_scopes)
-        if scoped_to_markers:
-            # Repository-completion experiments place two protected marker calls
-            # around the missing span.  Restrict renaming to their enclosing
-            # function so that unrelated public APIs in the same source file are
-            # not silently changed.  Function arguments remain part of the public
-            # call interface and are therefore preserved below as well.
-            functions = [
-                function for function in functions if function in marker_scopes
-            ]
         methods = [
             n
             for n in functions
@@ -123,8 +112,7 @@ class RenameIdentifiers(Interference):
                 args.append(function.args.kwarg)
             for arg in args:
                 if (
-                    not scoped_to_markers
-                    and arg.arg not in {"self", "cls"}
+                    arg.arg not in {"self", "cls"}
                     and arg.arg not in context.protected_names
                 ):
                     declarations.setdefault(arg.arg, arg)
@@ -136,17 +124,6 @@ class RenameIdentifiers(Interference):
                     and node.id not in context.protected_names
                 ):
                     declarations.setdefault(node.id, node)
-            if scoped_to_markers:
-                # Renaming an outer local without also rewriting a nested closure
-                # would change program semantics.  Conservatively leave any such
-                # binding untouched; native tests still validate every retained
-                # transformed task afterwards.
-                nested_uses = _names_used_in_nested_functions(function, parents)
-                declarations = {
-                    name: node
-                    for name, node in declarations.items()
-                    if name not in nested_uses
-                }
             function_used = (
                 {
                     item.id
@@ -336,46 +313,6 @@ def _nearest_function(node: ast.AST, parents: dict[ast.AST, ast.AST]):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             return node
     return None
-
-
-def _marker_scopes(
-    tree: ast.AST,
-    parents: dict[ast.AST, ast.AST],
-    protected_names: set[str],
-) -> set[ast.AST]:
-    """Find functions containing at least two protected marker calls.
-
-    Ordinary degradation runs do not provide marker functions and therefore keep
-    the historical whole-file behavior.  Completion-task construction supplies a
-    start/end pair, both of which resolve to the same enclosing function.
-    """
-    counts: dict[ast.AST, int] = {}
-    for node in ast.walk(tree):
-        if not (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id in protected_names
-        ):
-            continue
-        function = _nearest_function(node, parents)
-        if function is not None:
-            counts[function] = counts.get(function, 0) + 1
-    return {function for function, count in counts.items() if count >= 2}
-
-
-def _names_used_in_nested_functions(
-    function: ast.AST, parents: dict[ast.AST, ast.AST]
-) -> set[str]:
-    names: set[str] = set()
-    for node in ast.walk(function):
-        nearest = _nearest_function(node, parents)
-        if nearest is function or nearest is None:
-            continue
-        if isinstance(node, ast.Name):
-            names.add(node.id)
-        elif isinstance(node, ast.arg):
-            names.add(node.arg)
-    return names
 
 
 def _nearest_class(node: ast.AST, parents: dict[ast.AST, ast.AST]):

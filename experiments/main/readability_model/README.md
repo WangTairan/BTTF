@@ -21,7 +21,6 @@ Run from the repository root:
 ```bash
 python -m experiments.main.readability_model.evaluation.cross_validate_fixed
 python -m experiments.main.readability_model.evaluation.leave_one_dataset_out
-python -m experiments.main.readability_model.evaluation.ablate_embedding_only_predecessor
 python -m experiments.main.readability_model.evaluation.ablate_final_representation \
   --selected-features-metadata \
   experiments/main/readability_model/configs/consensus11_6dataset_three_llm_opencoder_jina.json
@@ -35,6 +34,7 @@ python -m experiments.main.readability_model.evaluation.bootstrap_benchmark_pred
   -o <output-directory>
 ```
 
-Some cache and result paths retain their historical `cognascore/` namespace
-for provenance. No evaluation script downloads embedding weights or changes
-the pinned human-rated datasets.
+Cached features and frozen models retain their historical `cognascore/`
+namespace for provenance. Generated evaluations use
+`results/experiments/readability_model/`. No evaluation script downloads
+embedding weights or changes the pinned human-rated datasets.

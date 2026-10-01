@@ -1,8 +1,7 @@
-"""Render the retained six-dataset feature-count curve from its CSV data."""
+"""Shared CSV and plotting helpers for the final feature-budget figure."""
 
 from __future__ import annotations
 
-import argparse
 import csv
 from pathlib import Path
 
@@ -19,24 +18,6 @@ DATASET_LABELS = {
     "scalabrino": "Scalabrino",
     "schnappinger": "Schnappinger",
 }
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("figures/publication"),
-    )
-    parser.add_argument(
-        "--curve-csv",
-        type=Path,
-        default=Path("figures/data/cognascore_feature_count_sensitivity_data.csv"),
-        help="Retained curve CSV to render.",
-    )
-    parser.add_argument("--top-k-marker", type=int, default=18)
-    parser.add_argument("--max-k", type=int, default=150)
-    return parser.parse_args()
 
 
 def write_curve(path: Path, rows: list[dict[str, object]]) -> None:
@@ -178,20 +159,3 @@ def plot_pdf(
     fig.subplots_adjust(top=0.88)
     fig.savefig(path)
     plt.close(fig)
-
-
-def main() -> None:
-    args = parse_args()
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = args.output_dir / "cognascore_feature_count_sensitivity_data.csv"
-    pdf_path = args.output_dir / "cognascore_feature_count_sensitivity_six_datasets.pdf"
-    rows = read_curve(args.curve_csv)
-    rows = ensure_origin(rows)
-    write_curve(csv_path, rows)
-    plot_pdf(pdf_path, rows, args.top_k_marker, args.max_k)
-    print(f"Wrote {len(rows)} K values to {csv_path}")
-    print(f"Wrote figure to {pdf_path}")
-
-
-if __name__ == "__main__":
-    main()

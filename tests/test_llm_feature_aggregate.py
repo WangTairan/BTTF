@@ -82,7 +82,7 @@ def test_binding_role_blocks_and_context_gain_numerically():
         "identifier_reuse_tail_bpb": 3,
         "identifier_reuse_difficulty_increase": 2,
         "identifier_within_binding_bpb_std": 1,
-        "identifier_onset_difficulty": 2,
+        "identifier_onset_surprisal": 2,
         "identifier_context_gain_mean": 1,
         "identifier_context_gain_q10": 1,
         "short_identifier_context_dependence": 1,
@@ -128,7 +128,7 @@ def test_duplicate_unicode_offsets_accumulate_bits_but_not_bytes():
     )
     assert features["llm__code_bits_per_byte"] == pytest.approx(5 / 4)
     assert features["llm__identifier__bpb_mean"] == pytest.approx(3 / 2)
-    assert features["llm__identifier_onset_difficulty"] == pytest.approx(2)
+    assert features["llm__identifier_onset_surprisal"] == pytest.approx(2)
     assert features["llm__identifier_continuation_bpb"] == pytest.approx(1)
     assert metadata["covered_utf8_bytes"] == 4
 
@@ -140,7 +140,7 @@ def test_straddling_token_loss_is_fractionally_allocated_to_identifier():
         Analysis([Span(1, 2, "identifier")]),
     )
     assert features["llm__identifier__bpb_mean"] == pytest.approx(1)
-    assert features["llm__identifier_onset_difficulty"] == pytest.approx(1)
+    assert features["llm__identifier_onset_surprisal"] == pytest.approx(1)
     assert features["llm__identifier_first_occurrence_bpb"] is None
 
 

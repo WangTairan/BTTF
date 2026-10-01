@@ -4,7 +4,7 @@ import argparse
 import os
 from pathlib import Path
 
-from src.experiments.registry import COGNASCORE_DEFAULT_CACHE_DIR, COGNASCORE_EMBEDDING_MODELS
+from src.experiments.registry import READABILITY_MODEL_CACHE_DIR, READABILITY_MODEL_EMBEDDINGS
 from src.methods.readability_model.embeddings import MODEL_LOAD_KWARGS
 
 
@@ -15,9 +15,9 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         help="Embedding model names. Defaults to all supported embedding models.",
     )
-    parser.add_argument("--cache-dir", type=Path, default=COGNASCORE_DEFAULT_CACHE_DIR)
+    parser.add_argument("--cache-dir", type=Path, default=READABILITY_MODEL_CACHE_DIR)
     args = parser.parse_args()
-    unknown = [model for model in args.models if model not in COGNASCORE_EMBEDDING_MODELS]
+    unknown = [model for model in args.models if model not in READABILITY_MODEL_EMBEDDINGS]
     if unknown:
         parser.error(f"Unsupported embedding models: {', '.join(unknown)}")
     return args
@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    model_names = args.models or list(COGNASCORE_EMBEDDING_MODELS)
+    model_names = args.models or list(READABILITY_MODEL_EMBEDDINGS)
     args.cache_dir.mkdir(parents=True, exist_ok=True)
     os.environ["TRANSFORMERS_OFFLINE"] = "0"
     os.environ["HF_HUB_OFFLINE"] = "0"

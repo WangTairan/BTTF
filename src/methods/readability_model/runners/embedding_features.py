@@ -9,7 +9,7 @@ from pathlib import Path
 if not os.environ.get("LOKY_MAX_CPU_COUNT"):
     os.environ["LOKY_MAX_CPU_COUNT"] = str(max((os.cpu_count() or 2) - 1, 1))
 
-from src.experiments.registry import COGNASCORE_DEFAULT_MODEL, DATASETS
+from src.experiments.registry import DATASETS, READABILITY_MODEL_DEFAULT_EMBEDDING
 
 from ..comment_relevance import calibrate_comment_relevance
 from ..embedding_cache import EmbeddingCache, embedding_cache_path
@@ -43,7 +43,7 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Dataset paths. Defaults to all current code datasets.",
     )
-    parser.add_argument("--embedding-model", default=COGNASCORE_DEFAULT_MODEL)
+    parser.add_argument("--embedding-model", default=READABILITY_MODEL_DEFAULT_EMBEDDING)
     parser.add_argument("--embedding-cache-root", type=Path, default=EMBEDDING_CACHE_ROOT)
     parser.add_argument(
         "-o",

@@ -10,41 +10,18 @@ from readability_data.java_degradation import construct_interference_dataset
 from readability_data.java_degradation.registry import interference_registry
 from readability_data.python_degradation import construct_python_dataset
 from readability_data.python_degradation.registry import INTERFERENCES
-from readability_experiments.cli import build_parser
-from readability_experiments.common.paths import (
-    constructed_dataset,
-    default_results,
-    default_workspace,
-    repository_root,
-)
 from src.datasets.constructed_variants.loader import load_dataset
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_defaults_do_not_depend_on_current_directory(monkeypatch, tmp_path):
-    monkeypatch.delenv("READABILITY_REPOSITORY_ROOT", raising=False)
-    monkeypatch.chdir(tmp_path)
-    args = build_parser().parse_args([])
-    assert repository_root() == ROOT
-    assert (
-        args.workspace == default_workspace() == ROOT / "artifacts/source_interference"
-    )
-    assert args.java_dataset == constructed_dataset("java")
-    assert args.python_dataset == constructed_dataset("python")
-    assert (
-        default_results("deepseek")
-        == ROOT / "results/experiments/source_interference/deepseek"
-    )
-
-
-def test_invalid_explicit_repository_root_is_not_silently_ignored(
-    monkeypatch, tmp_path
-):
-    monkeypatch.setenv("READABILITY_REPOSITORY_ROOT", str(tmp_path))
-    with pytest.raises(RuntimeError, match="Cannot locate"):
-        repository_root()
+def constructed_dataset(language: str) -> Path:
+    names = {
+        "java": "java-comparative-obfuscation-class-100",
+        "python": "python-comparative-degradation-class-100",
+    }
+    return ROOT / "datasets" / "constructed" / names[language]
 
 
 @pytest.mark.parametrize("language", ["java", "python"])

@@ -24,7 +24,6 @@ from experiments.main.readability_model.evaluation.evaluate_constructed_variants
 from src.datasets import load_code_dataset
 from src.experiments.registry import DATASETS
 from src.experiments.statistics import spearman
-from src.methods.readability_model.llm_features.types import DEFAULT_CAUSAL_LM
 from src.methods.readability_model.paths import (
     BASE_FEATURE_ROOT,
     EMBEDDING_FEATURE_ROOT,
@@ -74,7 +73,7 @@ def parse_args() -> argparse.Namespace:
         "--embedding-root", type=Path, default=EMBEDDING_FEATURE_ROOT
     )
     parser.add_argument("--llm-root", type=Path, default=LLM_FEATURE_ROOT)
-    parser.add_argument("--llm-model", default=DEFAULT_CAUSAL_LM)
+    parser.add_argument("--llm-model", default="infly/OpenCoder-1.5B-Base")
     parser.add_argument(
         "--selected-features-metadata",
         type=Path,
@@ -87,9 +86,7 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--output",
         type=Path,
-        default=Path(
-            "results/experiments/cognascore/embedding_model_refit_comparison"
-        ),
+        default=Path("results/experiments/readability_model/embedding_model_refits"),
     )
     return parser.parse_args()
 

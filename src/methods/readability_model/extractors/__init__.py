@@ -1,4 +1,4 @@
-"""Language-aware typed-chunk extractors for the readability model."""
+"""Language-aware extractors of AST-labelled construct representations."""
 
 from .c_like import CLikeLexemeExtractor
 from .factory import ChunkExtractor, extractor_for_language

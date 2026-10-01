@@ -60,9 +60,10 @@ def test_documented_module_help(module, tmp_path):
 @pytest.mark.parametrize(
     "script",
     (
-        "figures/scripts/plot_readability_label_distributions.py",
-        "figures/scripts/plot_chunk_clustering_motivation.py",
+        "figures/scripts/plot_ast_labelled_representations.py",
+        "figures/scripts/plot_identifier_clustering_motivation.py",
         "figures/scripts/plot_identifier_surprisal_motivation.py",
+        "figures/scripts/plot_opaque_month_offset_motivation.py",
     ),
 )
 def test_documented_direct_figure_command(script, tmp_path):

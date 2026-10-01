@@ -4,7 +4,7 @@ import argparse
 import csv
 from pathlib import Path
 
-from src.experiments.registry import COGNASCORE_DEFAULT_MODEL
+from src.experiments.registry import READABILITY_MODEL_DEFAULT_EMBEDDING
 
 from ..embedding_features import embedding_feature_names
 from ..feature_database import BASE_FEATURE_NAMES, TYPE_STAT_NAMES
@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-model",
-        default=COGNASCORE_DEFAULT_MODEL,
+        default=READABILITY_MODEL_DEFAULT_EMBEDDING,
         help="Model slug used for the base readability feature tables.",
     )
     parser.add_argument("--base-root", type=Path, default=BASE_FEATURE_ROOT)
@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     datasets = tuple(args.dataset) or DEFAULT_DATASETS
-    embedding_models = args.embedding_model or [COGNASCORE_DEFAULT_MODEL]
+    embedding_models = args.embedding_model or [READABILITY_MODEL_DEFAULT_EMBEDDING]
     expected_embedding_columns = ["dataset", "task_id", "readability_score", *embedding_feature_names()]
     expected_base_feature_columns = [*BASE_FEATURE_NAMES, *TYPE_STAT_NAMES]
     if any("graph" in column for column in expected_embedding_columns):

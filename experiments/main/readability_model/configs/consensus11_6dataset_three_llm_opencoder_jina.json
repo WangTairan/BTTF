@@ -22,7 +22,7 @@
   "selection_evidence": {
     "protocol": "three causal-LM feature tables crossed with five embedding-model instantiations; 200-round L1 stability selection and canonical-feature consensus",
     "ranking_artifact": "experiments/main/readability_model/configs/evidence/consensus11_three_llm_full_ranking.csv",
-    "ranking_artifact_sha256": "ab89e6211c49d4d3f396cc749ccd50884d3a7dcc4fe1cfc9f5a35379968e5786",
+    "ranking_artifact_sha256": "51ca58a8c4640cdd8de377d7ead07cef07ba3cda928c590f1b9f0b50a5144dfc",
     "selected_rule": "first 11 positions of the fixed consensus ranking",
     "reference_instantiation_rule": "highest pooled cross-validation average among all 15 causal-LM and embedding-model pairings",
     "constructed_datasets_used": false,
@@ -31,14 +31,14 @@
   "serialized_model_sha256": "e832c826c3e1bf12aedc062210e4852618f67696484c1eb3c014a23dc25d66af",
   "selected_features": [
     "base__operator_density",
-    "llm__literal_tail_difficulty",
-    "llm__identifier_onset_difficulty",
-    "embedding__structural_core__auto_kmeans_pattern_count",
+    "llm__literal_tail_surprisal",
+    "llm__identifier_onset_surprisal",
+    "embedding__computation_control_pattern_count",
     "base__decision_density",
-    "base__expression_complexity",
+    "base__expression_literal_density",
     "base__longest_line_length",
-    "llm__assignment_value_difficulty",
-    "llm__declaration_difficulty_variation",
+    "llm__assignment_value_surprisal",
+    "llm__declaration_surprisal_variation",
     "llm__short_identifier_context_dependence",
     "embedding__only_identifier__embedding_dispersion"
   ]

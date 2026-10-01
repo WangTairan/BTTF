@@ -90,7 +90,7 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help=(
             "Exact result directory. Defaults to "
-            "results/experiments/cognascore/selected_<folds>fold_cv/."
+            "results/experiments/readability_model/selected_<folds>fold_cv/."
         ),
     )
     return parser.parse_args()

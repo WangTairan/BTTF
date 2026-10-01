@@ -21,7 +21,7 @@ from experiments.main.readability_model.selection.screen_llm_features import (
     evaluate_features,
     load_matrices,
 )
-from src.experiments.registry import COGNASCORE_EMBEDDING_MODELS
+from src.experiments.registry import READABILITY_MODEL_EMBEDDINGS
 from src.methods.readability_model.paths import (
     BASE_FEATURE_ROOT,
     EMBEDDING_FEATURE_ROOT,
@@ -38,13 +38,13 @@ def checked_screen(path: Path, model: str, checksums: dict[str, str]):
     payload = json.loads((path / "summary.json").read_text(encoding="utf-8"))
     if payload["llm_model"] != model or payload["parameters"]["stability_rounds"] != 200:
         raise ValueError(f"Incompatible screening configuration: {path}")
-    if payload["embedding_models"] != list(COGNASCORE_EMBEDDING_MODELS):
+    if payload["embedding_models"] != list(READABILITY_MODEL_EMBEDDINGS):
         raise ValueError(f"Incompatible embedding model order: {path}")
     for filename, expected in payload["input_csv_sha256"].items():
         if checksums.get(filename) != expected:
             raise ValueError(f"Screening input changed: {filename}")
     rankings = {}
-    for embedding_model in COGNASCORE_EMBEDDING_MODELS:
+    for embedding_model in READABILITY_MODEL_EMBEDDINGS:
         table = path / "per_model" / model_slug(embedding_model) / "ranking.csv"
         rankings[embedding_model] = pd.read_csv(table).to_dict("records")
     return payload, rankings
@@ -99,7 +99,7 @@ def main():
     matrices, rankings = {}, {}
     for name, model in models.items():
         loader_args = argparse.Namespace(
-            embedding_models=tuple(COGNASCORE_EMBEDDING_MODELS),
+            embedding_models=tuple(READABILITY_MODEL_EMBEDDINGS),
             llm_model=model,
             base_root=BASE_FEATURE_ROOT,
             embedding_root=EMBEDDING_FEATURE_ROOT,
@@ -109,7 +109,7 @@ def main():
         _, rankings[name] = checked_screen(screen_paths[name], model, checksums)
         if set(features) != {row["feature"] for row in next(iter(rankings[name].values()))}:
             raise ValueError(f"Candidate inventory changed for {model}")
-    reference_model = COGNASCORE_EMBEDDING_MODELS[0]
+    reference_model = READABILITY_MODEL_EMBEDDINGS[0]
     references = {name: values[reference_model] for name, values in matrices.items()}
     single_rankings = {name: consensus_ranking(values) for name, values in rankings.items()}
     def rank_across(names):

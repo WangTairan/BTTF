@@ -1,4 +1,4 @@
-"""Render a real readability-model chunk-to-cluster motivating example.
+"""Render a real readability-model identifier-clustering example.
 
 The source is an unchanged method from the official Scalabrino dataset.
 Identifier chunks come from the readability-model Java extractor, embeddings come
@@ -17,7 +17,9 @@ from typing import Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "rmc_matplotlib"))
+os.environ.setdefault(
+    "MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "readability_model_matplotlib")
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,7 +38,7 @@ from src.methods.readability_model.extractors.factory import extractor_for_langu
 DEFAULT_DATASET = ROOT / "datasets" / "scalabrino" / "dataset"
 DEFAULT_CACHE_ROOT = ROOT / "artifacts" / "cognascore" / "embeddings"
 DEFAULT_OUTPUT = (
-    ROOT / "figures" / "publication" / "cognascore_chunk_clustering_motivation.pdf"
+    ROOT / "figures" / "publication" / "identifier_clustering_motivation.pdf"
 )
 DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1.5"
 DEFAULT_TASK_ID = "Scalabrio189"
@@ -219,7 +221,7 @@ def render_figure(
     )
     draw_embedding_panel(embedding_ax)
     draw_cluster_panel(clusters_ax, chunks, labels)
-    draw_arrow(fig, 0.465, 0.50, 0.523, "chunks")
+    draw_arrow(fig, 0.465, 0.50, 0.523, "snippets")
     draw_arrow(fig, 0.601, 0.50, 0.659, "vectors")
     fig.savefig(output, format="pdf", facecolor="white", bbox_inches="tight", pad_inches=0.018)
     plt.close(fig)

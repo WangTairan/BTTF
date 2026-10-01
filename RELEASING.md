@@ -28,7 +28,6 @@ download pretrained weights, or overwrite saved publication outputs.
 - published/reproduced baselines and their frozen weights where applicable;
 - feature-family ablation, bootstrap uncertainty, semantic-anchor, and
   content-aware comment analyses reported in the paper;
-- the pinned recent-repository repair dataset and its validation tooling; and
 - publication figure scripts, data, and rendered figures.
 
 Superseded compact subset searches, obsolete reference instantiations, one-off

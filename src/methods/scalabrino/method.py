@@ -38,7 +38,7 @@ def scalabrino_java_source(code: str) -> ScalabrinoReadabilityResult:
     if not SCALABRINO_JAR.is_file():
         raise FileNotFoundError(f"Scalabrino jar not found: {SCALABRINO_JAR}")
 
-    with tempfile.TemporaryDirectory(prefix="rmc_scalabrino_") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="readability_scalabrino_") as temp_dir:
         source_path = Path(temp_dir) / "Snippet.java"
         source_path.write_text(code, encoding="utf-8")
         return scalabrino_file(source_path)
@@ -64,7 +64,7 @@ def scalabrino_language_metrics(code: str, language: str) -> ScalabrinoMetricsRe
     prepared = prepare_java_source(code) if normalized == "java" else code
     if not SCALABRINO_JAR.is_file():
         raise FileNotFoundError(f"Scalabrino jar not found: {SCALABRINO_JAR}")
-    with tempfile.TemporaryDirectory(prefix="rmc_scalabrino_") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="readability_scalabrino_") as temp_dir:
         source_path = Path(temp_dir) / f"Snippet{suffix}"
         source_path.write_text(prepared, encoding="utf-8")
         return scalabrino_file_metrics(source_path)
@@ -78,7 +78,7 @@ def scalabrino_java_source_metrics(code: str) -> ScalabrinoMetricsResult:
     if not SCALABRINO_JAR.is_file():
         raise FileNotFoundError(f"Scalabrino jar not found: {SCALABRINO_JAR}")
 
-    with tempfile.TemporaryDirectory(prefix="rmc_scalabrino_") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="readability_scalabrino_") as temp_dir:
         source_path = Path(temp_dir) / "Snippet.java"
         source_path.write_text(code, encoding="utf-8")
         return scalabrino_file_metrics(source_path)

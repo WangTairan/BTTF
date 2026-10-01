@@ -20,9 +20,9 @@ written to `publication/` and `data/`, respectively.
 Run commands from the repository root.
 
 ```bash
-python figures/scripts/plot_typed_chunk_extraction.py
-python figures/scripts/plot_chunk_clustering_motivation.py
-python figures/scripts/plot_readability_label_distributions.py
+python figures/scripts/plot_ast_labelled_representations.py
+python figures/scripts/plot_identifier_clustering_motivation.py
+python figures/scripts/plot_opaque_month_offset_motivation.py
 ```
 
 The causal-LM motivation figure performs six small, local inference calls and
@@ -39,11 +39,16 @@ language model:
 python figures/scripts/plot_identifier_surprisal_motivation.py --render-only
 ```
 
+The final feature-budget curve is regenerated from the frozen three-model
+consensus ranking and cached feature tables:
+
+```bash
+python -m experiments.main.readability_model.figures.plot_three_llm_consensus_sensitivity \
+  --ranking experiments/main/readability_model/configs/evidence/consensus11_three_llm_full_ranking.csv
+```
+
 The motivating comparison holds the source prefix fixed. Each candidate
 replaces the complete variable binding, while only its declaration occurrence
 is scored in bits per UTF-8 byte, normalizing for identifier length. The stored CSV records
 the pinned model revision, prefix hash, source path and hash, token coverage,
 allocated information, and plotted BPB value.
-
-Historical filenames containing `cognascore` are retained where manuscript
-provenance refers to those exact artifacts.

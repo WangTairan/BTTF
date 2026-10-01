@@ -31,7 +31,7 @@ from experiments.main.readability_model.evaluation.cross_validate_fixed import (
 )
 from experiments.main.readability_model.evaluation.metrics import unweighted_spearman_average
 from src.datasets import load_code_dataset
-from src.experiments.registry import COGNASCORE_EMBEDDING_MODELS, DATASETS
+from src.experiments.registry import DATASETS, READABILITY_MODEL_EMBEDDINGS
 from src.experiments.statistics import spearman
 from src.methods.readability_model.dataset_io import item_source_sha256
 from src.methods.readability_model.feature_schema import feature_family, namespaced_feature
@@ -124,7 +124,7 @@ def load_matrices(args):
     matrices = {model: [] for model in args.embedding_models}
     checksums = {}
     base_slug, llm_slug = (
-        model_slug(COGNASCORE_EMBEDDING_MODELS[0]),
+        model_slug(READABILITY_MODEL_EMBEDDINGS[0]),
         model_slug(args.llm_model),
     )
     for dataset in CORE_DATASETS:
@@ -445,7 +445,7 @@ def main():
         dest="embedding_models",
         action="append",
         default=None,
-        choices=COGNASCORE_EMBEDDING_MODELS,
+        choices=READABILITY_MODEL_EMBEDDINGS,
     )
     parser.add_argument("--llm-model", default=DEFAULT_CAUSAL_LM)
     parser.add_argument("--base-root", type=Path, default=BASE_FEATURE_ROOT)
@@ -466,7 +466,7 @@ def main():
         default=EXPERIMENT_RESULTS_ROOT / "llm47_top30_screen",
     )
     args = parser.parse_args()
-    args.embedding_models = tuple(args.embedding_models or COGNASCORE_EMBEDDING_MODELS)
+    args.embedding_models = tuple(args.embedding_models or READABILITY_MODEL_EMBEDDINGS)
     if (
         args.stability_rounds < 1
         or not 0 < args.sample_fraction <= 1

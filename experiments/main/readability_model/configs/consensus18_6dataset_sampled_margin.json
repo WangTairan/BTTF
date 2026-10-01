@@ -76,9 +76,9 @@
   "selected_features": [
     "base__operator_density",
     "base__source_text_entropy",
-    "base__expression_complexity",
+    "base__expression_literal_density",
     "base__longest_line_length",
-    "embedding__structural_core__auto_kmeans_pattern_count",
+    "embedding__computation_control_pattern_count",
     "embedding__only_identifier__embedding_dispersion",
     "base__mean_indentation_change",
     "embedding__structural_core__optics_pattern_mixing",

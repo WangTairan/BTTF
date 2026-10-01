@@ -10,9 +10,7 @@ hypothesis before results, and is not relabeled after observing coefficients.
 
 from __future__ import annotations
 
-import argparse
 import ast
-import hashlib
 import io
 import json
 import re
@@ -21,31 +19,24 @@ import textwrap
 import tokenize
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from experiments.main.readability_model.evaluation.cross_validate_fixed import fold_assignments
-from experiments.main.readability_model.evaluation.evaluate_constructed_variants import prediction_rows, summarize_paired_variants
 from experiments.supplementary.comment_validity.comment_span_features import (
     COMMENT,
     comment_form,
     noncomment_intervals,
     read_trace,
 )
-from experiments.main.readability_model.selection.screen_llm_features import CORE_DATASETS, load_matrices, load_table, metric_summary
 from src.datasets import load_code_dataset
-from src.experiments.registry import COGNASCORE_EMBEDDING_MODELS, DATASETS
-from src.experiments.statistics import spearman
+from src.experiments.registry import DATASETS
 from src.methods.readability_model.dataset_io import item_source_sha256
 from src.methods.readability_model.llm_features.aggregate import _SourceLoss, _union
 from src.methods.readability_model.llm_features.scoring import TraceConfiguration
 from src.methods.readability_model.llm_features.source_spans import _parser, analyze_source
-from src.methods.readability_model.paths import BASE_FEATURE_ROOT, EMBEDDING_FEATURE_ROOT, EXPERIMENT_RESULTS_ROOT, LLM_FEATURE_ROOT, LLM_SURPRISAL_CACHE_ROOT
 from src.methods.readability_model.results import model_slug
 from src.methods.readability_model.runners.llm_surprisal_features import _source_policy
-from src.methods.readability_model.runners.supervised_ridge import fit_ridge
 
 GROUPS = ("code_like", "separator", "metadata", "prose", "mixed_unknown", "unknown")
 PREFIX = "llm__comment_content__"
@@ -338,125 +329,3 @@ def attach(frame, statistics):
     if len(result) != len(frame):
         raise ValueError("Content statistics lost feature rows")
     return result
-
-
-def evaluate(frame, features, probes, args):
-    fold_ids = np.full(len(frame), -1, int)
-    for index, dataset in enumerate(CORE_DATASETS):
-        indices = np.flatnonzero(frame.dataset.to_numpy() == dataset)
-        fold_ids[indices] = fold_assignments(frame.iloc[indices], args.folds, args.seed + index)
-    if (fold_ids < 0).any():
-        raise ValueError("Missing folds")
-    pooled, lodo = np.full(len(frame), np.nan), np.full(len(frame), np.nan)
-    fold_coefs = {"pooled": [], "lodo": []}
-    for kind, predictions, tests in (("pooled", pooled, [fold_ids == fold for fold in range(args.folds)]), ("lodo", lodo, [frame.dataset.to_numpy() == dataset for dataset in CORE_DATASETS])):
-        for index, test in enumerate(tests):
-            train, validation = frame.loc[~test].reset_index(drop=True), frame.loc[test].reset_index(drop=True)
-            missing = [name for name in features if train[name].isna().all()]
-            if missing:
-                raise ValueError(f"Unavailable training-only group calibration: {kind}/{index}/{missing}")
-            fit = fit_ridge(train, np.ones(len(train), bool), args.alpha, features)
-            predictions[test] = fit.predict(validation[features].to_numpy(float))
-            fold_coefs[kind].append({"fold": index if kind == "pooled" else CORE_DATASETS[index], "coefficients": {name: float(fit.named_steps["ridge"].coef_[features.index(name)]) for name in features}})
-    fit = fit_ridge(frame, np.ones(len(frame), bool), args.alpha, features)
-    diagnostics = {}
-    for name in probes:
-        single = fit_ridge(frame, np.ones(len(frame), bool), args.alpha, [name])
-        correlations = {}
-        for dataset, part in frame.groupby("dataset", sort=False):
-            available = part.loc[part[name].notna()]
-            correlations[dataset] = {"n": len(available), "rho": spearman(available[name].tolist(), available.readability_score.tolist()) if len(available) > 1 and available[name].nunique() > 1 else None}
-        diagnostics[name] = {"coefficient": float(fit.named_steps["ridge"].coef_[features.index(name)]), "single_feature_coefficient": float(single.named_steps["ridge"].coef_[0]), "n_available": int(frame[name].notna().sum()), "missing_ratio": float(frame[name].isna().mean()), "single_correlations": correlations, "pooled_positive_fold_count": sum(row["coefficients"][name] > 1e-12 for row in fold_coefs["pooled"]), "lodo_positive_fold_count": sum(row["coefficients"][name] > 1e-12 for row in fold_coefs["lodo"])}
-    predictions = frame[["dataset", "task_id", "readability_score"]].copy()
-    predictions["pooled_fold"], predictions["pooled_score"], predictions["lodo_score"] = fold_ids, pooled, lodo
-    result = {"features": features, "feature_count": len(features), "pooled_cv": metric_summary(frame, pooled), "lodo": metric_summary(frame, lodo), "probes": diagnostics, "fold_coefficients": fold_coefs}
-    return result, fit, predictions
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--reference-summary", type=Path, default=EXPERIMENT_RESULTS_ROOT / "comment_feature_probes/summary.json")
-    parser.add_argument("--output", type=Path, default=EXPERIMENT_RESULTS_ROOT / "comment_content_groups")
-    parser.add_argument("--base-root", type=Path, default=BASE_FEATURE_ROOT)
-    parser.add_argument("--embedding-root", type=Path, default=EMBEDDING_FEATURE_ROOT)
-    parser.add_argument("--llm-root", type=Path, default=LLM_FEATURE_ROOT)
-    parser.add_argument("--cache-root", type=Path, default=LLM_SURPRISAL_CACHE_ROOT)
-    parser.add_argument("--reuse-statistics", action="store_true")
-    args = parser.parse_args()
-    prior = json.loads(args.reference_summary.read_text())
-    screen = json.loads(Path(prior["screen_summary"]).read_text())
-    args.llm_model, args.embedding_models = screen["llm_model"], list(COGNASCORE_EMBEDDING_MODELS)
-    args.alpha, args.seed, args.folds = prior["parameters"]["alpha"], prior["parameters"]["seed"], prior["parameters"]["folds"]
-    selected = prior["results"]["original"]["features"]
-    other = [name for name in selected if name != COMMENT]
-    if len(selected) != 24 or len(other) != 23:
-        raise ValueError("Expected fixed original24/other23")
-    matrices, _, _, checksums = load_matrices(args)
-    predictor_model = screen["predictor_embedding_model"]
-    args.output.mkdir(parents=True, exist_ok=True)
-    if args.reuse_statistics:
-        saved = json.loads((args.output / "summary.json").read_text())
-        if saved["classifier_source_sha256"] != hashlib.sha256(Path(__file__).read_bytes()).hexdigest():
-            raise ValueError("Classifier changed since saved statistics; strict reaggregation required")
-        statistics = pd.read_csv(args.output / "comment_content_statistics.csv")
-        occurrences = pd.read_csv(args.output / "comment_occurrences.csv")
-        for dataset, part in statistics.groupby("dataset"):
-            items = {item.task_id: item_source_sha256(item) for item in load_code_dataset(DATASETS[dataset].path)}
-            if any(items[row.task_id] != row.source_sha256 for row in part.itertuples()):
-                raise ValueError("Reused statistics have stale sources")
-    else:
-        statistics, occurrences = derive_statistics(matrices[predictor_model], args)
-        statistics.to_csv(args.output / "comment_content_statistics.csv", index=False)
-        occurrences.to_csv(args.output / "comment_occurrences.csv", index=False)
-    frames = {model: attach(matrix, statistics) for model, matrix in matrices.items()}
-    reference = frames[predictor_model]
-    dataset = "java_comparative_obfuscation"
-    items = {item.task_id: item for item in load_code_dataset(DATASETS[dataset].path)}
-    tables = []
-    for family, root, model in (("base", args.base_root, predictor_model), ("embedding", args.embedding_root, predictor_model), ("llm", args.llm_root, args.llm_model)):
-        path = root / dataset / model_slug(model) / "features.csv"
-        tables.append(load_table(path, family, items, dataset=dataset, llm=family == "llm"))
-        checksums[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
-    if any(checksums.get(path) != value for path, value in prior["input_csv_sha256"].items()):
-        raise ValueError("Reference input hashes changed")
-    constructed = tables[0]
-    for table in tables[1:]:
-        constructed = constructed.merge(table.drop(columns="readability_score"), on=["dataset", "task_id"], validate="one_to_one")
-    if args.reuse_statistics:
-        constructed_statistics = pd.read_csv(args.output / "java_comment_content_statistics.csv")
-        for row in constructed_statistics.itertuples():
-            if item_source_sha256(items[row.task_id]) != row.source_sha256:
-                raise ValueError("Reused Java statistics have stale source")
-        constructed_occurrences = pd.read_csv(args.output / "java_comment_occurrences.csv")
-    else:
-        constructed_statistics, constructed_occurrences = derive_statistics(constructed, args)
-        constructed_statistics.to_csv(args.output / "java_comment_content_statistics.csv", index=False)
-        constructed_occurrences.to_csv(args.output / "java_comment_occurrences.csv", index=False)
-    constructed = attach(constructed, constructed_statistics)
-    prose = PREFIX + "prose__bpb_mean"
-    decomposition = [PREFIX + group + "__bpb_mean" for group in GROUPS]
-    experiments = (("original24", selected, [COMMENT]), ("without_comment", other, []), ("prose_only", other + [prose], [prose]), ("content_decomposition", other + decomposition, decomposition))
-    payload = {"classifier_version": CLASSIFIER_VERSION, "classifier_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "parameters": {"alpha": args.alpha, "seed": args.seed, "folds": args.folds}, "input_csv_sha256": checksums, "reference_input_csv_sha256": prior["input_csv_sha256"], "reference_summary": str(args.reference_summary), "reference_summary_sha256": hashlib.sha256(args.reference_summary.read_bytes()).hexdigest(), "inference_performed": False, "production_or_frozen_modified": False, "classification_uses_readability_labels": False, "expected_direction": {"prose": -1, **{group: None for group in GROUPS if group != "prose"}}, "prospective_hypotheses": {"prose": "Explanatory prose BPB is intended negative prediction difficulty, unchanged after outcomes.", "code_like": "Standalone operational code-like content conflates code-expression difficulty with comment language difficulty; no explanatory-load direction assigned.", "separator_metadata": "Punctuation separators and explicit license/provenance are not explanatory cognitive load; treat as nuisance groups, not automatically valid readability signals.", "mixed_unknown": "Occurrences with mixed mechanisms or insufficient evidence remain separate; do not force an explanatory label."}, "classifier_precedence": "separator -> complete operational code -> mixed code/prose or provenance/prose -> explicit license/provenance -> descriptive prose -> unknown. Syntax form is provenance only. Full parse plus operational syntax prevents semicolon-alone code classification; documentation @param/@return descriptions are not metadata merely because they have a tag.", "measurement": "Existing global original-source token loss reaggregated over whole original comment intervals, including markers. Group mean is union-covered UTF-8 byte-weighted BPB; classification-normalized body is never rescored. Missing groups are NaN/absent applicability, not zero BPB; predictor medians fit within each training fold.", "limitations": "Conservative English-word prose evidence, not proof of author intent/explanatory validity. Pure code-like can be an example, not necessarily disabled code. Parser lexical-only Python fragments retain AST docstring false-negative uncertainty; no guessed roles. Some valid code fragments and short explanatory labels remain unknown. Development-data diagnostic, not independent validation.", "group_counts": {group: {"occurrences": int((occurrences.content_group == group).sum()), "core_samples": int((statistics[group + '__occurrence_count'] > 0).sum()), "covered_bytes": float(statistics[group + '__covered_bytes'].sum())} for group in GROUPS}, "group_counts_by_dataset": occurrences.groupby(["dataset", "content_group"]).size().reset_index(name="occurrences").to_dict("records"), "comment_detection_status": {"unavailable": int((~statistics.comment_detection_available).sum()), "available_no_detected_comments": int((statistics.comment_detection_available & (statistics.detected_comment_count == 0)).sum())}, "first_actual_examples": {group: occurrences.loc[occurrences.content_group == group, ["dataset", "task_id", "source_sha256", "language", "start", "end", "syntax_form", "reason", "raw_comment"]].head(5).to_dict("records") for group in GROUPS}, "results": {}}
-    (args.output / "coverage.json").write_text(json.dumps({key: payload[key] for key in ("classifier_version", "group_counts", "group_counts_by_dataset", "comment_detection_status", "first_actual_examples")}, indent=2, allow_nan=False) + "\n")
-    for name, features, probes in experiments:
-        result, fit, predictions = evaluate(reference, features, probes, args)
-        baseline_name = "original" if name == "original24" else "without_comment" if name == "without_comment" else None
-        if baseline_name and any(result[metric] != prior["results"][baseline_name][metric] for metric in ("pooled_cv", "lodo")):
-            raise ValueError("Fixed baseline no longer exactly reproduced")
-        predictions.to_csv(args.output / f"{name}_predictions.csv", index=False)
-        rows = prediction_rows(constructed, fit.predict(constructed[features].to_numpy(float)), items)
-        pd.DataFrame(rows).to_csv(args.output / f"{name}_java_predictions.csv", index=False)
-        result["constructed"] = {dataset: summarize_paired_variants(rows)}
-        result["full_five_embedding_fits"] = {}
-        for model, frame in frames.items():
-            model_fit = fit if model == predictor_model else fit_ridge(frame, np.ones(len(frame), bool), args.alpha, features)
-            coefficients = {feature: float(value) for feature, value in zip(features, model_fit.named_steps["ridge"].coef_)}
-            baseline = coefficients if name == "original24" else payload["results"]["original24"]["full_five_embedding_fits"][model]["coefficients"]
-            result["full_five_embedding_fits"][model] = {"coefficients": coefficients, "probe_coefficients": {feature: coefficients[feature] for feature in probes}, "retained_sign_changes": {feature: {"original": baseline[feature], "candidate": coefficients[feature]} for feature in other if baseline[feature] * coefficients[feature] < 0}}
-        payload["results"][name] = result
-        (args.output / "summary.json").write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
-        print(f"{name}: pooled={result['pooled_cv']['unweighted_mean']:.6f}, LODO={result['lodo']['unweighted_mean']:.6f}, coefs={ {feature: diagnostic['coefficient'] for feature, diagnostic in result['probes'].items()} }", flush=True)
-
-
-if __name__ == "__main__":
-    main()

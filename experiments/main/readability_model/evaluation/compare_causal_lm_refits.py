@@ -44,14 +44,14 @@ CAUSAL_LMS = (
 
 EXPECTED_SIGNS = {
     "base__operator_density": -1,
-    "llm__literal_tail_difficulty": -1,
-    "embedding__structural_core__auto_kmeans_pattern_count": -1,
-    "llm__identifier_onset_difficulty": -1,
+    "llm__literal_tail_surprisal": -1,
+    "embedding__computation_control_pattern_count": -1,
+    "llm__identifier_onset_surprisal": -1,
     "base__decision_density": -1,
-    "base__expression_complexity": -1,
-    "llm__assignment_value_difficulty": -1,
+    "base__expression_literal_density": -1,
+    "llm__assignment_value_surprisal": -1,
     "base__longest_line_length": -1,
-    "llm__declaration_difficulty_variation": -1,
+    "llm__declaration_surprisal_variation": -1,
     "llm__short_identifier_context_dependence": -1,
     "embedding__only_identifier__embedding_dispersion": -1,
 }
@@ -67,7 +67,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--embedding-model",
-        default="Qwen/Qwen3-Embedding-0.6B",
+        default="jinaai/jina-embeddings-v2-base-code",
     )
     parser.add_argument("--folds", type=int, default=10)
     parser.add_argument("--seed", type=int, default=42)
@@ -80,7 +80,8 @@ def parse_args() -> argparse.Namespace:
         "--output",
         type=Path,
         default=Path(
-            "results/experiments/readability_model/consensus11_qwen/causal_lm_refits"
+            "results/experiments/readability_model/consensus11_model_grid/"
+            "jina_causal_refits"
         ),
     )
     return parser.parse_args()

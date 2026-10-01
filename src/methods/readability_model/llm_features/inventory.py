@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-LLM_FEATURE_BUILD_VERSION = 5
+LLM_FEATURE_BUILD_VERSION = 6
 ROLE_NAMES = (
     "identifier",
     "declaration_header",
@@ -80,23 +80,23 @@ def _inventory() -> tuple[FeatureDefinition, ...]:
         definitions.extend(
             (
                 _definition(
-                    "assignment_value_difficulty" if role == "assignment_rhs" else f"{role}__bpb_mean",
+                    "assignment_value_surprisal" if role == "assignment_rhs" else f"{role}__bpb_mean",
                     "role_difficulty",
-                    description + ": covered-byte-weighted difficulty",
+                    description + ": covered-byte-weighted surprisal",
                     "bits(role span union)/bytes(role span union)",
                     role,
                 ),
                 _definition(
-                    "literal_tail_difficulty" if role == "literal" else f"{role}__bpb_tail_mean",
+                    "literal_tail_surprisal" if role == "literal" else f"{role}__bpb_tail_mean",
                     "role_difficulty",
-                    description + ": difficult occurrence tail",
+                    description + ": highest-surprisal occurrence tail",
                     "mean(top ceil(n*tail_fraction) occurrence Q values)",
                     role,
                 ),
                 _definition(
-                    "declaration_difficulty_variation" if role == "declaration_header" else f"{role}__bpb_std",
+                    "declaration_surprisal_variation" if role == "declaration_header" else f"{role}__bpb_std",
                     "role_difficulty",
-                    description + ": occurrence-to-occurrence variation",
+                    description + ": occurrence-to-occurrence surprisal variation",
                     "population_std(occurrence Q values)",
                     role,
                 ),
@@ -183,9 +183,9 @@ def _inventory() -> tuple[FeatureDefinition, ...]:
                 "identifier",
             ),
             _definition(
-                "identifier_onset_difficulty",
+                "identifier_onset_surprisal",
                 "identifier_learning",
-                "Difficulty allocated to the first tokenizer piece of each identifier",
+                "Surprisal allocated to the first tokenizer piece of each identifier",
                 "sum(first-piece allocated bits)/sum(first-piece allocated bytes)",
                 "identifier",
             ),

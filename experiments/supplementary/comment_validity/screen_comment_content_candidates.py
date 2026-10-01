@@ -31,7 +31,7 @@ from experiments.supplementary.comment_validity.comment_content_groups import (
     attach,
     derive_statistics,
 )
-from src.experiments.registry import COGNASCORE_EMBEDDING_MODELS
+from src.experiments.registry import READABILITY_MODEL_EMBEDDINGS
 from src.methods.readability_model.paths import (
     BASE_FEATURE_ROOT,
     EMBEDDING_FEATURE_ROOT,
@@ -117,7 +117,7 @@ def main() -> None:
 
     for causal_lm in CAUSAL_LMS:
         loader = argparse.Namespace(
-            embedding_models=tuple(COGNASCORE_EMBEDDING_MODELS),
+            embedding_models=tuple(READABILITY_MODEL_EMBEDDINGS),
             llm_model=causal_lm,
             base_root=BASE_FEATURE_ROOT,
             embedding_root=EMBEDDING_FEATURE_ROOT,
@@ -140,7 +140,7 @@ def main() -> None:
         if not trace_path.exists():
             raise FileNotFoundError(trace_path)
         input_hashes[str(trace_path)] = file_sha256(trace_path)
-        reference = matrices[COGNASCORE_EMBEDDING_MODELS[0]]
+        reference = matrices[READABILITY_MODEL_EMBEDDINGS[0]]
 
         trace_fingerprint, trace_source_count = complete_global_trace(
             trace_path, len(reference)
@@ -207,7 +207,7 @@ def main() -> None:
         "question": "Do content-conditioned comment predictability features enter the fixed Top-11 budget under the original 15-model consensus screen?",
         "datasets": ["mbjp", "buse", "scalabrino", "dorn", "schnappinger", "jetbrains"],
         "causal_language_models": list(CAUSAL_LMS),
-        "embedding_models": list(COGNASCORE_EMBEDDING_MODELS),
+        "embedding_models": list(READABILITY_MODEL_EMBEDDINGS),
         "pairing_count": len(all_rankings),
         "original_candidate_count": 228,
         "added_candidate_count": 6,

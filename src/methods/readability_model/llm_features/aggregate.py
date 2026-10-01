@@ -251,17 +251,17 @@ def aggregate_features(
         }
         if values and role in ROLE_DIFFICULTY_NAMES:
             mean_name = (
-                "llm__assignment_value_difficulty"
+                "llm__assignment_value_surprisal"
                 if role == "assignment_rhs"
                 else f"llm__{role}__bpb_mean"
             )
             tail_name = (
-                "llm__literal_tail_difficulty"
+                "llm__literal_tail_surprisal"
                 if role == "literal"
                 else f"llm__{role}__bpb_tail_mean"
             )
             variation_name = (
-                "llm__declaration_difficulty_variation"
+                "llm__declaration_surprisal_variation"
                 if role == "declaration_header"
                 else f"llm__{role}__bpb_std"
             )
@@ -349,7 +349,7 @@ def aggregate_features(
                 continuation_bits += bits
                 continuation_bytes += bytes_
                 continuation_count += 1
-    features["llm__identifier_onset_difficulty"] = (
+    features["llm__identifier_onset_surprisal"] = (
         first_piece_bits / first_piece_bytes if first_piece_bytes > 0 else None
     )
     features["llm__identifier_continuation_bpb"] = (

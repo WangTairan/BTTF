@@ -2,10 +2,10 @@ rank,feature,active_model_count,mean_selection_frequency
 1,base__operator_density,5,1.000
 2,base__source_text_entropy,5,0.989
 3,base__longest_line_length,5,0.960
-4,embedding__structural_core__auto_kmeans_pattern_count,5,0.943
+4,embedding__computation_control_pattern_count,5,0.943
 5,base__mean_indentation_change,5,0.901
 6,embedding__only_identifier__embedding_dispersion,5,0.889
-7,base__expression_complexity,5,0.846
+7,base__expression_literal_density,5,0.846
 8,semantic__short_identifier_mathematical_context,5,0.833
 9,embedding__structural_core__optics_pattern_mixing,5,0.783
 11,base__regex_prevalence,5,0.723

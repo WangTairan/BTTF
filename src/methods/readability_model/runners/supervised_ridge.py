@@ -19,7 +19,7 @@ from sklearn.preprocessing import StandardScaler
 
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.datasets import load_code_dataset
-from src.experiments.registry import COGNASCORE_EMBEDDING_MODELS, DATASETS
+from src.experiments.registry import DATASETS, READABILITY_MODEL_EMBEDDINGS
 from src.methods.readability_model.feature_schema import namespaced_feature
 from src.methods.readability_model.paths import (
     BASE_FEATURE_ROOT,
@@ -52,9 +52,9 @@ METHOD_KEY = "readability_model_consensus18_6dataset_sampled_margin"
 SELECTED_FEATURES = [
     "base__operator_density",
     "base__source_text_entropy",
-    "base__expression_complexity",
+    "base__expression_literal_density",
     "base__longest_line_length",
-    "embedding__structural_core__auto_kmeans_pattern_count",
+    "embedding__computation_control_pattern_count",
     "embedding__only_identifier__embedding_dispersion",
     "base__mean_indentation_change",
     "embedding__structural_core__optics_pattern_mixing",
@@ -87,7 +87,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--embedding-model",
-        choices=COGNASCORE_EMBEDDING_MODELS,
+        choices=READABILITY_MODEL_EMBEDDINGS,
         default=EMBEDDING_MODEL,
         help="Embedding-model instantiation used by embedding-derived features.",
     )

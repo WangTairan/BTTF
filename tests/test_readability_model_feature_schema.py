@@ -18,12 +18,34 @@ from src.methods.readability_model.feature_database import (
     TYPE_STAT_NAMES,
     extract_feature_row,
 )
-from src.methods.readability_model.feature_schema import feature_family, namespaced_feature
+from src.methods.readability_model.feature_schema import (
+    canonical_feature_name,
+    feature_family,
+    namespaced_feature,
+)
 from src.methods.readability_model.extractors import extractor_for_language
 from src.methods.readability_model.runners.supervised_ridge import SELECTED_FEATURES
 
 
 class ReadabilityModelFeatureSchemaTest(unittest.TestCase):
+    def test_historical_selected_feature_names_migrate_to_canonical_keys(self) -> None:
+        aliases = {
+            "base__expression_complexity": "base__expression_literal_density",
+            "embedding__structural_core__auto_kmeans_pattern_count": (
+                "embedding__computation_control_pattern_count"
+            ),
+            "llm__literal_tail_difficulty": "llm__literal_tail_surprisal",
+            "llm__identifier_onset_difficulty": "llm__identifier_onset_surprisal",
+            "llm__assignment_value_difficulty": "llm__assignment_value_surprisal",
+            "llm__declaration_difficulty_variation": (
+                "llm__declaration_surprisal_variation"
+            ),
+        }
+        for historical, canonical in aliases.items():
+            self.assertEqual(canonical_feature_name(historical), canonical)
+            family, raw_name = historical.split("__", 1)
+            self.assertEqual(namespaced_feature(family, raw_name), canonical)
+
     def test_three_storage_families_preserve_model_namespaces(self) -> None:
         self.assertEqual(feature_family("base__operator_density"), "base")
         self.assertEqual(feature_family("compression__gzip_ratio"), "base")
@@ -53,7 +75,7 @@ class ReadabilityModelFeatureSchemaTest(unittest.TestCase):
             "all__embedding_mean_cosine_to_centroid",
             embedding_names,
         )
-        self.assertIn("expression_complexity", base_names)
+        self.assertIn("expression_literal_density", base_names)
         self.assertNotIn("literal_expression_log_balance", base_names)
         self.assertIn(
             "all__embedding_dispersion",
@@ -95,7 +117,7 @@ class ReadabilityModelFeatureSchemaTest(unittest.TestCase):
             for chunk_type in ("ARITHMETIC", "BITWISE", "COMPARISON", "LOGICAL")
         )
         expected = math.log1p(expression_count) - math.log1p(counts["LITERAL"])
-        self.assertAlmostEqual(row["expression_complexity"], expected)
+        self.assertAlmostEqual(row["expression_literal_density"], expected)
 
     def test_residual_variance_is_one_minus_first_pc_share(self) -> None:
         vectors = np.asarray(

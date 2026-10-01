@@ -6,6 +6,8 @@ field.
 
 Key parameter: the LLM model key. The paper baseline uses `dsv4-pro` through
 the official DeepSeek API and requires `DEEPSEEK_API_KEY` in the environment.
+Results are checkpointed per sample and preserve the raw response, token usage,
+request parameters, and complete serializable API response for auditing.
 
 ```bash
 python -m src.experiments.evaluate_method \

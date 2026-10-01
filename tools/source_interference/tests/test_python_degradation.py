@@ -62,39 +62,6 @@ class Example:
         self.assertIn("import value", result.source)
         ast.parse(result.source)
 
-    def test_identifier_renaming_can_be_scoped_by_completion_markers(self):
-        source = """def sibling(public_argument):
-    sibling_local = public_argument + 1
-    return sibling_local
-
-def target(public_argument):
-    before_value = public_argument + 1
-    __READABILITY_HOLE_START__()
-    missing_value = before_value * 2
-    __READABILITY_HOLE_END__()
-    return missing_value
-"""
-        result = INTERFERENCES["garble-identifiers"].apply(
-            source,
-            Context(
-                1,
-                "scope",
-                protected_names=(
-                    "target",
-                    "__READABILITY_HOLE_START__",
-                    "__READABILITY_HOLE_END__",
-                ),
-            ),
-        )
-        self.assertIn("def sibling(public_argument):", result.source)
-        self.assertIn("sibling_local = public_argument + 1", result.source)
-        self.assertIn("def target(public_argument):", result.source)
-        self.assertNotIn("before_value", result.source)
-        self.assertNotIn("missing_value", result.source)
-        self.assertIn("__READABILITY_HOLE_START__()", result.source)
-        self.assertIn("__READABILITY_HOLE_END__()", result.source)
-        ast.parse(result.source)
-
     def test_condition_inversion_preserves_branch_comments(self):
         source = """class Example:
     def choose(self, enabled):

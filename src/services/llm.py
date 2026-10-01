@@ -25,10 +25,6 @@ MODELS = {
         "id": "gpt-5.4-mini",
         "provider": "openai",
     },
-    "gpt41-nano": {
-        "id": "gpt-4.1-nano-2025-04-14",
-        "provider": "openai",
-    },
     "gpt-oss": {
         "id": "openai/gpt-oss-120b",
         "provider": "groq",
@@ -64,7 +60,8 @@ def supports_batch_api(model_name: str) -> bool:
     """Return whether the configured provider supports our remote batch path."""
     if model_name not in MODELS:
         raise ValueError(f"Unknown model: {model_name}")
-    return MODELS[model_name]["provider"] in ("openai", "groq")
+    info = MODELS[model_name]
+    return info["provider"] in ("openai", "groq") and info.get("batch_api", True)
 
 
 _openai_client = None
@@ -291,10 +288,27 @@ def chat_messages_with_metadata(
     )
     client = _get_client(provider)
     response = client.chat.completions.create(**body)
+    return _chat_response_record(
+        response,
+        provider=provider,
+        configured_model=model_name,
+        requested_model=requested_model,
+        request_parameters={key: value for key, value in body.items() if key != "messages"},
+    )
+
+
+def _chat_response_record(
+    response: Any,
+    *,
+    provider: str,
+    configured_model: str,
+    requested_model: str,
+    request_parameters: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "content": _message_content(response),
         "provider": provider,
-        "configured_model": model_name,
+        "configured_model": configured_model,
         "requested_model": requested_model,
         "response_id": _obj_get(response, "id"),
         "response_model": _obj_get(response, "model"),
@@ -302,7 +316,7 @@ def chat_messages_with_metadata(
         "finish_reason": _first_finish_reason(response),
         "usage": _serializable_value(_obj_get(response, "usage")),
         "request_parameters": _serializable_value(
-            {key: value for key, value in body.items() if key != "messages"}
+            request_parameters
         ),
         "api_response": _serializable_value(response),
     }
@@ -311,7 +325,7 @@ def chat_messages_with_metadata(
 def _first_finish_reason(response: Any) -> Any:
     choices = _obj_get(response, "choices", ())
     if not choices:
-        return None
+        return _obj_get(response, "status")
     return _obj_get(choices[0], "finish_reason")
 
 
@@ -331,7 +345,7 @@ def _serializable_value(value: Any) -> Any:
     return str(value)
 
 
-def batch_chat(
+def batch_chat_with_metadata(
     model_name: str,
     messages_list: Sequence[Sequence[dict[str, Any]]],
     *,
@@ -343,15 +357,17 @@ def batch_chat(
     retry_failed_individually: bool = True,
     progress: BatchProgressFn | None = None,
     **kwargs: Any,
-) -> list[str]:
+) -> list[dict[str, Any]]:
     if not messages_list:
         return []
 
-    provider, _, _ = _build_chat_body(model_name, messages_list[0], **dict(kwargs))
+    provider, requested_model, _ = _build_chat_body(
+        model_name, messages_list[0], **dict(kwargs)
+    )
     if provider not in ("openai", "groq"):
         results = []
         for index, messages in enumerate(messages_list, start=1):
-            results.append(chat_messages(model_name, messages, **kwargs))
+            results.append(chat_messages_with_metadata(model_name, messages, **kwargs))
             if progress is not None:
                 progress("completed", index, len(messages_list))
         return results
@@ -407,16 +423,32 @@ def batch_chat(
             if retry_failed_individually:
                 results = []
                 for index, messages in enumerate(messages_list, start=1):
-                    results.append(chat_messages(model_name, messages, **kwargs))
+                    results.append(chat_messages_with_metadata(model_name, messages, **kwargs))
                     if progress is not None:
                         progress("retrying", index, len(messages_list))
                 return results
-        results, failures = collect_batch_results(client, batch, request_index)
+        raw_results, failures = collect_batch_results(client, batch, request_index)
+        results = {
+            index: _chat_response_record(
+                response,
+                provider=provider,
+                configured_model=model_name,
+                requested_model=requested_model,
+                request_parameters={
+                    key: value
+                    for key, value in _build_chat_body(
+                        model_name, messages_list[index], **dict(kwargs)
+                    )[2].items()
+                    if key != "messages"
+                },
+            )
+            for index, response in raw_results.items()
+        }
     except Exception as exc:
         if retry_failed_individually:
             results = []
             for index, messages in enumerate(messages_list, start=1):
-                results.append(chat_messages(model_name, messages, **kwargs))
+                results.append(chat_messages_with_metadata(model_name, messages, **kwargs))
                 if progress is not None:
                     progress("retrying", index, len(messages_list))
             return results
@@ -454,12 +486,36 @@ def batch_chat(
     return [results[index] for index in range(len(messages_list))]
 
 
+def batch_chat(
+    model_name: str,
+    messages_list: Sequence[Sequence[dict[str, Any]]],
+    **kwargs: Any,
+) -> list[str]:
+    """Return response text while retaining the metadata-capable batch path."""
+    return [
+        str(record["content"])
+        for record in batch_chat_with_metadata(model_name, messages_list, **kwargs)
+    ]
+
+
 def batch_chat_prompts(
     model_name: str,
     prompts: Sequence[str],
     **kwargs: Any,
 ) -> list[str]:
     return batch_chat(
+        model_name,
+        [[{"role": "user", "content": prompt}] for prompt in prompts],
+        **kwargs,
+    )
+
+
+def batch_chat_prompts_with_metadata(
+    model_name: str,
+    prompts: Sequence[str],
+    **kwargs: Any,
+) -> list[dict[str, Any]]:
+    return batch_chat_with_metadata(
         model_name,
         [[{"role": "user", "content": prompt}] for prompt in prompts],
         **kwargs,
@@ -607,8 +663,8 @@ def collect_batch_results(
     client: Any,
     batch: Any,
     request_index: dict[str, int],
-) -> tuple[dict[int, str], list[BatchChatFailure]]:
-    results: dict[int, str] = {}
+) -> tuple[dict[int, Any], list[BatchChatFailure]]:
+    results: dict[int, Any] = {}
     failures: list[BatchChatFailure] = []
 
     output_file_id = _obj_get(batch, "output_file_id")
@@ -624,7 +680,7 @@ def collect_batch_results(
             if error or status_code != 200:
                 failures.append(BatchChatFailure(index=index, custom_id=custom_id, error=error or response))
                 continue
-            results[index] = _message_content(_obj_get(response, "body"))
+            results[index] = _obj_get(response, "body")
 
     error_file_id = _obj_get(batch, "error_file_id")
     if error_file_id:
@@ -683,13 +739,13 @@ def retry_batch_failures(
     model_name: str,
     messages_list: Sequence[Sequence[dict[str, Any]]],
     kwargs: dict[str, Any],
-    results: dict[int, str],
+    results: dict[int, dict[str, Any]],
     failures: Sequence[BatchChatFailure],
 ) -> list[BatchChatFailure]:
     remaining: list[BatchChatFailure] = []
     for failure in failures:
         try:
-            results[failure.index] = chat_messages(
+            results[failure.index] = chat_messages_with_metadata(
                 model_name,
                 messages_list[failure.index],
                 **kwargs,
