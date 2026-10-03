@@ -13,6 +13,14 @@ from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wai
 
 
 MODELS = {
+    "gpt61-sol": {
+        "id": "gpt-6.1-sol",
+        "provider": "openai",
+    },
+    "gpt6-sol": {
+        "id": "gpt-6-sol",
+        "provider": "openai",
+    },
     "gpt5-nano": {
         "id": "gpt-5-nano-2025-08-07",
         "provider": "openai",
@@ -179,6 +187,14 @@ def _apply_reasoning_controls(
 
     if provider == "openai" and model_name in {"gpt5-nano", "gpt5-mini"}:
         body["reasoning_effort"] = "minimal"
+
+    if provider == "openai" and model_name == "gpt6-sol":
+        body["reasoning_effort"] = "none"
+
+    if provider == "openai" and model_name == "gpt61-sol":
+        body.pop("temperature", None)
+        body["reasoning_effort"] = "low"
+        body["max_completion_tokens"] = 2048
 
     if provider == "deepseek" and model_name == "dsv4-pro":
         body["extra_body"] = {"thinking": {"type": "disabled"}}
@@ -355,6 +371,7 @@ def batch_chat_with_metadata(
     metadata: dict[str, str] | None = None,
     state_path: Path | str | None = None,
     retry_failed_individually: bool = True,
+    retry_failed_in_batch: bool = False,
     progress: BatchProgressFn | None = None,
     **kwargs: Any,
 ) -> list[dict[str, Any]]:
@@ -467,6 +484,31 @@ def batch_chat_with_metadata(
         if index not in results and all(failure.index != index for failure in failures)
     ]
     failures.extend(missing)
+
+    if failures and retry_failed_in_batch:
+        failure_by_index = {failure.index: failure for failure in failures}
+        failed_indices = sorted(failure_by_index)
+        retry_state_path = None
+        if resolved_state_path is not None:
+            retry_state_path = resolved_state_path.with_name(
+                f"{resolved_state_path.stem}.retry{resolved_state_path.suffix}"
+            )
+        retry_results = batch_chat_with_metadata(
+            model_name,
+            [messages_list[index] for index in failed_indices],
+            completion_window=completion_window,
+            poll_interval=poll_interval,
+            timeout=timeout,
+            metadata=metadata,
+            state_path=retry_state_path,
+            retry_failed_individually=False,
+            retry_failed_in_batch=False,
+            progress=None,
+            **kwargs,
+        )
+        for index, retry_result in zip(failed_indices, retry_results):
+            results[index] = retry_result
+        failures = []
 
     if failures and retry_failed_individually:
         failures = retry_batch_failures(

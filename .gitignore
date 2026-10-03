@@ -30,7 +30,11 @@ dist/
 !/artifacts/README.md
 /results/*
 !/results/README.md
-/docs/
+!/results/direct_llm/
+!/results/direct_llm/**
+/docs/*
+!/docs/assets/
+!/docs/assets/**
 wandb/
 runs/
 
@@ -67,3 +71,4 @@ tmp/
 temp/
 .env
 .env.*
+.svn/

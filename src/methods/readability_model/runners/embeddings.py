@@ -39,7 +39,7 @@ DEFAULT_DATASET_KEYS = ("mbjp", "buse", "scalabrino", "jetbrains", "dorn", "schn
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Materialize AST-labelled construct embeddings into SQLite.")
+    parser = argparse.ArgumentParser(description="Materialize AST-tagged snippet embeddings into SQLite.")
     parser.add_argument(
         "datasets",
         nargs="*",

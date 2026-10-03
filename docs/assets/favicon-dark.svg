@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>BTTF</title>
+  <rect width="64" height="64" rx="14" fill="#161b22"/>
+  <path d="M17 15h13c14 0 17 15 7 19 12 4 8 17-5 17H17V15Zm9 8v8h4c7 0 7-8 0-8h-4Zm0 16v4h6c5 0 5-7 0-7h-6v3Z" fill="#e6edf3" fill-rule="evenodd"/>
+  <g shape-rendering="crispEdges">
+    <path d="M35 38h8v2h4v2h4v-2h4v-2h6v18h-6v2h-4v2h-4v-2h-4v-2h-8Z" fill="#050709"/>
+    <path d="M37 40h6v2h4v2h1v12h-1v-2h-4v-2h-6Z" fill="#fff"/>
+    <path d="M50 44h1v-2h4v-2h4v12h-4v2h-4v2h-1Z" fill="#fff"/>
+    <path d="M37 52h6v2h4v2h4v-2h4v-2h4v4h-4v2h-4v2h-4v-2h-4v-2h-6Z" fill="#55baa9"/>
+    <path d="M39 44h4v2h-4Zm0 4h4v2h-4Zm14-4h4v2h-4Zm0 4h4v2h-4Z" fill="#aab1b7"/>
+  </g>
+</svg>

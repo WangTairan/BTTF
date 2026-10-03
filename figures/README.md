@@ -20,7 +20,7 @@ written to `publication/` and `data/`, respectively.
 Run commands from the repository root.
 
 ```bash
-python figures/scripts/plot_ast_labelled_representations.py
+python figures/scripts/plot_ast_tagged_snippet_extraction.py
 python figures/scripts/plot_identifier_clustering_motivation.py
 python figures/scripts/plot_opaque_month_offset_motivation.py
 ```

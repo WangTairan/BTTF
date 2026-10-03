@@ -3,6 +3,12 @@
 Dataset parsing is implemented under `src/datasets/`; canonical paths and
 evaluation metrics are registered in `src/experiments/registry.py`.
 
+The complete Buse, Dorn, and Scalabrino source directories are local inputs,
+excluded from new public releases pending redistribution permission. Their
+dataset READMEs link to official downloads. Restore those files at the canonical
+paths below before rerunning source-based experiments. The viewer's source-free
+index preserves full result browsing without distributing these collections.
+
 | Registry key | Canonical path | Label | Primary metric |
 | --- | --- | --- | --- |
 | `mbjp` | `mbjp_dev_dataset/readability_dataset.json` | continuous | Spearman |

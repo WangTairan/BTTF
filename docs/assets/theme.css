@@ -1,0 +1,121 @@
+/* Light retains the existing palette. Dark uses GitHub-style neutral surfaces. */
+.theme-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle:hover { background: var(--accent-soft); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.header-parent { max-width: calc(100vw - 255px); }
+@media (max-width: 480px) {
+  .theme-toggle span { display: none; }
+  .header-parent { max-width: calc(100vw - 190px); }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --panel: #161b22;
+  --text: #e6edf3;
+  --muted: #9da7b3;
+  --line: #30363d;
+  --accent: #79c0ff;
+  --accent-soft: #203247;
+  --good: #56d4a0;
+  --surface: #1c2128;
+  --human-marker: #e6edf3;
+  --rank-lightness: 64%;
+  scrollbar-color: #484f58 #161b22;
+}
+[data-theme="dark"] .topbar { background: rgba(22,27,34,.96); }
+[data-theme="dark"] .topbar a:hover { background: #262c36; }
+[data-theme="dark"] th { color: var(--text); background: var(--surface); }
+[data-theme="dark"] .result-link:hover { background: #232a34; }
+[data-theme="dark"] .result-link.best strong { color: #42dbc4; }
+[data-theme="dark"] .result-link.best:hover,
+[data-theme="dark"] .result-link.best:focus-visible { background: transparent; border-color: #596573; }
+[data-theme="dark"] .cloud-method > th,
+[data-theme="dark"] .cloud-method > td { background: #1c2939; }
+[data-theme="dark"] .bttf-method > th,
+[data-theme="dark"] .bttf-method > td { background: #20362b; }
+[data-theme="dark"] .cloud-method .result-link:hover,
+[data-theme="dark"] .bttf-method .result-link:hover { background: transparent; }
+[data-theme="dark"] .filter-label { color: var(--muted); }
+[data-theme="dark"] .filter-check input { border-color: #687481; }
+[data-theme="dark"] .filter-check input:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8l3 3 7-7' fill='none' stroke='%23e6edf3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea { color: var(--text); background: var(--bg); border-color: var(--line); }
+[data-theme="dark"] input::placeholder { color: var(--muted); }
+[data-theme="dark"] input[type="radio"] { accent-color: #79c0ff; }
+[data-theme="dark"] .stat,
+[data-theme="dark"] .link-list a,
+[data-theme="dark"] .formula,
+[data-theme="dark"] .feature-column,
+[data-theme="dark"] .feature-group,
+[data-theme="dark"] .selected-feature-detail,
+[data-theme="dark"] .method-filter,
+[data-theme="dark"] .pair-filter,
+[data-theme="dark"] .region { background: var(--surface); color: var(--text); }
+[data-theme="dark"] .traditional-column { background: #28251e; border-color: #494233; }
+[data-theme="dark"] .feature-tags code { background: var(--surface); color: var(--text); border-color: var(--line); }
+[data-theme="dark"] .method-filter.active,
+[data-theme="dark"] .pair-filter.active,
+[data-theme="dark"] .pair-filter[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+[data-theme="dark"] .explanation-run { background: #1c2939; }
+[data-theme="dark"] .comparison-score { color: #8ddb9c; }
+[data-theme="dark"] .explanation-comparison .diagnosis-feature:hover { background: #233b2d; }
+[data-theme="dark"] .diagnosis-feature { color: var(--text); }
+[data-theme="dark"] .penalty,
+[data-theme="dark"] .pair-bad { color: #ff9b91; }
+[data-theme="dark"] .benefit,
+[data-theme="dark"] .pair-good { color: #56d4a0; }
+[data-theme="dark"] .sort-header.active span { color: #79c0ff; }
+[data-theme="dark"] .mode-tab.active { border-bottom-color: #79c0ff; }
+[data-theme="dark"] .rank-comparison-track { background: #373e47; }
+[data-theme="dark"] .human-rank-marker { background: var(--human-marker); }
+[data-theme="dark"] .human-reference td { background: #22272e; border-top-color: var(--panel); }
+[data-theme="dark"] pre,
+[data-theme="dark"] .example-code,
+[data-theme="dark"] .diagnostic-code { background: #0d1117; color: var(--text); }
+[data-theme="dark"] .line-number { color: #7d8997; }
+[data-theme="dark"] .kw,
+[data-theme="dark"] .example-keyword { color: #d2a8ff; }
+[data-theme="dark"] .str { color: #a5d6ff; }
+[data-theme="dark"] .comment { color: #8b949e; }
+[data-theme="dark"] .num { color: #79c0ff; }
+[data-theme="dark"] .highlight,
+[data-theme="dark"] .example-code mark,
+[data-theme="dark"] .code-block mark { background: #493d20; color: var(--text); border-bottom-color: #b99543; }
+[data-theme="dark"] .copy-code-button { background: #21262d; color: #b1bac4; border-color: #484f58; }
+[data-theme="dark"] .copy-code-button:hover,
+[data-theme="dark"] .copy-code-button.copied { color: #56d4a0; border-color: #56d4a0; }
+[data-theme="dark"] .example-track { background: #23364c; }
+[data-theme="dark"] .example-track i { background: #79a9de; }
+[data-theme="dark"] .example-frontier .example-track { background: #45282e; }
+[data-theme="dark"] .example-frontier .example-track i { background: #ef8f99; }
+[data-theme="dark"] .example-human .example-track { background: #373e47; }
+[data-theme="dark"] .example-human .example-track i { background: #e6edf3; }
+[data-theme="dark"] .example-trigger { border-left-color: #ff9b91; }
+[data-theme="dark"] .example-trigger span { color: #ff9b91; }
+[data-theme="dark"] .method-hero { background: linear-gradient(135deg, #1c2939, #161b22); border-color: #35495d; }
+[data-theme="dark"] .method-hero p:last-child,
+[data-theme="dark"] .feature-figure figcaption,
+[data-theme="dark"] .feature-list code { color: var(--text); }
+[data-theme="dark"] .feature-icon { background: #2c333d; color: var(--text); }
+[data-theme="dark"] .feature-list li { background: #21262d; border-color: var(--line); }

@@ -11,6 +11,6 @@ for script in scripts/*.sh; do
   bash -n "${script}"
 done
 export PYTHONPATH="${PWD}/tools/source_interference/src:${PWD}${PYTHONPATH:+:${PYTHONPATH}}"
-"${PYTHON_BIN}" -m compileall -q src experiments figures tools/source_interference/src
+"${PYTHON_BIN}" -m compileall -q src experiments figures tools/source_interference/src tools/readability_viewer
 "${PYTHON_BIN}" -m pytest -q tests
 "${PYTHON_BIN}" -m pytest -q -c tools/source_interference/pyproject.toml tools/source_interference/tests

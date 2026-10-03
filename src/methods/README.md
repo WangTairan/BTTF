@@ -5,7 +5,7 @@ embedding-derived, and causal-LM feature construction plus fixed Ridge scoring.
 
 Comparison methods are independent implementations:
 
-- [`posnett/`](posnett/) and [`loc_baseline/`](loc_baseline/): fixed formulas;
+- [`posnett/`](posnett/) and [`lloc_baseline/`](lloc_baseline/): fixed formulas;
 - [`scalabrino/`](scalabrino/) and [`dorn/`](dorn/): released-tool wrappers or
   paper-aligned reconstruction;
 - [`mi_convnet_cr/`](mi_convnet_cr/): reconstructed character CNN;

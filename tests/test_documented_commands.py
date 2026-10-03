@@ -60,7 +60,7 @@ def test_documented_module_help(module, tmp_path):
 @pytest.mark.parametrize(
     "script",
     (
-        "figures/scripts/plot_ast_labelled_representations.py",
+        "figures/scripts/plot_ast_tagged_snippet_extraction.py",
         "figures/scripts/plot_identifier_clustering_motivation.py",
         "figures/scripts/plot_identifier_surprisal_motivation.py",
         "figures/scripts/plot_opaque_month_offset_motivation.py",
@@ -70,6 +70,7 @@ def test_documented_direct_figure_command(script, tmp_path):
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     env["MPLCONFIGDIR"] = str(tmp_path / "matplotlib")
+    env["XDG_CACHE_HOME"] = str(tmp_path / "cache")
     env["MPLBACKEND"] = "Agg"
     result = subprocess.run(
         [sys.executable, script, "--help"],

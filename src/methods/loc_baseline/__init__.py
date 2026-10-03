@@ -1,2 +1,0 @@
-"""LOC-only readability baseline."""
-

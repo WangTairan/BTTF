@@ -1,5 +1,11 @@
 # Readme
 
+**Repository packaging note:** this is a curated copy, not the complete
+upstream archive. It retains the 304 label-referenced Java sources unchanged,
+`labels.csv`, and original license/notice files. See [`NOTICE.md`](NOTICE.md)
+for attribution, licenses, omitted components, and the original download.
+The original archive documentation follows below.
+
 This archive was created along the work described in detail in
 
 *M. Schnappinger, A. Fietzke, and A. Pretschner, "Defining a Software Maintainability Dataset: Collecting, Aggregating and Analysing Expert Evaluations of Software Maintainability", International Conference on Software Maintenance and Evolution (ICSME), 2020*
@@ -157,4 +163,3 @@ ccl, cco, ci. clc, cllc, lldc, nle, cbo, cboi, nii, noi, ad, cd, cloc, dloc, tcd
 [11] Wust, J. "SDMetrics: The software design metrics tool for UML." (2005).
 
 [12] https://www.sourcemeter.com/
-

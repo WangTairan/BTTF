@@ -26,7 +26,13 @@ def load_dataset(path: Path = DEFAULT_DATASET) -> list[DatasetItem]:
             zip(rows, base_task_ids),
             start=2,
         ):
-            source_path = root.joinpath(*PureWindowsPath(row["path"]).parts)
+            source_parts = PureWindowsPath(row["path"]).parts
+            source_path = root.joinpath(*source_parts)
+            # The original CSV spells the project "jsweet", but the archive
+            # directory is "Jsweet". Preserve both originals on case-sensitive
+            # filesystems as well as macOS.
+            if not source_path.exists() and source_parts[0] == "jsweet":
+                source_path = root.joinpath("Jsweet", *source_parts[1:])
             if not source_path.exists():
                 raise FileNotFoundError(
                     f"Schnappinger source on CSV line {line_number} does not exist: {source_path}"

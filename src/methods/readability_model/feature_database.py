@@ -39,8 +39,8 @@ IDENTITY_COLUMNS = (
 def feature_definitions() -> list[FeatureDefinition]:
     return [
         FeatureDefinition("log_vocabulary_size", "code_halstead", "log(1 + vocabulary_size)."),
-        FeatureDefinition("lexeme_count", "cognascore_chunk", "Number of extracted AST-labelled representations."),
-        FeatureDefinition("log_lexeme_count", "cognascore_chunk", "log(1 + AST-labelled representation count)."),
+        FeatureDefinition("lexeme_count", "cognascore_chunk", "Number of extracted AST-tagged snippets."),
+        FeatureDefinition("log_lexeme_count", "cognascore_chunk", "log(1 + AST-tagged snippet count)."),
         FeatureDefinition("loc", "code_layout", "Number of non-empty source lines."),
         FeatureDefinition("log_loc", "code_layout", "log(1 + loc)."),
         FeatureDefinition("mean_line_length", "code_layout", "Mean non-empty line length."),
@@ -84,8 +84,8 @@ def feature_definitions() -> list[FeatureDefinition]:
         FeatureDefinition("scalabrino_visual_comma_dft_energy", "scalabrino_dorn", "Normalized low-frequency DFT energy of the per-line comma-count series."),
         FeatureDefinition("scalabrino_visual_comparison_dft_energy", "scalabrino_dorn", "Normalized low-frequency DFT energy of the per-line comparison-count series."),
         FeatureDefinition("scalabrino_align_blocks_count", "scalabrino_dorn", "Number of vertically aligned runs of the same visible character across consecutive source lines."),
-        FeatureDefinition("chunk_y_mean", "cognascore_visual_chunk", "Normalized mean vertical position of AST-labelled representations."),
-        FeatureDefinition("chunk_line_span", "cognascore_visual_chunk", "Number of source lines spanned by all AST-labelled representations."),
+        FeatureDefinition("chunk_y_mean", "cognascore_visual_chunk", "Normalized mean vertical position of AST-tagged snippets."),
+        FeatureDefinition("chunk_line_span", "cognascore_visual_chunk", "Number of source lines spanned by all AST-tagged snippets."),
         FeatureDefinition("mean_chunks_per_source_line", "cognascore_chunk", "Mean chunk count on source lines that contain chunks."),
         FeatureDefinition("std_chunks_per_source_line", "cognascore_chunk", "Standard deviation of chunk count across source lines that contain chunks."),
         FeatureDefinition("unique_lexeme_ratio", "cognascore_chunk", "Distinct chunk lexemes divided by all chunks."),

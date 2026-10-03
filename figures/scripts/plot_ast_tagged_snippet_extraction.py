@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render the AST-tagged snippet overview used in the paper.
 
-The displayed chunks are validated against the production Java extractor so
+The displayed snippets are validated against the production Java extractor so
 that the conceptual figure cannot silently drift away from the implementation.
 """
 
@@ -282,7 +282,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=ROOT / "figures" / "publication" / "ast_labelled_representations.pdf",
+        default=ROOT / "figures" / "publication" / "ast_tagged_snippet_extraction.pdf",
     )
     args = parser.parse_args()
     plt.rcParams.update({

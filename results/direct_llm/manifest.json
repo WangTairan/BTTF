@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "model": "dsv4-pro",
+      "run": 1,
+      "path": "dsv4-pro/run_1.jsonl.gz",
+      "records": 3900,
+      "sha256": "b4bf1b260e9acb620dd02fddd0bb7dfd3be157dc4335bff2f47a891dc303a05d"
+    },
+    {
+      "model": "dsv4-pro",
+      "run": 2,
+      "path": "dsv4-pro/run_2.jsonl.gz",
+      "records": 3900,
+      "sha256": "83e73328085fca4a31fb34b9ffd792b269fc28ddcf189ac0749ec3adf6f9a9a5"
+    },
+    {
+      "model": "dsv4-pro",
+      "run": 3,
+      "path": "dsv4-pro/run_3.jsonl.gz",
+      "records": 3900,
+      "sha256": "e3f35dbd27a5d8704a79f5b92e837d88a4e6b81eb4d166675a92ded38db7d4f9"
+    },
+    {
+      "model": "gpt6-sol",
+      "run": 1,
+      "path": "gpt6-sol/run_1.jsonl.gz",
+      "records": 3900,
+      "sha256": "c77fe089cb6e9b56bce063356baa5a83c7557c9dc74523f5fba7922623fd1ef5"
+    },
+    {
+      "model": "gpt6-sol",
+      "run": 2,
+      "path": "gpt6-sol/run_2.jsonl.gz",
+      "records": 3900,
+      "sha256": "81a5d2366e6da8876a54f03dbec2f09d143ea2ab3937c7614ea3db349dbbde05"
+    },
+    {
+      "model": "gpt6-sol",
+      "run": 3,
+      "path": "gpt6-sol/run_3.jsonl.gz",
+      "records": 3900,
+      "sha256": "24bd2cde2d6ef4a638e1bf6ba59475fac05f398873f6805548461aab95494c97"
+    },
+    {
+      "model": "gpt61-sol",
+      "run": 1,
+      "path": "gpt61-sol/run_1.jsonl.gz",
+      "records": 3900,
+      "sha256": "5c32ec727749c95bfae12555a16b600849873316bc30b9b80ba3e553092c81b8"
+    },
+    {
+      "model": "gpt61-sol",
+      "run": 2,
+      "path": "gpt61-sol/run_2.jsonl.gz",
+      "records": 3900,
+      "sha256": "ab92b4f7002196ebfe355f6654546d9355fa993e7eb5adabf440fc2baa945948"
+    },
+    {
+      "model": "gpt61-sol",
+      "run": 3,
+      "path": "gpt61-sol/run_3.jsonl.gz",
+      "records": 3900,
+      "sha256": "c0416227a36d274e4b51c4885315f30245e6aa4b295f90dd43589e503891063d"
+    }
+  ]
+}

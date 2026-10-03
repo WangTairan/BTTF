@@ -2,7 +2,12 @@
 
 Source: <https://web.eecs.umich.edu/~weimerw/data/readability/>
 
-Local files:
+Complete snippet sources and their archive are retained locally, not bundled
+in new public releases while redistribution permission is unconfirmed. Obtain
+them from the official source above before running source-based experiments.
+The viewer includes a source-free result index and fixed case excerpts.
+
+Local input layout:
 
 - `raw/readability-snippets.zip`: original snippet archive.
 - `raw/readability-votes.csv`: raw participant votes.

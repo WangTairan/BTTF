@@ -1,0 +1,1 @@
+document.getElementById('sample-search')?.addEventListener('input',event=>{const query=event.target.value.toLowerCase();document.querySelectorAll('.sample-table tbody tr').forEach(row=>{row.hidden=!row.cells[0].textContent.toLowerCase().includes(query);});});

@@ -24,7 +24,7 @@ METHOD_RESULT_KEYS = {
     "dorn": method_output_key("dorn"),
     "mi_convnet_cr": method_output_key("mi_convnet_cr"),
     "llm": method_output_key("llm"),
-    "loc": "loc_baseline",
+    "lloc": "lloc_baseline",
 }
 
 
@@ -94,7 +94,7 @@ def main() -> None:
         "evaluation_protocol": (
             "Each independent transformation is paired with its original class; "
             "a response is correct when the direction-normalized readability "
-            "score decreases. Raw LOC is negated before paired aggregation. "
+            "score decreases. Raw LLOC is negated before paired aggregation. "
             "If a method fails on any member of a group, the entire group is "
             "excluded and reported explicitly."
         ),
@@ -157,7 +157,7 @@ def paired_row(
             f"Method failed for {result.get('task_id')}: {result.get('error', 'no score')}"
         )
     raw_score = float(result["score"])
-    readability_score = -raw_score if method == "loc" else raw_score
+    readability_score = -raw_score if method == "lloc" else raw_score
     return {
         "task_id": str(result["task_id"]),
         "group_id": str(metadata["group_id"]),

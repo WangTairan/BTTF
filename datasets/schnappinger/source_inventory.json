@@ -1,0 +1,1528 @@
+{
+  "schema_version": 1,
+  "upstream": "https://doi.org/10.6084/m9.figshare.12801215.v3",
+  "label_sha256": "2448842f858f73bfa7d1631b8be3f16c7943ff76c65e6910410fc74dd120f531",
+  "sample_count": 304,
+  "sources": [
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/ActorEditorWindow.java",
+      "sha256": "5346adcd70ba3e2ef38afde82c45cbb9828a7f62be1dc219a0328544d0a91cab"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/AnimationPreviewer.java",
+      "sha256": "71e4b4a46307780fe8f8f0ac26b8c8a7ee16832b0e336a9b0c403e41f5495e8f"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/distortion/CustomDistortion.java",
+      "sha256": "6161a449f26505139f500e9a088c3da79355f4b66b101b2e386af930028585c6"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/FilterParameterTrack.java",
+      "sha256": "28f032f37fe002642868bcf6e111e3ee8ba77073a62f17dca8cb2b56d809f4dd"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/IKTrack.java",
+      "sha256": "2f55a450ca71c1c175e798b6f81a6899c72820b2e7a9c71a41476638e2910670"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/NullKeyframe.java",
+      "sha256": "93447a96f0397316472c96a7001149fae1d477af4bbf8639fd40b84eecc69089"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/PositionTrack.java",
+      "sha256": "4f64df64131bf95efad56aea5a7dbf265e409076d16d352e210cb5d0b61e6873"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/Skeleton.java",
+      "sha256": "6939b13db2352a1347e16bc299265e5da0b92ade92361c7e1b382017557c3d95"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/SkeletonTool.java",
+      "sha256": "a14fe1091bcbec8602531a3e022cfaceb9e770fd7e6dc936e6a37c9bcfbb6c94"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/animation/VerticalAxis.java",
+      "sha256": "1c3484d758233db93592ab778e185e964abb03c87c17b1050741ca878bf19e95"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/ApplicationPreferences.java",
+      "sha256": "fad2687a2f4d360dff21cf816283a749fc42461f0d81212882b4cc9af5d79af3"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/CreateCubeTool.java",
+      "sha256": "c8ac152af69b9f0fafc2a077d36c11948366feb216dc7fb045b58e324972b16c"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/CreateCylinderTool.java",
+      "sha256": "d9df42a48dcaae8afbe377f30c789aff7addcc40c3b31697b57139763924ca78"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/CreateVertexTool.java",
+      "sha256": "9ede957348872b66a0dce17ff40e8221c28a533b0423d2111fd50d31d522b663"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/CurveViewer.java",
+      "sha256": "5cbd8fe2fc2336efc8bc6c7e62c3bb022d4590e7d4d65839858097f5b19c6f6d"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/image/ImageOrColor.java",
+      "sha256": "1c07c5690320f790845b5dd036b7b267a35f75b07c488da65baa03ff46c6904c"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/image/ImageSaver.java",
+      "sha256": "1d43f4a9cb01e2b0b0973f3a29ec7e94e918f69c39ea7f4619daf1bf14eb8209"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/keystroke/KeystrokeEditor.java",
+      "sha256": "d7058f7656c9143743b69e64190614e05ed92285b1787c8f9acf64ef1393dbc5"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/keystroke/KeystrokePreferencesPanel.java",
+      "sha256": "95058776f180dda4b0c95c19398d0ca55d1c938fa0b5c3b7712acc9ed7a22287"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/material/Material3D.java",
+      "sha256": "331f8e7624958f94166161a1a2377c29621d317dc6cf53637b649e22b9632a56"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/material/MaterialMapping.java",
+      "sha256": "bcd6fb744ae53f1ee599bbcd21d4dcebb9ac3b472c2aa91c17ec5f889aa96958"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/math/Cells.java",
+      "sha256": "2a212dca1bd0e4580109b1ad39d4aa3caea737305dc73ea90ce6dd5abe449576"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/math/Mat4.java",
+      "sha256": "c29f3e5a0054aa8242b3db9accaa1439391cd0a4840b5ba18c890f326ad5f039"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/MoveScaleRotateObjectTool.java",
+      "sha256": "991632fef73497d830e2e183d95ed221d47103db92906fab49b241bfb94156c6"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/object/ImplicitObject.java",
+      "sha256": "dae3f3bde0a366aa665bcbe988bf4676ef775a9d5ca56a70202bc054f4545251"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/object/MeshVertex.java",
+      "sha256": "873a3cf3b5bc79cbb993349c7fe95fde8ff8b03f0771ee9de75e97a319c681f4"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/object/ReferenceImage.java",
+      "sha256": "df1dcbcc55218a00574b9774484680003f41d440fabf3a821e3dee884349abe6"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/ObjectPropertiesPanel.java",
+      "sha256": "d3bcabb0b8c88e9e58f2315b59a96dedd099949828b47733f627f0f2551f20c8"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/ObjectViewer.java",
+      "sha256": "d26dc04c4794a9d5a990fe884fb1255adbbb4beb514af1269059efc6e7b0e605"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/AbsModule.java",
+      "sha256": "346ad17297e32233a5a46a6f305f5c2c7b0668f3e112f2e6bde2f6e796fafd30"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/ClipModule.java",
+      "sha256": "7d10bc251dcd41e44403d7022a742d1dc980bfaddf999bdf1fdefa91f78abfa5"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/ColorDarkenModule.java",
+      "sha256": "61c1fe5caf5bea2a3e6dffcae0fa5d150c24684abe0099293bccd7a5c49831cc"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/ColorLightenModule.java",
+      "sha256": "7d9e8390654a39996ac387c09bd3cc1608f2e23f682db907a1154e06ad20fe07"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/ColorScaleModule.java",
+      "sha256": "105e1b41ae8d4361b4ac55a46e7169a409679c043fd9739424c2e46f073e82ee"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/ColorSumModule.java",
+      "sha256": "fff88a20764433467b1591772b2df9d13f088b7e0ff29cc55e25003fccf8faad"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/MaxModule.java",
+      "sha256": "3d4633a4019b4978367e15ca071b5db8c506ceda1f22bcf9200264a4f11e91f8"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/NumberModule.java",
+      "sha256": "00ab004a9848023b3dbd6d9fc0320a2b3bd5479df133b61a5f9aa7e4b071c305"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/procedural/RGBModule.java",
+      "sha256": "38b4bf837149a259dbbd71a060885df85a440217b75c4232487a58db483e4b07"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Renderers/src/artofillusion/raytracer/PhotonMap.java",
+      "sha256": "42cd8a3f66b69c70a939408d0ab93015f64f953221a4fd4e78a92d123c756021"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Renderers/src/artofillusion/raytracer/RTDirectionalLight.java",
+      "sha256": "5e3c77e803b65ad3b1fedf97dfe514851744862e426a0f36f08836c09846211c"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Renderers/src/artofillusion/raytracer/RTEllipsoid.java",
+      "sha256": "614898e4197f1265fd662463f99827d1ac97655a5401df6f18eb9d2a2c39a575"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Renderers/src/artofillusion/raytracer/RTTriangleLowMemory.java",
+      "sha256": "b363fb2cae533b59d71d4ade69955e57568bcde8e5baae04cbb76322befa9892"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/RotateObjectTool.java",
+      "sha256": "35088e2c6c9b18f1bcb706d798b5c8e106389ae51636509c002dc28f13870f40"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/Scene.java",
+      "sha256": "2ac6bcae36dc08f13d76e9221c23064012a1cdd856eeb61c60ab38ac2e7a563c"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/SceneChangedEvent.java",
+      "sha256": "2ddb3ab0b3d6f07209267aac916b62ee35d569ef98ff5444b3f27811598ab513"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/SceneViewer.java",
+      "sha256": "f05390b7f0afc2abc9f2e73e3a435173970ca725093dcad3a9857a06bf13c790"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/script/ScriptedObjectController.java",
+      "sha256": "8ce6d9dae7855ef92d774225c12baa34a45620a06d5b4aa9d2e1670b3c0e5620"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/SplineMeshEditorWindow.java",
+      "sha256": "2235a9391f38a5550a90132af255d4f648e37a3fc2731db75306c1f9d52246a5"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/SPManager/src/artofillusion/spmanager/HttpSPMFileSystem.java",
+      "sha256": "548b0a6a1738d33cc8bfe52f651ae97260a229c79970cf1b9b3cce08170673b4"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/SPManager/src/artofillusion/spmanager/InstallSplitPane.java",
+      "sha256": "5c38a574ba582268a1bad6774403f96b5f4310983aea18ad43dcf176be8e62ce"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/SPManager/src/artofillusion/spmanager/SPManagerPlugin.java",
+      "sha256": "06f5c2ad3480cc0992ee0d678b79c73ca2f355b5807ff4655bc8698ffbe2b40f"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/SPManager/src/artofillusion/spmanager/SPManagerUtils.java",
+      "sha256": "00a60cc4db338d74a54264201c1944c4ac3a6db44398a86c23921bb1e76ffecb"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/SPManager/src/artofillusion/spmanager/SPMFileSystem.java",
+      "sha256": "d03f82cfd057bd27936b066018ea78ad1e1a029a922d71cb1010c36d7d8e78be"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/SPManager/src/artofillusion/spmanager/SPMTranslate.java",
+      "sha256": "cc922eee357a8369c367c1a533f4f635148b878290f3f0c18609cc842784c75c"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/texture/FaceVertexParameterValue.java",
+      "sha256": "e1a8f3511f124f8cac346d709ce65b6ecd1e1f03e87dae553cbc752fbc192e58"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/texture/UniformTexture.java",
+      "sha256": "9e29d913eef4ef19ace3a1366316722d691dcba656f35f9e2060c9b48d79e7d1"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Tools/src/artofillusion/tools/ArraySpec.java",
+      "sha256": "baa9623fbe31ea14270bbc3f2fd313c99c88608cd2c4e17d103f2a20432b2b82"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/TransformPointsDialog.java",
+      "sha256": "3ba4e29d0f5f22b16507c7f5379cb26c543394660754135e9ffb0ae3b0e63d08"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Translators/src/artofillusion/translators/OBJImporter.java",
+      "sha256": "154c32a03c891b908154a0b31ce91e2090fdebff2809cf0c6f9b152130a70bc6"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Translators/src/artofillusion/translators/POVExporter.java",
+      "sha256": "cc49478656360ad5f6340e09e9f8e8bdc548e350fea3bcd2fa80a0777261f377"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/Translators/src/artofillusion/translators/TextureImageExporter.java",
+      "sha256": "32884b3ae6bb235ad157189decb3f79c6c83fbfd1ab8a0a3a5f2fefc56de4ac7"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/TriMeshSelectionUtilities.java",
+      "sha256": "91129055b4f832fa9838cb8d4fc379d3223399113fbe23b5189964cbc6b659f7"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/TriMeshSimplifier.java",
+      "sha256": "ba3f39353a1da4b5496bf1499eaee4497c2882888e95e36c3775484ba96ef903"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/TubeEditorWindow.java",
+      "sha256": "d5c15516914aab1323b02aad7b7e1ce89a4fe7ef142e50760df28d757e8d0b4b"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/ui/DefaultDockableWidget.java",
+      "sha256": "fb8eb589c44ed2cbdc0051acbb7929b6fd9596e97ad77ad06a3e5d97fe78001f"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/ui/DefaultToolButton.java",
+      "sha256": "096f240e7ebf7d98b83a0931c24446cb071117072e54805926e58d7c20e9be89"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/ui/ToolPalette.java",
+      "sha256": "bac2c1d525e89a4039bdc4b23b4bf9cc24ce2bb303b5d236a4be717f224c62ab"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/view/FlatVertexShader.java",
+      "sha256": "a11609fd45571b3a17ea1702c44e666a1199b52b70d0e63b4d9ed82719907989"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/view/GLCanvasDrawer.java",
+      "sha256": "13c410c91eb862bf8bdfec9b0d0466630bb8a9de5d0cec88deaad270feb30906"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/ArtOfIllusion/src/artofillusion/view/TexturedVertexShader.java",
+      "sha256": "c2f9b837d768793d07bf5ffd9c6333e46092acbf7efc0cc6954f71076b98a13e"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/HelpPlugin/src/HelpPlugin.java",
+      "sha256": "902293d120ba10abc3ebe32259f0e0d345fa4e8ce843c4ceab10bb87ec1d440e"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/HelpPlugin/src/ChatTextPane.java",
+      "sha256": "6e94c052561ca65357fe2b98974bdd42fede9afb2310e103877da0851bfaabe9"
+    },
+    {
+      "project": "aoi",
+      "path": "aoi/sourcefiles/HelpPlugin/src/StringEditor.java",
+      "sha256": "0cb782e4d71310c25213dcdbba5fc7fa7aba4953432502cc50f038530e9728da"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/application/api/Argo.java",
+      "sha256": "2d899a1849c882076f96ab681efb23e81cacb4a40048c486f85fb734de37592c"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/application/events/ArgoEventPump.java",
+      "sha256": "3f1cb7969aa38ff3d5d7fc96372431cc97d5b4492e0799ce9bbd1c1b9d65d02d"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/cognitive/ui/PriorityNode.java",
+      "sha256": "410f0b00bfb5e81596bec703fe234542012ce15fe3a9f2c4516d0b84d20a64a6"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/cognitive/ui/ToDoByType.java",
+      "sha256": "95c495f11a1d412bb627a0c6b826eef0dc750d55af7ef19eb78b3c3da4547459"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/cognitive/UnresolvableException.java",
+      "sha256": "15457e0108ec20fb8cb813efc94366e61d7c9737e90f884c8f01b5652ab3a364"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/EnumerationListModel.java",
+      "sha256": "cc7f1b4a2025d669f780481c20915e60fb260ebdf43ee21c33e97d06b1bc25f4"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/LabelledLayout.java",
+      "sha256": "13ceb0c15d0b2df82d138a0430c13da1b271ab47739f32f33158285ee6508b35"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLDiscriminatorNameDocument.java",
+      "sha256": "dd50c4c852a072bfc1814f41baa50d19a87c249b077a22ba1ea1ef81ef4f537b"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLExpressionPanel.java",
+      "sha256": "1cb7b876733744ccdc2782efa543a3d53790528e216e24eaca7c6342841f40bb"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLIncludeBaseListModel.java",
+      "sha256": "7935f6de240afc94600e5e1c725c46d172645edcf213688c701ea2c019f0c9e0"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLMessageActivatorComboBoxModel.java",
+      "sha256": "3a53161af212828ece1537c9f2c02c8552da87d9bff65c06d46deae7d1e8df20"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLModelElementSourceFlowListModel.java",
+      "sha256": "97c3b1692849f55c5a7f51614c3c56ef341f04ae43928f4670025a3391675358"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLOFSStateListModel.java",
+      "sha256": "72fc64a6f3029f601b36f7b2968956fa2bfd7187a9c9166d40c0aa09063f3f15"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLSignalComboBoxModel.java",
+      "sha256": "47ebfe84dae7f70fa708f73b9671e31651e5053e860230fcd2cbab06661201f5"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-umlpropertypanels/src/org/argouml/core/propertypanels/ui/UMLTemplateParameterParameterComboBoxModel.java",
+      "sha256": "d3080a808d3cef1fbc46f53c12b40ebf2bc3c792c5706295e972b4fa7084d2be"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/modules/dev/src/org/argouml/dev/UndoManagerWrapper.java",
+      "sha256": "5a2fbdba29bec4192ea71fb5c692ff26b5e00aa57802a6c6b615bb07c9c75a8f"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/gefext/ArgoFigRect.java",
+      "sha256": "775d0ea6d1c4d2d37c891a9f857574f5793387b775fd3f2860927dd5cc06a960"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/gefext/ArgoModeCreateFigLine.java",
+      "sha256": "ede826272a0e9c2bd3450b83860605d3e1be01a923a6e172d6ce63729727fbc0"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/kernel/ProfileConfiguration.java",
+      "sha256": "8826266d8b579ac04aadd279ac16e5170460bfcfd013f4cac7314cae1007a332"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model/src/org/argouml/model/AbstractUseCasesHelperDecorator.java",
+      "sha256": "aa17471527c5f6181f7338fcd96536c7f7747566c8cb8346eace32d3799a310b"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-euml/src/org/argouml/model/euml/CollaborationsFactoryEUMLImpl.java",
+      "sha256": "84311614a0bbb2cd7339dc1121be06c6b98457dec125d4bd53fb7be988e942d2"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-euml/src/org/argouml/model/euml/DataTypesHelperEUMLImpl.java",
+      "sha256": "dcc47fad4c7c86b914b8cd43033a2ba76c94d14fda37fe88cb5617eb3d184810"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-euml/src/org/argouml/model/euml/UMLUtil.java",
+      "sha256": "72b8b6412789ad944865e1f20efc2457c5329f65d1f7ccb6beead4d518a0f23d"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-euml/src/org/argouml/model/euml/XmiReaderEUMLImpl.java",
+      "sha256": "331d085e4e1092cf2ae6753934f7dd3b40daf4e160aae741d23ae51e6157c632"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-mdr/src/org/argouml/model/mdr/CollaborationsHelperMDRImpl.java",
+      "sha256": "35d9d8bd315ddcff498c80ec8a187a2473997c98b16d20d0dc95915721bf6456"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-mdr/src/org/argouml/model/mdr/CoreFactoryMDRImpl.java",
+      "sha256": "7702b7a8f87afe8ee509266191c5ed8de22a2a381e4d168de665fd4af98dd6a8"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-mdr/src/org/argouml/model/mdr/ModelEventPumpMDRImpl.java",
+      "sha256": "608cb4ffa7c4d85d1eeffcd2be2a7c307c18f19ecd27811d4ac8464e901ec769"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-model-mdr/src/org/argouml/model/mdr/UmlFactoryMDRImpl.java",
+      "sha256": "0da36fa71ea41f74341e8d4d49435b5a1e7644dfd9e1a5edc9972b5d1f776902"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/notation/providers/ActionStateNotation.java",
+      "sha256": "186e51e180cafd92e70da10b67e10498fd8eb6e9ba0f6875e473e319d1430efa"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/notation/providers/java/AssociationEndNameNotationJava.java",
+      "sha256": "c7c1885d2e1686c5e7b49fd770f3f980bfde50554bbb9b95c10a9beaf120e6ee"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/notation/providers/uml/ClassifierRoleNotationUml.java",
+      "sha256": "c991d39c2197d36ba6bf56bd305b1f4084d9d721bbcfc402586e75efdd8062c1"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/persistence/AbstractFilePersister.java",
+      "sha256": "de695303d13ede1d02939df9d9b93877b3bc7962cda880ffd0866f76bdf0ac69"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-core-diagrams-sequence2/src/org/argouml/sequence2/diagram/FigMessage.java",
+      "sha256": "cdcdfbaa5de34b9c86d7a12de14e5a6ceeba1f7feeed2e3863a1a0a9339cedf7"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/ui/cmd/ShortcutField.java",
+      "sha256": "01152782d742918b2bde7d37481b93e2fac4a323030680ea4d1f07d14b6106cf"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/ui/explorer/ExplorerTreeModel.java",
+      "sha256": "ca2d21f4b10a41eaba612dc24336f448375e9920920b6374b13aa3513b3ed2eb"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/ui/explorer/rules/AbstractPerspectiveRule.java",
+      "sha256": "7e1fd66a50ec239f83c430aa4ae217e6b67602c68d3fa07fd3c000d125af1f9f"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/ui/explorer/rules/GoStateToDoActivity.java",
+      "sha256": "d7e6da655d0987f1d09b2d59e87ab99abd2c89a0d00d0e24d1b37f2fa072f78b"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/ui/SettingsTabLayout.java",
+      "sha256": "861de811ac75a5e8cf5ad0eeeb137b14cf362f170ffc2ec9d288f1d06aeee187"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/ui/ZoomSliderButton.java",
+      "sha256": "0f1a05b518069b0cdb72d7a3f1534633daed8db029d70af1062853a1189e19da"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/checklist/Init.java",
+      "sha256": "69e1d637b52758271a522575b2e405b34db6c4751dfc73930a61746392e06ac9"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/CrCircularInheritance.java",
+      "sha256": "da2200a14d345f88b8ef68df93f0207035bb536aee27c46de9428d15537d92de"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/CrInvalidForkTriggerOrGuard.java",
+      "sha256": "6698614169846daa31c3db0096a3cc45978f8d9ea067dee001c8e7994a078305"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/CrMissingClassName.java",
+      "sha256": "64446739c09dce7a591cd2a2a6ace2a2805436fb8c46e33c3331133a409bc610"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/CrMissingOperName.java",
+      "sha256": "f14dd91798b70791966756130396d3f97f874f63b6e571a2ad2a18fd226fff3a"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/CrMultiComposite.java",
+      "sha256": "ec0a5fa77dbc62182c1a139114029cea098d65463674e48711df8d33f2e1140f"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/CrNoIncomingTransitions.java",
+      "sha256": "a1855cf7b3fb898b445b9cb45ed5feec736ce2f31a8e1f231d316fa8510e9d29"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/cognitive/critics/WizMEName.java",
+      "sha256": "cf3a83d4fc46cce998e0bb71936931cce805ec1e1664da5a227b71212ce9f063"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/activity/ui/FigSubactivityState.java",
+      "sha256": "a29346510b001239b1504442f5c1103bda2ee6bdb8a3be3b8c99ed66c3e1107d"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/deployment/ui/SelectionComponentInstance.java",
+      "sha256": "f0b89d9b582479c72fe6f1801cb4da96b6220c41763c6c560e397ef661a5a2b5"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/deployment/ui/UMLDeploymentDiagram.java",
+      "sha256": "b5e577f3c0e60cffd7ce1b04c1eae4788c0dd6b38b3d77131544da25e06a3d66"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/state/ui/ButtonActionNewCallEvent.java",
+      "sha256": "51782dd147c20422eea8f9f1a38ed320d05691cf0123db9456ab539bbde93208"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/state/ui/FigCompositeState.java",
+      "sha256": "cf42cb07e01411fb6d5d2987907d9eaf59b362da4e6c625837ed07038426c2fb"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/static_structure/layout/ClassdiagramModelElementFactory.java",
+      "sha256": "81b30169e3f6255c7722e6ac2f91659149495a8b6e1171a942bb8687dfac2287"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/static_structure/layout/ClassdiagramNode.java",
+      "sha256": "dcf39adb4831ac86fc0aac286623a1b76cb8537cbcc37a43f32834e2ab49643c"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/ui/ActionStereotypeViewTextual.java",
+      "sha256": "0de31e68a7a52c953c6f4dd290f5a4eadff0b205c9808018670e3a5cd0092b05"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/ui/FigEdgePort.java",
+      "sha256": "e8cfeb2a1fd991797c7a7620b39a82779428239f49878d5605cd0237d5989d04"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/ui/FigKeyword.java",
+      "sha256": "ba1f2e48dcf4f3f006398707aeff38cd1e6a8d80ad68e0ed4e30be73e7219faa"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/ui/FigStereotypesGroup.java",
+      "sha256": "83b3e472aaa7a4ceb09e9275b3c22ea21da9c170ba94aa4eb8342be16f9c3972"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/ui/FigUsage.java",
+      "sha256": "a5bbb41da443dca332a8c01781664a6d59b332e61154967149fa24cdc594c7b0"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/ui/PathConvPercent2.java",
+      "sha256": "63ff008e08dd87aa1b5f4a3fc96233b814c4e1b352dd535f6e398bc471b5dda6"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/diagram/UmlDiagramRenderer.java",
+      "sha256": "e401113505468e9990b0e93f968b8de8a6e86eb52bef918c08f376ca3424e944"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/reveng/ui/ImportStatusScreen.java",
+      "sha256": "2fd5f1863a2e9dec902bea7229549a2ebf3c886e0f98124fbb8814f0b5c88586"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/ActionImportFromSources.java",
+      "sha256": "6abeec0be378332266228a6458ababf35cd48ec1f28a44d6e7cf765208a352fd"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/behavior/state_machines/ButtonActionNewGuard.java",
+      "sha256": "31851cb347ac741efb0b4528e50ed874e18652cde59f063948d98d57b343520f"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/behavior/state_machines/PopupMenuNewEvent.java",
+      "sha256": "d448b31a19986f9ad4bcd6924857a993d6551150fe1fb4486dd18b56877fa7d9"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/foundation/core/UMLAssociationEndOrderingCheckBox.java",
+      "sha256": "90ae854eb81e80d37b169c84ea82364267d54f772ec9cf0b0ed87cc83b344b76"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/foundation/core/UMLGeneralizableElementLeafCheckBox.java",
+      "sha256": "3ed1158a84683214e5b50554ec61add59ce59ce27d1fb30d5592ecd9be040dd1"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/PropPanel.java",
+      "sha256": "7b92c14d86309032b8eaa35e04447dc6af2df46a794525b2c912c4ba678a9008"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/UMLComboBox2.java",
+      "sha256": "eccfa59022b85fe447c60d51269461bf069bf94882205928c6fc37011ccc1a17"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/UMLTableCellRenderer.java",
+      "sha256": "594fea47703206568969cce0f4f1f28eaac18a33e31cb625dcc80eda3766884b"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/uml/ui/UMLTreeCellRenderer.java",
+      "sha256": "2900ef3ea5feeed7fe40ef06a58d9f1c08f1889fc6134d877cd3989bbbca4691"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/util/PredicateStringMatch.java",
+      "sha256": "58f9d27602296dd5a9cd3a21bbc8717fc1e01ddee7ceff4ba53927f36943b9ac"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/util/PredicateTrue.java",
+      "sha256": "8ee991de13c21b5760bef77b500e5465e59dfc0aa0966cadcd19fd327b8cda7f"
+    },
+    {
+      "project": "argoUML",
+      "path": "argoUML/sourcefiles/src/argouml-app/src/org/argouml/util/PredicateType.java",
+      "sha256": "ce4e192a922e04da91a1bb6003e336523c0fa24551148e5d469af31c3eb95601"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/tbaclient/src/TBA/Client/GUI/SettingsDialog.java",
+      "sha256": "d47a2c7d0c5817ce661564a4baa212e481999c2ade91b8cb9bfa0b1369e1b164"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Data/User.java",
+      "sha256": "4f31fef2fc66f9bdd4e52bd46fbd5a6d679d45ecfc3f838a7677e4b84f6764b5"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/tbaclientr/SSL/src/TBA/Data/User.java",
+      "sha256": "9944c0c7a6f9ed6c66b4272cab503e054b8f23b0fd9f9f8de7807212d2d71d08"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Exceptions/MessagesException.java",
+      "sha256": "0adba3ddc0681cc118e494098ed442986b61f6519a1c75f02874d5718949ffa4"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Exceptions/NetworkDataException.java",
+      "sha256": "3d720666fae3edba2e12ea3e07c04621b197188607a603f75be9694b1b6c63d7"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/tbaclient/src/TBA/Logging/TBALogger.java",
+      "sha256": "55fd60200247915a30d633f79e4fbe6bd7f7000c175ba207c7280a6f5a06d7de"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Messages/LoginResponse.java",
+      "sha256": "3b5fe46d33e9dee263a7e32923c5323e61f9665286d91670eec78a5135749909"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/tbaclient/src/TBA/Messages/LogoutResponse.java",
+      "sha256": "6309d6e5c670652d7944f253387244cb0877614700d6d03409f7ff4ae92d1221"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Messages/Messages.java",
+      "sha256": "ebd0458f286a8af0611d1c2ea267107ecb03ef64cc4d01a9dfe62b031489970b"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Messages/QueryMessage.java",
+      "sha256": "d96c80777b47257ff8adf97b1b4cb329b14e9c8a5ab982c5efe1b7701121e31c"
+    },
+    {
+      "project": "diarymanagement",
+      "path": "diarymanagement/sourcefiles/dbserver/src/TBA/Messages/ResponseMessage.java",
+      "sha256": "47bc736b2e54b08a15d0f802b25e472361c3a2caf290a480b7ee216a7ef226db"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/ANGLE_instanced_arrays.java",
+      "sha256": "f1c1c7ac9ee4f0bf30a8bcde139a65ed94b6f6799d9e38f0b7c4b87fd31ca288"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/AudioParam.java",
+      "sha256": "66157c4e5a74798b08b58be0e6304286c3c4034eea410650997746334a50756d"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/CanvasRenderingContext2D.java",
+      "sha256": "d56f794235fee98928d6927c26f7fd9be350cf2d2316ce441c58821549e56a77"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/ChildNode.java",
+      "sha256": "4a4d806352a25fa3b082d2607c036f3130666d277b13d7f98578a21e82aacc0c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/CloseEvent.java",
+      "sha256": "2efe8ed2c2d08665418a98b42d4de5da1c724677522f3839dc077c6232353440"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/CSSConditionRule.java",
+      "sha256": "8b65762427bd53298cf4aa5b725afe0c6bf3756a9120011eeb0d7f72ce22bf2c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/GainNode.java",
+      "sha256": "ad98e6793d184ad13b6f0c3b7749d0c9486540de5d8485dc3bb507fd7ce066b1"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/GamepadEvent.java",
+      "sha256": "19cbaa9a1bf44e11eb1a3f726c44178cabf38ba9dcb888d5b10ce87f746f7d72"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/HTMLAllCollection.java",
+      "sha256": "25dcb43a520e58758dfcd6c8ace9e682a80d3911ebc6da6b58944219c84aa40c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLBaseElement.java",
+      "sha256": "d2952db66a01444cb1f86b0e79cc82cf567570027a41caefd97c3a4f975c867e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/HTMLBodyElement.java",
+      "sha256": "09fc799dba9a87305b3867d69ec0122f3dd1913fdff791337db135dd895edb19"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/HTMLDTElement.java",
+      "sha256": "fca919c79b76167b878db89fa0e73c9853d3d84eba7d4bffab907cbf07746c40"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLFrameElement.java",
+      "sha256": "b1982578623cd6e27b38781f05215ebd53d5bad205c4fe8ba59db2be1a9eea3e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/HTMLIFrameElement.java",
+      "sha256": "0794ad7fc46ed9d722774e27a0b9d0665dfe3aae8f8b68b451752445eb6a2247"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLLegendElement.java",
+      "sha256": "bd76c2eaf15fc9d0881bb415c2dffedf87940c511e0579e5e776281b1f28b97d"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLMapElement.java",
+      "sha256": "f2e27a3ceeaf05f060e31156948b2e74a9f0de1eb6bf265ed8ce67495ad248b4"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLNextIdElement.java",
+      "sha256": "446bde17fa28bc6df54fa2fbb9b487dbe02ca0acdabd2e726d5053543d3256c0"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/HTMLOListElement.java",
+      "sha256": "755fda213e05b99569bfa75044df5541f14ca2de89f0afb33bdc439e85c4e2f6"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLUListElement.java",
+      "sha256": "fbd1255894a0b3dda303edb9c342074a4dd9b4d9aa6de1ef701d9d00c8509acb"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/HTMLUnknownElement.java",
+      "sha256": "430492e1d2a9aecef7825ac1fa3b797eeee9939f525f2f918cd1ce8bbde9f8e1"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/intl/CollatorOptions.java",
+      "sha256": "7d68d3a872dd81fcd42019777fdba4fced0e6e24e3f2e2365f948cf6a3f2bd6b"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/intl/ResolvedCollatorOptions.java",
+      "sha256": "caff785c4211304b255103758bb4516840acbe8d171db8b54954978ab11f9cdb"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/intl/ResolvedNumberFormatOptions.java",
+      "sha256": "83928688d8bf0065605469a3c06bbb6e9b664c5c1b2f9d32bf9c52af8241c29c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/KeyAlgorithm.java",
+      "sha256": "354e7dca538a6d21d741677263466ec5f3dff2aa5f40eeb5e3376e3630134326"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/KeyAlgorithm.java",
+      "sha256": "4eb9a71a33135adbd504a39fca5ca9dd8f9abda6917ed995f1f065b41b1ac4d2"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MediaSource.java",
+      "sha256": "26ee697a72b4682155dedccf512ee965e51bb3e465710003be02cc719a23375b"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MimeTypeArray.java",
+      "sha256": "24cc603b0d33e22dbc0fb148ab66dcd3bcd9865c103dfa6109b3dc85c028609f"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MouseEvent.java",
+      "sha256": "4959f4ddab3e0ce4f52b2a739a65cfbef01e1cbf87a2ad051d758cc27961cc06"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MouseEventInit.java",
+      "sha256": "17ecb71caee2a6e9df22f023a2b2184d74818c8961b41c5d44bf2cdb58f01af1"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MSApp.java",
+      "sha256": "e897231c6fd15a554e1d551ace157fb6366bd663e460b6da1be05e9f9d50216e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MSBaseReader.java",
+      "sha256": "d8247f02ffec090778c3b3faad528a694d8036fe978e23f307c02a22f1a4b1b4"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/MSFileSaver.java",
+      "sha256": "5d98f712ce59c54ee842955d9413726d3b5c15af4eecf1de32525ab29d660f67"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/MSInputMethodContext.java",
+      "sha256": "a9dc074fe1640b79198158e15bd46d03b43409efbb84bcb3f915048d8e63912b"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/MSManipulationEvent.java",
+      "sha256": "929675745834e56921cb75af2459f9520c4dbc3d4deeacf9c24e867136885b22"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MSMediaKeySession.java",
+      "sha256": "d6b63016561a56732b697ed9c098ad5f170d0bbb3cd252773fb92b083ef3f7bf"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/MSStreamReader.java",
+      "sha256": "7f2de25a9e956807d6d1c36b71cee18934bd7805a8f9eb494d31b15cc8d074a4"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/MSWebViewSettings.java",
+      "sha256": "d4cda73d4fb2edcdfffe90aeff7f35a19081cab5407e6e77f2d689f521e7b189"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/MutationRecord.java",
+      "sha256": "160b2dd9874263b570588b8fe4bff04b638d76e30f23aae78b0d1f17987308be"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/NavigatorOnLine.java",
+      "sha256": "df7f5741cbd6046dff0c447c300babc7f57e078867b3c124eff8b4ef7f8232ff"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/NodeList.java",
+      "sha256": "7c090d75d54c711955408e1777ce57ab8b6d6a7222bfd186fc0bbd6d47878ef3"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/NodeSelector.java",
+      "sha256": "29cf4a8303af027076f05533e798e661e5d0e2f4f3bf29d40219eb86813b7638"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/OES_standard_derivatives.java",
+      "sha256": "b79c2ae8fc292c197a0f0a944901b5f409a28b471b567bc65933ba043153a4be"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/PointerEvent.java",
+      "sha256": "15e6ce149c4318efc73ec064f8e3d7bed856412eb6f35372e7b93179c79f132c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/Selection.java",
+      "sha256": "6f39ae47ffa215a41868bc3f14e1afd92dc0283132413b7535882f196d99174d"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGAnimatedBoolean.java",
+      "sha256": "3a1d1bbab57fda6ef2b077df532b28da598dc08c808a1d0acc913969b48b2677"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGAnimatedString.java",
+      "sha256": "815c9a0fc2f0ca119ce655f2cef869bc2b26787bceac9573dcadb961f9456249"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/SVGElementInstance.java",
+      "sha256": "316a918a9bfd0756d4216923ea77ec7448b4829862282ee6f54a00d368ce13ef"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGFEColorMatrixElement.java",
+      "sha256": "c1efc84fb97c57bd3942546a97c6305d4c542d9dd27830394a8a96c97cd3ac6b"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGFEFuncBElement.java",
+      "sha256": "fb2e99378c949d3946f123d60aa16bf668e04af1b101d50b290366ccfffb4968"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGFEMergeElement.java",
+      "sha256": "98863e4e04eacf1de6c34971663400726aea88a3e89bdc7473c0052b2f1290da"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGMaskElement.java",
+      "sha256": "839b810c76528c959bc8464e5d753dcdb3a17b8657cb781155daf167404c171f"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/SVGPathSegMovetoRel.java",
+      "sha256": "a786904cf368072c1dc19b3c37e8c4d0c3e24ed1fc63af0496bb507106dd4da6"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGStringList.java",
+      "sha256": "ca0f94a139f08b19b4f8ce8865f12b83ed50dda1624aa8c271ba516295ee9af8"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGSVGElement.java",
+      "sha256": "db9dd9b33762077f7aa6841902b4c75c78b68c72bd39c2a4dc08d2ab98ff7d29"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/SVGTextPathElement.java",
+      "sha256": "16ca24afc6023da4e5628d2f32e8654932688a93bfaa4c9b88f3fd69dcda77f3"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/TextEvent.java",
+      "sha256": "72ef9e05f1059f1e858bb5ba743f55c58fa3a423552bc1cd9bccd0ce40922632"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/WebGLObject.java",
+      "sha256": "e8ed5535b905eeb66169c5fcc62047389d61e084b095329fda3eec0d42b0df6c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/dom/WebGLTexture.java",
+      "sha256": "9f9629763a3f07d832e558f903a430f4fdf906f7c503cd136437f87b9c6dfae0"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/WindowSessionStorage.java",
+      "sha256": "087ef7cc5c05b18756c9f356556422a61c24080af7441981858841d91ee3f075"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/dom/XPathEvaluator.java",
+      "sha256": "4557ba333e1ef075fa69e3a5d561860e39a387d004712263d0a610f74ecf6d5e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es6/src/main/java/def/js/Float64Array.java",
+      "sha256": "980a7fa1febc79bcdb007971c64cc3862ce8e86c93718de04c4a7ebfeb997222"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/js/PropertyDescriptorMap.java",
+      "sha256": "8c0f844231245a9689937eeb27d92d6298e6029126a158f132eab6a6eec88250"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/js/String.java",
+      "sha256": "d616100ff0c7033c6d88bfcc21646b4338c40a02e98c2908dc58f574fd683e9e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/def/js/Uint8Array.java",
+      "sha256": "9821d264dfd52d2e4deb456d3e1945ff6fff30bc0f2be3d1194e4051d6911c0e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/core-lib/es5/src/main/java/jsweet/util/Lang.java",
+      "sha256": "a23bf0530a10a484c2a8a0e48bdb95ca83f8f6f75e38896d8d42318a1886713b"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/candy-generator/src/main/java/org/jsweet/input/typescriptdef/parser/GenParser.java",
+      "sha256": "3be38ade2ecf9d3b971de5f557610217f1c3dcf8ddc6f22bfd331a29ac4f3937"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/candy-generator/src/main/java/org/jsweet/input/typescriptdef/visitor/TypeReferenceExpander.java",
+      "sha256": "fe56bf9646ec672686e6ad7718db6ab57cba59ade842a6b3d334ac6cf084d95d"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/transpiler/src/main/java/org/jsweet/transpiler/extension/RemoveJavaDependenciesAdapter.java",
+      "sha256": "09d2d65c99fc8c5bbc857477ea92b6b6b02fc1a52b274b3100944a586cf1d68f"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/transpiler/src/main/java/org/jsweet/transpiler/GlobalBeforeTranslationScanner.java",
+      "sha256": "e4dbb9b98bbb6d2c8a5381633481fc022582252bb4d4d03e359f5add7bd0af74"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/transpiler/src/main/java/org/jsweet/transpiler/JSweetTranspiler.java",
+      "sha256": "859375e3e9b2c2031e73f3317b97a42bfa1fe2def2a98af2c704b0dbb876e15e"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/transpiler/src/main/java/org/jsweet/transpiler/model/support/CompilationUnitElementSupport.java",
+      "sha256": "fb7db66147b4aa9b3dfa1368e72af25235c527e3de5db5a7072da74f193c8940"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/transpiler/src/main/java/org/jsweet/transpiler/ModuleImportDescriptor.java",
+      "sha256": "2d4aecf1f39a7ee88c01cf672a21ec852f06ad01c9c82f7cc5bbdf7bb9183f8c"
+    },
+    {
+      "project": "jsweet",
+      "path": "Jsweet/sourcefiles/transpiler/src/main/java/org/jsweet/transpiler/util/ErrorCountTranspilationHandler.java",
+      "sha256": "dcc463921c56d3ae8e36742433eac013186c47d10a1ef2ce9e803c0f3790b7af"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/extensions/RepeatedTest.java",
+      "sha256": "d290ad6423e4cf349d42b86040cec4a93813069cb12dabc03e27df86ee4ed770"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/extensions/TestDecorator.java",
+      "sha256": "267ca627c0e543041cbd85da239ec8f5fb81f1724f79ad245a13c666fbfdd5dc"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/Assert.java",
+      "sha256": "cc0dc6d84b81cb42651ee7e8cfede9d9d473411ac86b3c1c074eb510a6329f7a"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/AssertionFailedError.java",
+      "sha256": "29a27ea74c8c53f03c01f9d1da1c9280b7457286f87a665cfc5c69cf0ba30da9"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/ComparisonCompactor.java",
+      "sha256": "28d341b4a906f1be589f8c277f91e89b9205cb119e42856c09daac34a37ada77"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/JUnit4TestAdapter.java",
+      "sha256": "4b704cd5450eafb6ed811103d788c0793f6283de6a9187d881dc08efc9b21a79"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/JUnit4TestCaseFacade.java",
+      "sha256": "3b09f73359baeefa8cec09a37a953bfcb9d016cb20825050cf586808f7e95b97"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/TestCase.java",
+      "sha256": "697eea92ef1a43f19c3d8f4db87dcea2bed42cbb5a5bdbb71df7ace63d55776e"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/framework/TestResult.java",
+      "sha256": "cbc6a2d936b35fde993049f341debd14dad170b77d62f806ab7510e193f0de9a"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/junit/textui/TestRunner.java",
+      "sha256": "bf6e79992d372d54ccbde886ecad04cfa249e157481dd03967cf3e2ce74fcee6"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/Assume.java",
+      "sha256": "30654e7ed2a05d080884eb31a104f769361346e40a18a9d4fd8596cc138db43e"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/ComparisonFailure.java",
+      "sha256": "1d38025ad41204877868fb758ce49914d85fb0c543d892d4f139ca449ae1ee57"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/categories/Categories.java",
+      "sha256": "2f1cff261048686fe4735265a16874d15473591aa538d42b4f0994c7c5eccb9a"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/categories/CategoryFilterFactory.java",
+      "sha256": "b0bbdc581e3c7eac9f8a847a116df5a6742ff55ea7410f78c9c005bd052ceaaa"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/categories/CategoryValidator.java",
+      "sha256": "12009a0b735da02af3149a19ecd8f7956f7539249a4881bb98494c4af6192c5e"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/max/CouldNotReadCoreException.java",
+      "sha256": "a114c5723c6c971e587862c187af56108b52ffe5044e5d466a5445e556c87219"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/max/MaxCore.java",
+      "sha256": "f83a90b1946703ecd21a632ba033cc242cf1c3f9e05fe83d758f642945ea0d69"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/max/MaxHistory.java",
+      "sha256": "c82ed53f53395224b5d4f5446615d79956a54068bce663cf4f38a96d698f4c65"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/results/PrintableResult.java",
+      "sha256": "7a508459133e685b006d685510eb937477bcc9024b939374b54afbd8cb01ba31"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/results/ResultMatchers.java",
+      "sha256": "b32bc45f872401144e3e8b5dc751cfc85c12a98d5647e367f7d7cb4ef10a46b4"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/runners/Enclosed.java",
+      "sha256": "c4119f87a1f970f1c693f375c06b2383817014c35e6ac52ecef09be1100dc806"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/theories/internal/AllMembersSupplier.java",
+      "sha256": "e997d59e01e92263144e57a7ef0bbaf12f9200736819f953e944d293d97a57ca"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/theories/internal/BooleanSupplier.java",
+      "sha256": "3e4ceb79a9626e559381a665d0469b8ef849af2a79799a7c796c2fc31c0cb6cd"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/theories/ParameterSignature.java",
+      "sha256": "1948a42a48fa70ec284db3f05cd1bad3026b92c6d0b8bae83763e4a885754557"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/theories/suppliers/TestedOnSupplier.java",
+      "sha256": "c682aa02eff0dff454fb54fa5ff129ab5c4643698a4d5529ec2c21a2eacdcd9a"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/experimental/theories/Theories.java",
+      "sha256": "a2552191269c6db8539e3e19c3508f93ffbc5896746d78c65f46c4e0d4ed468d"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/ArrayComparisonFailure.java",
+      "sha256": "77fe6e5e9025c87ce37e3ca5e53106c592e9aef6913b3a4f3561cd9e37bf09a7"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/AssumptionViolatedException.java",
+      "sha256": "a6baac3b1aa0c94cce08b4ab6b87c56264ab5121b8fb7bb213c20451c1ed6650"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/builders/AnnotatedBuilder.java",
+      "sha256": "08952665a4bb994532df42360615553180f67e9dc3b49b67bcf81d341cd8be0f"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/builders/IgnoredBuilder.java",
+      "sha256": "7a9784c80d9333b1b321e3b6aa3d0477260b2ed7847d83deaacc23dadf922f3c"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/builders/IgnoredClassRunner.java",
+      "sha256": "27352006c0ebf417af33e134c94895340b4bf3316536cb9fef08df285dcf5c75"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/builders/JUnit3Builder.java",
+      "sha256": "ebbc318468243e8d8900eb441ddf3604fb8ffc6b2be9a895768e33447350297d"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/builders/JUnit4Builder.java",
+      "sha256": "aef1df8966a61081097f635adb72f1ec4e3a4c7b016bbe63f5cd169a345c9322"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/builders/SuiteMethodBuilder.java",
+      "sha256": "957cf5b8a72a484399fa8c27aad98358399ce542165a6991ca39e952bad2f23e"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/Classes.java",
+      "sha256": "cf5b1d95226b0ad09715845f54ed22060aab4d0f5090da6c03faf3c4ae85bda1"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/ExactComparisonCriteria.java",
+      "sha256": "01b756f9bd55536e2785c25edd54b24172ef04d168b0e3a15e8494c209f65ac4"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/MethodSorter.java",
+      "sha256": "324b789f7abab0a9dd7a45aad5da10004c399ea2992f474229f81b130791a7b6"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/InitializationError.java",
+      "sha256": "62d962f45479d176dfa140aae90d030a933cf426f69373730f2cb08cdc21026d"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/JUnit38ClassRunner.java",
+      "sha256": "93371176741c57b7d3a38018b2f9c95e0d4f447e12cf388f669e62e62d0e580f"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/MethodRoadie.java",
+      "sha256": "8c509a4cfeaea0f38ff85b67a720bc0b07bdc9bb164d4afa0b114e6632b30639"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/model/MultipleFailureException.java",
+      "sha256": "229df61df293c13d5da23bc6e419cd03da0191473b7efdd94266072a660c24ac"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/statements/ExpectException.java",
+      "sha256": "d73506d258815c42f97f31fc5e215439b331f8561e33734155d39ca3a3f3371f"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/statements/Fail.java",
+      "sha256": "c0fc9c56ecf2839f9e55155d486ad1346fb85e3ac744fed448bec07411973cbe"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/statements/InvokeMethod.java",
+      "sha256": "c618fd4ea11bc8c9e4a57cc116acdb7f83a0514f86ed68119e78243e04875eb8"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/statements/RunAfters.java",
+      "sha256": "00a5169ba00ea3e0477a6dab7bff3c54929c10c5bcc782bc4db85e79e2acf692"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/TestClass.java",
+      "sha256": "8827bd9a259a8af4477177c8967f6c9e85d7b3a2fe90e8dadc27e1ed816faae8"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/runners/TestMethod.java",
+      "sha256": "6194d1e09a244bc9562b2223f9e185098d7fa48aa13878d9843c61fe1ef6e208"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/internal/TextListener.java",
+      "sha256": "9e54e7b49e2d8d86974b4f0132d5fbe457935e9e9c50fb26de28a3f481ad5c4c"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/rules/ExternalResource.java",
+      "sha256": "7505dd11fc734b839e931075ea1a856597c64d26818d0860f6065a6f1a0fa094"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/rules/Stopwatch.java",
+      "sha256": "44ab1bc8441075431c144c83d6c049b2e37a9dc4558e596ad046990a1dbdc252"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/rules/TemporaryFolder.java",
+      "sha256": "796feec6bbecd2f4c67d9bb7f1984e65dbc1dc90f4bbf298f9564c89624bcd70"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/rules/TestName.java",
+      "sha256": "9b99ab14f2722123bd3016db6e069969a9293c8fb18941d32f556977a1c921ee"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/rules/TestWatcher.java",
+      "sha256": "2d1782278c094ea31c0b107ab46b338f058ea44270470a36e33156a18ba02a1c"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/Description.java",
+      "sha256": "7317db0c2a8f859f6f150f0bc82390655c00ed952535ea4495eab68cc0198105"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/FilterFactories.java",
+      "sha256": "5cff4230994bcc806a6e38ddc5d95ba17c4e2df51cb26c005281e44110a28917"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/FilterFactoryParams.java",
+      "sha256": "bcbb693dd82f1cbe5e4c95b97adc4476173bebb473b231b5a5b5715ea8053c05"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/JUnitCore.java",
+      "sha256": "71b207403a01e07fc548afc329ea9d997b3042ed1e5236309c7d95babe4c6b68"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/manipulation/Filter.java",
+      "sha256": "32255cfddb15acc09414252c9d89d4c974ef8abfafab7619f5e63e2977cf9633"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/manipulation/Sorter.java",
+      "sha256": "3cc67a99aa4c15480d0aa071a2483d375f74a831f1b365bb9b7a95854c68fb34"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/notification/RunListener.java",
+      "sha256": "f94b80f13f287a75c04c0150cf7e9b1964a1071de30f751c7bab1c5fab885f3d"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/notification/RunNotifier.java",
+      "sha256": "7fdc8c218b0de2fb428997321f1c6ab464be9a6525d8612e5018b0cd23411db7"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/notification/StoppedByUserException.java",
+      "sha256": "cc4ff42b7a13182f969a53a1e3fe3feb23c63977557121e8d2ac46650bc4f3f8"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/notification/SynchronizedRunListener.java",
+      "sha256": "cd0c3c6af091ea2b0e0a46248130adf4424728d90f53c5678d089ca8e7ccb1e6"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runner/Runner.java",
+      "sha256": "d0f96d6e36880911ad4acc26c30bb92fd7036ba192751fb7c8be675f44419e23"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/BlockJUnit4ClassRunner.java",
+      "sha256": "4160529631b07dd68baf073e503c987d738bfae7c554c250f61da9e467ece547"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/model/FrameworkField.java",
+      "sha256": "1e80684f8c3f8e7f14a62912eb983951c13039e064de53e87b32ad71f63d09ad"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/model/RunnerBuilder.java",
+      "sha256": "94c4769abb8118f327614e4defd69cc7088874090541c06dcc25d461b6305dab"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/model/TestTimedOutException.java",
+      "sha256": "3614269df78de510e4a1eab54145d291a161e62a451b632578ca04aec87cd394"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/parameterized/BlockJUnit4ClassRunnerWithParameters.java",
+      "sha256": "78151d9bf45d8d8c74b82f38634de4f4016ef58ef16be982ec50a75a622be710"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/parameterized/BlockJUnit4ClassRunnerWithParametersFactory.java",
+      "sha256": "236ad5f061293de9250401e215d79ad2b3ae5659dc3b1863ead250dc109b849a"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/runners/parameterized/TestWithParameters.java",
+      "sha256": "e891353e4805a0417f4195d5f863f59ab83ab8e3397e6d9fc9fd805c9a2619d7"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/validator/AnnotationsValidator.java",
+      "sha256": "17203fe5980309b578962b41795b171d97fa777f910b532afa8383b62db269a1"
+    },
+    {
+      "project": "junit4",
+      "path": "junit4/sourcefiles/src/main/java/org/junit/validator/AnnotationValidator.java",
+      "sha256": "5afa35d17f2ab3b0c34a61540ba89e28e58720b4ed089dd218738e3c7137dbc1"
+    }
+  ]
+}

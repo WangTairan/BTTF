@@ -1,0 +1,3 @@
+# Preserve exact dataset bytes: source hashes and formatting are research inputs.
+# Do not normalize original CRLF/LF endings on commit or checkout.
+/datasets/** -text

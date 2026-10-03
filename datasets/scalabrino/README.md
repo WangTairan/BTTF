@@ -1,6 +1,10 @@
 # Scalabrino Dataset
 
-This folder contains the official Scalabrino readability dataset.
+This folder documents the official Scalabrino readability dataset. Complete
+source snippets are local inputs, excluded from new public releases while
+redistribution permission is unconfirmed. Download and extract the official
+archive below before running source-based experiments. The viewer retains a
+source-free result index and fixed case excerpts.
 
 Files:
 

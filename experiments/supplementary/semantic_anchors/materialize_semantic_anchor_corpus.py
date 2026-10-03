@@ -85,7 +85,7 @@ SOURCES = (
         "spring-petclinic.tar.gz",
         "f4211e8217601bb4af9ac70e1dc4044ac1521b63d066e88d5fd3318f4188a090",
         "Apache-2.0",
-        "https://github.com/spring-projects/spring-petclinic/blob/818c4136ea971c21674525f9053de0d9c7ad8cfe/license.txt",
+        "https://github.com/spring-projects/spring-petclinic/blob/818c4136ea971c21674525f9053de0d9c7ad8cfe/LICENSE.txt",
     ),
 )
 

@@ -6,6 +6,11 @@ import math
 from pathlib import Path
 from statistics import mean
 
+from tree_sitter import Language, Parser
+import tree_sitter_cpp
+import tree_sitter_java
+import tree_sitter_python
+
 from src.datasets import load_code_dataset
 from src.experiments.statistics import matthews_correlation_coefficient, spearman
 from src.methods.readability_model.dataset_io import item_source_sha256
@@ -27,8 +32,53 @@ DATASETS: dict[str, Path] = {
 }
 
 
-def loc(content: str) -> int:
-    return sum(1 for line in content.splitlines() if line.strip())
+PARSERS = {
+    "java": Parser(Language(tree_sitter_java.language())),
+    "python": Parser(Language(tree_sitter_python.language())),
+    "cpp": Parser(Language(tree_sitter_cpp.language())),
+}
+
+
+def logical_loc(content: str, language: str) -> int:
+    """Count language-aware statement and declaration nodes in source code."""
+    normalized = language.lower()
+    parser_key = "python" if normalized == "python" else "cpp" if normalized in {
+        "c", "cpp", "c++", "cuda"
+    } else "java"
+    tree = PARSERS[parser_key].parse(content.encode("utf-8"))
+    count = 0
+    stack = [tree.root_node]
+    while stack:
+        node = stack.pop()
+        kind = node.type
+        if parser_key == "java":
+            selected = kind.endswith("_statement") or kind in {
+                "local_variable_declaration",
+                "field_declaration",
+                "method_declaration",
+                "constructor_declaration",
+            }
+        elif parser_key == "python":
+            selected = kind.endswith("_statement") or kind in {
+                "function_definition",
+                "class_definition",
+            }
+        else:
+            selected = (
+                kind.endswith("_statement") and kind != "compound_statement"
+            ) or kind in {"declaration", "function_definition"}
+        count += int(selected)
+        stack.extend(node.children)
+    return max(count, 1)
+
+
+def item_language(dataset_name: str, metadata: dict) -> str:
+    language = str(metadata.get("language") or "").lower()
+    if language:
+        return language
+    if dataset_name in {"mbjp", "buse", "scalabrino", "schnappinger", "jetbrains"}:
+        return "java"
+    return "java"
 
 
 def best_binary_threshold_lower_is_positive(
@@ -67,7 +117,7 @@ def write_dataset(
     skip_existing: bool = False,
 ) -> Path:
     items = load_code_dataset(dataset_path)
-    output_dir = output_root / "loc_baseline" / dataset_name
+    output_dir = output_root / "lloc_baseline" / dataset_name
     summary_path = output_dir / "summary.json"
     reusable_by_task, reusable_by_hash = load_reusable_rows(summary_path) if skip_existing else ({}, {})
     rows = []
@@ -88,17 +138,19 @@ def write_dataset(
             )
             reused_count += 1
         else:
-            line_count = loc(item.content)
+            line_count = logical_loc(
+                item.content, item_language(dataset_name, item.metadata)
+            )
             row = {
                 "task_id": item.task_id,
                 "readability_score": item.readability_score,
-                "method": "loc_baseline",
+                "method": "lloc_baseline",
                 "source_sha256": source_hash,
                 "score": float(line_count),
                 "result": {
                     "score": float(line_count),
-                    "loc": line_count,
-                    "formula": "score = LOC; lower LOC predicts higher readability",
+                    "lloc": line_count,
+                    "formula": "score = LLOC; lower LLOC predicts higher readability",
                 },
                 "metadata": item.metadata,
             }
@@ -133,9 +185,9 @@ def write_dataset(
 
     payload = {
         "dataset": str(dataset_path),
-        "method": "loc_baseline",
+        "method": "lloc_baseline",
         "model": None,
-        "configuration": "negative_nonempty_loc",
+        "configuration": "ast_statement_declaration_count",
         "output_policy": "overwrite",
         "incremental_resume": skip_existing,
         "computed_count": computed_count,
@@ -154,9 +206,9 @@ def write_dataset(
         "mean_score": mean(float(row["score"]) for row in valid) if valid else None,
         "results": rows,
         "baseline": {
-            "name": "LOC baseline",
-            "formula": "score = LOC",
-            "description": "A length-only sanity-check baseline: snippets with fewer non-empty source lines are predicted to be more readable. Continuous datasets report the raw LOC correlation with readability.",
+            "name": "LLOC baseline",
+            "formula": "score = LLOC",
+            "description": "A language-aware size baseline that counts AST statement and declaration nodes; comments and blank lines are excluded. Continuous datasets report the raw LLOC correlation with readability.",
         },
     }
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -186,7 +238,7 @@ def result_source_sha256(row: dict) -> str | None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the LOC-only readability baseline.")
+    parser = argparse.ArgumentParser(description="Run the LLOC readability baseline.")
     parser.add_argument(
         "--output-root",
         type=Path,
@@ -196,7 +248,7 @@ def main() -> None:
     parser.add_argument(
         "--skip-existing",
         action="store_true",
-        help="Reuse LOC rows with an unchanged source SHA-256.",
+        help="Reuse LLOC rows with an unchanged source SHA-256.",
     )
     parser.add_argument(
         "--dataset",

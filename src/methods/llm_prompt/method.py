@@ -69,7 +69,8 @@ def llm_prompt_engineering_scores(
         state_path=state_path,
         metadata={"method": "llm_prompt", "model": model_name},
         progress=progress,
-        retry_failed_individually=False,
+        retry_failed_individually=True,
+        retry_failed_in_batch=False,
     )
     results = []
     for code, response_record in zip(codes, response_records):

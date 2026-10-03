@@ -1,4 +1,4 @@
-"""Language-aware extractors of AST-labelled construct representations."""
+"""Language-aware extractors of AST-tagged snippets."""
 
 from .c_like import CLikeLexemeExtractor
 from .factory import ChunkExtractor, extractor_for_language

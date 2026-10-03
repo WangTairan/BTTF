@@ -5,7 +5,7 @@ predictors. It does not contain benchmark-specific feature searches.
 
 | Area | Responsibility |
 | --- | --- |
-| `extractors/`, `feature_database.py` | AST-labelled construct representations and code-level features (`base__`, `compression__`) |
+| `extractors/`, `feature_database.py` | AST-tagged snippets and code-level features (`base__`, `compression__`) |
 | `embedding_cache.py`, `embedding_features.py`, `semantic_context.py` | Reusable chunk vectors, geometry, clustering, and short-identifier context (`embedding__`, `semantic__`) |
 | `llm_features/` | Local causal-LM predictability measurements (`llm__`) |
 | `runners/` | Incremental feature production, validation, and Ridge materialization |
@@ -32,7 +32,7 @@ bash scripts/refresh_readability_after_extractor_change.sh
 Generate the local causal-LM feature family separately:
 
 ```bash
-python -m pip install -r requirements-llm.txt
+python -m pip install -r requirements/llm.txt
 bash scripts/run_llm_feature_tables.sh
 ```
 

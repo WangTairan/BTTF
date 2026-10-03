@@ -13,6 +13,16 @@ No source code is included in the official archive. The assets in
 `official_tool/` are copied from the official `readability.zip` downloaded from
 `https://dibt.unimol.it/report/readability/files/readability.zip`.
 
+The JAR and classifier are local dependencies, excluded from new public release
+contents pending confirmation of redistribution permission. Retrieve the
+official assets before running this baseline or the Dorn feature extractor:
+
+```bash
+bash scripts/fetch_scalabrino_tool.sh
+```
+
+The viewer's stored scores and feature contributions do not require this tool.
+
 Official archive checksum:
 
 ```text

@@ -1,5 +1,5 @@
 # Verified Python 3.11 causal-LM runtime (Qwen2.5-Coder-0.5B).
--r requirements.txt
+-r ../requirements.txt
 torch==2.7.1
 torchvision==0.22.1
 transformers==4.57.6

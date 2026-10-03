@@ -37,11 +37,11 @@ for index in "${!DATASET_PATHS[@]}"; do
   done
 
   PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
-    -m src.methods.loc_baseline.runners \
+    -m src.methods.lloc_baseline.runners \
     --dataset "${dataset_key}" \
     --skip-existing
 
-  for method in posnett dorn loc; do
+  for method in posnett dorn lloc; do
     PYTHONPYCACHEPREFIX="${PYCACHE}" "${PYTHON_BIN}" \
       -m experiments.main.readability_model.evaluation.summarize_constructed_method \
       --dataset "${dataset_key}" \

@@ -73,7 +73,7 @@
       "archive_url": "https://codeload.github.com/spring-projects/spring-petclinic/tar.gz/818c4136ea971c21674525f9053de0d9c7ad8cfe",
       "archive_sha256": "f4211e8217601bb4af9ac70e1dc4044ac1521b63d066e88d5fd3318f4188a090",
       "license": "Apache-2.0",
-      "license_url": "https://github.com/spring-projects/spring-petclinic/blob/818c4136ea971c21674525f9053de0d9c7ad8cfe/license.txt",
+      "license_url": "https://github.com/spring-projects/spring-petclinic/blob/818c4136ea971c21674525f9053de0d9c7ad8cfe/LICENSE.txt",
       "eligible_unit_count": 32,
       "selected_unit_count": 12
     }

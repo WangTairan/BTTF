@@ -149,7 +149,7 @@ class PublicationContractTest(unittest.TestCase):
         self.assertEqual(sha256(weights), manifest["weights"]["sha256"])
 
     def test_reproduction_versions_match_both_primary_manifests(self):
-        requirements = (ROOT / "requirements-reproduction.txt").read_text().splitlines()
+        requirements = (ROOT / "requirements/reproduction.txt").read_text().splitlines()
         for filename in (
             "consensus11_6dataset_three_llm_opencoder_jina.json",
             "consensus18_6dataset_sampled_margin.json",
