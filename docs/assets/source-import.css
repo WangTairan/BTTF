@@ -1,0 +1,16 @@
+.source-import { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.source-import-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.source-import-button { display: inline-flex; align-items: center; min-height: 36px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface, var(--panel)); color: var(--text); font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
+.source-import-button:hover { border-color: var(--accent); }
+.source-import-button:focus-visible, .source-import-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.source-import-button:disabled { opacity: .6; cursor: wait; }
+.source-import-actions > a.source-import-button { background: #eef5fb; color: #275978; border-color: #bfd2e0; }
+.source-import-actions > button.source-import-button { background: #f0f6f0; color: #34563f; border-color: #c4d6c7; }
+.source-import-actions > button.source-import-clear { background: #f5f5f7; color: #5a616a; border-color: #d2d6dc; }
+.source-import-button:disabled { cursor: default; }
+[data-theme="dark"] .source-import-actions > a.source-import-button { background: #1c3042; color: #b6d9f2; border-color: #38536c; }
+[data-theme="dark"] .source-import-actions > button.source-import-button { background: #20362b; color: #b7d6c0; border-color: #405e4c; }
+[data-theme="dark"] .source-import-actions > button.source-import-clear { background: #252b33; color: #c0c7cf; border-color: #444e5a; }
+.source-import-status { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.source-import-status.error { color: var(--penalty, #b42318); }
+.source-import [hidden] { display: none !important; }

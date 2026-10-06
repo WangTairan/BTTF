@@ -15,6 +15,7 @@ from .catalog import Catalog, ORDER
 from .diagnosis import ROOT
 from .site import METHODS, ResultSite
 from .source_access import public_diagnosis, source_restricted
+from .source_import import OFFICIAL_ARCHIVES, source_manifest
 
 
 class RecordedOnly:
@@ -28,7 +29,7 @@ def portable_html(content, filename, diagnosis=None):
     def replace(match):
         target = html.unescape(match.group(2))[1:] or 'index.html'
         return match.group(1) + '="' + html.escape(posixpath.relpath(target, parent), quote=True) + '"'
-    content = re.sub(r'(href|src)="(/(?!/)[^"]*)"', replace, content)
+    content = re.sub(r'(href|src|data-source-manifest-url)="(/(?!/)[^"]*)"', replace, content)
     if diagnosis:
         content = content.replace('id="mode-bttf"',
             'id="mode-bttf" data-diagnosis-url="' + html.escape(diagnosis, quote=True) + '"')
@@ -42,7 +43,7 @@ class Links(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         for key, value in attrs:
-            if key in {'href', 'src', 'data-diagnosis-url'} and value:
+            if key in {'href', 'src', 'data-diagnosis-url', 'data-source-manifest-url'} and value:
                 self.targets.append(value)
 
 
@@ -81,6 +82,10 @@ def export_site(output):
 
     shutil.copytree(ROOT / 'docs/assets', output / 'assets')
     (output / '.nojekyll').touch()
+    for dataset in OFFICIAL_ARCHIVES:
+        path = output / 'source-manifests' / f'{dataset}.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(source_manifest(dataset), ensure_ascii=False, allow_nan=False), encoding='utf-8')
     write('index.html', site.home())
     write('explainability.html', site.explainability_page())
     for method in METHODS:

@@ -144,6 +144,52 @@ function initializeCodeCopy() {
   });
 }
 document.addEventListener("DOMContentLoaded", () => {
+  initializeHelpTooltips();
   initializeCodeCopy();
   new MutationObserver(initializeCodeCopy).observe(document.body, {childList: true, subtree: true});
 });
+
+// Explicit help popovers also work in embedded browsers without native title tips.
+function initializeHelpTooltips() {
+  const tip = document.createElement('div');
+  tip.className = 'help-tooltip'; tip.id = 'bttf-help-tooltip'; tip.hidden = true;
+  tip.setAttribute('role', 'tooltip'); document.body.append(tip);
+  let active = null;
+  document.querySelectorAll('.help-marker[title]').forEach(button => {
+    button.dataset.helpText = button.title; button.removeAttribute('title');
+  });
+  function hide() {
+    if (active) active.removeAttribute('aria-describedby');
+    active = null; tip.hidden = true;
+  }
+  function position() {
+    if (!active) return;
+    const anchor = active.getBoundingClientRect();
+    const box = tip.getBoundingClientRect();
+    tip.style.left = Math.max(12, Math.min(anchor.left + anchor.width / 2 - box.width / 2, innerWidth - box.width - 12)) + 'px';
+    const below = anchor.bottom + 9;
+    tip.style.top = Math.max(12, Math.min(below + box.height <= innerHeight - 12 ? below : anchor.top - box.height - 9, innerHeight - box.height - 12)) + 'px';
+  }
+  function show(button) {
+    if (!button?.dataset.helpText) return;
+    if (active !== button) hide();
+    active = button; tip.textContent = button.dataset.helpText; tip.hidden = false;
+    button.setAttribute('aria-describedby', tip.id); position();
+  }
+  document.addEventListener('pointerover', event => {
+    const button = event.target.closest('.help-marker'); if (button) show(button);
+  });
+  document.addEventListener('pointerout', event => {
+    if (active && active.contains(event.target) && !active.contains(event.relatedTarget) && document.activeElement !== active) hide();
+  });
+  document.addEventListener('focusin', event => {
+    const button = event.target.closest('.help-marker'); if (button) show(button);
+  });
+  document.addEventListener('focusout', event => {if (event.target === active) hide();});
+  document.addEventListener('click', event => {
+    const button = event.target.closest('.help-marker'); if (button) show(button); else hide();
+  });
+  document.addEventListener('keydown', event => {if (event.key === 'Escape') hide();});
+  window.addEventListener('resize', position);
+  document.addEventListener('scroll', position, true);
+}

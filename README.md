@@ -1,9 +1,16 @@
 # BTTF: Back to the Future
 
-This is the local research checkout. Complete dataset sources and baseline
-tools remain tracked here. The separate `BTTF` publication repository contains
-the final code, results, and viewer without this checkout's Git history or
-complete source collections whose redistribution permission is unconfirmed.
+This research repository contains the final code, recorded results, and
+interactive viewer, together with locally retained reproduction materials.
+The viewer follows the public BTTF source-access policy: complete Buse, Dorn,
+and Scalabrino sources are loaded by users from official downloads, while
+sample results and the fixed 30-case analysis remain directly available.
+
+**Publication status:** this checkout retains its original Git history and
+tracked third-party reproduction inputs. The viewer is publication-filtered;
+the repository itself has not yet been cleared for public release. Ignore
+rules do not remove previously tracked files or historical copies. See
+`RELEASING.md` and `THIRD_PARTY.md` before changing repository visibility.
 
 Code and reproduction materials for BTTF, an interpretable code-readability model built from
 traditional code measurements, embedding-space organization, and causal-LM
@@ -18,6 +25,10 @@ components that use them.
 Citation metadata is available in [`CITATION.cff`](CITATION.cff).
 
 ## Interactive diagnosis
+
+The online viewer is published at [BTTF interactive results](https://wangtairan.github.io/BTTF/)
+once GitHub Pages is enabled. It includes the same tables, sample diagnoses,
+and 30-case analysis as the local viewer.
 
 After installing the dependencies below, run:
 
@@ -89,12 +100,13 @@ bash scripts/fetch_scalabrino_tool.sh
 ## Verify the release
 
 ```bash
-bash scripts/check_release.sh
+bash scripts/check_public_release.sh
 ```
 
-This verifies imports, documented commands, feature contracts, dataset tools,
-and frozen-model checksums without downloading model weights or overwriting
-publication results.
+This checks the publication package, viewer, archived results, and dataset
+tools without downloading model weights or overwriting publication results.
+The complete research checks in `scripts/check_release.sh` additionally
+require the separately obtained source collections and baseline binaries.
 
 The verification suite is the recommended quick check. It does not regenerate
 the pretrained-model feature tables, which requires downloading the model
@@ -130,6 +142,10 @@ Dataset and third-party asset provenance is documented in
 
 ## License
 
-No license has yet been selected for this repository's original code.
+Unless otherwise indicated, this repository's original source code is licensed
+under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for attribution.
 Third-party datasets, source excerpts, tools, and pretrained models retain
 their respective licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).
+The code license does not relicense the paper, third-party materials, or data,
+and does not grant rights to materials whose redistribution permission remains
+unconfirmed.

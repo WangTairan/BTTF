@@ -2,10 +2,12 @@
 
 These texts apply only to the third-party materials identified in
 [`THIRD_PARTY.md`](../../THIRD_PARTY.md), not to this repository's original code.
-No license for the original code is selected by this directory.
+The original code's Apache-2.0 license is in the repository-root `LICENSE`;
+these third-party texts and notices remain separate.
 
 | Text | Original source / scope |
 | --- | --- |
+| `fflate-MIT.txt` | fflate 0.8.3, the vendored browser ZIP reader in `docs/assets/fflate-0.8.3.js` |
 | `CC-BY-4.0.txt` | [MBXP data license](https://github.com/amazon-science/mxeval/blob/main/data/mbxp/LICENSE); also the declared license for the JetBrains and Schnappinger dataset releases |
 | `Apache-2.0.txt` | Requests upstream LICENSE; shared license text for the Apache-2.0 source excerpts |
 | `Django-BSD-3-Clause.txt`, `Django-Python.txt` | Django LICENSE and LICENSE.python from the pinned Python construction checkout |

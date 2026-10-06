@@ -59,6 +59,19 @@ bib/local_papers/
 # Raw survey export contains pseudonymous session and demographic fields.
 /datasets/jetbrains/raw_data.csv
 
+# Publication exclusions: redistribution permission not yet confirmed.
+# Retained locally; official links and source-free results remain public.
+# Fixed 30-case excerpts are stored separately in the viewer's case_sources.json.
+/datasets/buse/snippets/
+/datasets/buse/raw/readability-snippets.zip
+/datasets/dorn/dataset/snippets/
+/datasets/scalabrino/dataset/Snippets/
+/datasets/buse/*.zip
+/datasets/dorn/*.zip
+/datasets/scalabrino/*.zip
+/src/methods/scalabrino/official_tool/rsm.jar
+/src/methods/scalabrino/official_tool/readability.classifier
+
 # Local manuscript drafts retained alongside the source-generation tool.
 tools/source_interference/notes/
 

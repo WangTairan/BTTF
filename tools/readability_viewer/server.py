@@ -12,6 +12,7 @@ from .diagnosis import Analyzer
 from .catalog import Catalog
 from .site import ResultSite, display_text
 from .source_access import OFFICIAL_SOURCES, source_restricted, public_diagnosis
+from .source_import import source_manifest
 
 DIRECTORY = Path(__file__).resolve().parent
 
@@ -46,11 +47,13 @@ def make_handler(analyzer):
                     return self.send(200, site.explainability_page().encode(), "text/html")
                 if path.startswith("/assets/"):
                     filename = path.removeprefix("/assets/")
-                    if filename in {"style.css", "app.js", "diagnosis.css", "diagnosis.js", "list.js", "theme.css", "theme.js", "favicon-light.svg", "favicon-dark.svg"}:
+                    if filename in {"style.css", "app.js", "diagnosis.css", "diagnosis.js", "list.js", "theme.css", "theme.js", "favicon-light.svg", "favicon-dark.svg", "source-import.css", "source-import.js", "fflate-0.8.3.js"}:
                         kind = ("image/svg+xml" if filename.endswith(".svg") else
                                 "text/css" if filename.endswith(".css") else "text/javascript")
                         return self.send(200, (DIRECTORY.parents[1] / "docs/assets" / filename).read_bytes(), kind)
                 parts = path.strip("/").split("/")
+                if len(parts) == 2 and parts[0] == 'source-manifests' and parts[1].endswith('.json'):
+                    return self.send(200, source_manifest(parts[1][:-5]))
                 if len(parts) == 2 and parts[0] == "explainability" and parts[1].endswith(".html"):
                     return self.send(200, site.explainability_page(parts[1][:-5]).encode(), "text/html")
                 if len(parts) == 2 and parts[0] == "downloads" and parts[1].endswith(".json"):

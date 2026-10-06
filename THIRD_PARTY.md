@@ -1,11 +1,12 @@
 # Third-party materials
 
 Third-party datasets, source programs, model weights, and tools are not covered
-by any future license for this repository's original code. Preserve their
+by the Apache-2.0 license for this repository's original code. Preserve their
 copyright notices and consult their original distribution terms before reuse.
 
 | Material | Provenance |
 | --- | --- |
+| Browser ZIP reader (fflate 0.8.3) | [Upstream](https://github.com/101arrowz/fflate); MIT, retained in `licenses/third_party/fflate-MIT.txt`; the pinned UMD bundle is vendored in `docs/assets/` |
 | MBJP-derived development set | [`NOTICE`](datasets/mbjp_dev_dataset/NOTICE.md); MBXP data are CC BY 4.0, distinct from the upstream evaluation code's Apache-2.0 license |
 | JetBrains benchmark | [`README`](datasets/jetbrains/README.md); official Zenodo record declares CC BY 4.0 |
 | Schnappinger benchmark and project sources | [`NOTICE`](datasets/schnappinger/NOTICE.md); dataset CC BY 4.0, project source licenses remain separate; only 304 evaluated sources and original notices are retained |
@@ -27,8 +28,10 @@ Public availability of a download is not, by itself, a redistribution license.
 
 This category is separate from generated caches, private credentials, and
 obsolete experiments. Complete Buse, Dorn, and Scalabrino source collections
-and their source archives are retained locally but excluded from new public
-release contents. They are not being discarded as research inputs.
+and their source archives are retained as research inputs. They are excluded
+from the exported viewer, but remain tracked in this research checkout and
+its history. They must not be treated as excluded from the repository merely
+because ignore rules have been added. Repository publication remains pending.
 
 | Excluded source material | Official source |
 | --- | --- |
@@ -43,8 +46,13 @@ index for the excluded collections, with source excerpts for its unchanged
 fixed 30-case analysis stored separately. This distinction records the
 release scope; it is not a claim that the case excerpts have an express
 redistribution license. Source access can be restored through the centralized
-viewer policy after permission is confirmed. Existing Git history is not
-rewritten by these exclusions.
+viewer policy after permission is confirmed. The viewer can also display a
+user's official ZIP after browser-local import and
+source-hash verification, without hosting or uploading those source files.
+The import manifests contain only identities, hashes, and numeric region
+offsets. This facility does not change the upstream distribution terms.
+The public viewer implementation has been merged into this research repository
+without deleting research inputs or rewriting its original history.
 
 ## Compiled baseline tool
 
@@ -53,8 +61,8 @@ authors' tool and classifier in its supplied README. Its JAR includes licenses
 for dependencies, which do not establish a license for the authors' own assets.
 Confirm the authors' terms before redistributing those assets. The retrieval script is
 [`scripts/fetch_scalabrino_tool.sh`](scripts/fetch_scalabrino_tool.sh).
-The JAR and classifier are excluded from new public release contents but remain
-in the local checkout. Retrieve them from the official download to run the
+The JAR and classifier remain tracked research inputs; they are not copied
+into the exported viewer. Retrieve them from the official download to run the
 Scalabrino baseline or the Dorn feature extractor. Stored viewer results do
 not require these binaries.
 

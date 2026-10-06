@@ -1,5 +1,20 @@
 # Research release checklist
 
+## Research-to-public integration status
+
+The public BTTF viewer, browser-local source import, Apache-2.0 license for
+original code, and Pages workflow are integrated here. Original research
+history and reproduction inputs remain intact. No repository rename,
+visibility change, history rewrite, or remote replacement has been performed.
+
+Do not make this research repository public yet: complete Buse, Dorn, and
+Scalabrino collections and the Scalabrino binaries remain tracked, including
+historical copies. `.gitignore` only prevents new untracked additions.
+Passing viewer/public-package tests verifies functionality, not clearance of
+the repository history. Before publication, review those redistribution
+permissions, historical personal paths and survey data, and third-party
+notices. Preserve contributor attribution when choosing a publication route.
+
 This repository is a paper-reproduction package rather than an archive of all
 development experiments.
 
@@ -9,7 +24,7 @@ Run from the repository root with Python 3.11:
 
 ```bash
 python -m pip install -r requirements/reproduction.txt
-bash scripts/check_release.sh
+bash scripts/check_public_release.sh
 git diff --check
 git status --short
 ```
@@ -18,6 +33,11 @@ The checks cover documented Python entry points, shell syntax, extraction and
 feature regression tests, controlled-dataset generation, equal-dataset
 benchmark averaging, and frozen-model checksums. They do not call providers,
 download pretrained weights, or overwrite saved publication outputs.
+
+The public-package checks run without the excluded source collections or
+official binaries. To run the complete research test suite with
+`scripts/check_release.sh`, first obtain those inputs from the documented
+official sources.
 
 ## Release contents
 
@@ -40,8 +60,8 @@ caches are excluded.
 
 ## Publication metadata
 
-Citation metadata is in `CITATION.cff`; a license for the original code
-remains to be selected.
+Citation metadata is in `CITATION.cff`. Original source code is licensed under
+Apache-2.0; see `LICENSE` and `NOTICE` for the license and attribution.
 Check redistribution terms for third-party datasets and baseline assets
 separately, using `THIRD_PARTY.md`. Record the commit identifier, frozen-model checksums, and
 paper version in the release notes before creating an annotated tag.

@@ -15,6 +15,7 @@ from .catalog import ORDER, LABELS
 from .diagnosis import ROOT
 from .source_access import OFFICIAL_SOURCES, source_restricted
 from .public_catalog import source_digest, source_lines
+from .source_import import IMPORT_ASSETS, source_import_control
 
 METHODS = {
     "posnett": "Posnett", "scalabrino": "Scalabrino",
@@ -499,17 +500,18 @@ class ResultSite:
             rows.append(f'<tr {attrs}>{cells}</tr>')
         download = (f'<a href="{OFFICIAL_SOURCES[dataset]}">Official dataset source</a>'
                     if source_restricted(dataset) else f'<a href="/downloads/{dataset}.json" download>Download dataset (JSON)</a>')
-        sample_hint = ('Click a sample ID to inspect its scores. Source code is linked to the official dataset; the fixed 30-case analysis retains source views.'
+        sample_hint = ('Click a sample ID to inspect scores and feature contributions. Load the official ZIP above to view source code.'
                        if source_restricted(dataset) else 'Click a sample ID to inspect its code, method scores, and BTTF feature diagnosis.')
+        import_control = source_import_control(dataset) if source_restricted(dataset) else ''
         body = f"""<section class="panel"><p class="eyebrow">Dataset</p>
-<h1>{LABELS[dataset]}</h1><p>{escape(DATASET_DESCRIPTIONS[dataset])}</p>{processing}<p>{download}</p><div class="stats"><div class="stat"><span>Samples</span>
+<h1>{LABELS[dataset]}</h1><p>{escape(DATASET_DESCRIPTIONS[dataset])}</p>{processing}<p>{download}</p>{import_control}<div class="stats"><div class="stat"><span>Samples</span>
 <strong>{len(bundle["items"])}</strong></div></div></section>
 <section class="panel"><div class="panel-head compact"><div><h2>Samples</h2>
 <p class="muted">{sample_hint}</p>
 </div><input id="sample-search" placeholder="Search sample ID"></div>
 <div class="matrix-wrap"><table class="records sample-table {'controlled-samples' if controlled else 'human-samples'}" data-sortable-samples>
 <thead><tr>{headings}</tr></thead><tbody>{"".join(rows)}</tbody></table></div></section>"""
-        return page(LABELS[dataset], body, '<script src="/assets/list.js" defer></script>')
+        return page(LABELS[dataset], body, (IMPORT_ASSETS if import_control else '') + '<script src="/assets/list.js" defer></script>')
 
     def source_visible(self, dataset, index):
         if not source_restricted(dataset):
@@ -523,6 +525,7 @@ class ResultSite:
             raise ValueError("Unknown sample")
         item = items[index]
         visible = self.source_visible(dataset, index)
+        import_control = source_import_control(dataset) if not visible else ''
         source_view = (f'<div id="plain-code" class="diagnostic-code">{escape(item.content)}</div>' if visible
                        else f'<div id="plain-code" class="source-reference"><a href="{OFFICIAL_SOURCES[dataset]}">Official dataset source</a> · {escape(item.task_id)}</div>')
         scores, details = self.scores(dataset)
@@ -560,10 +563,10 @@ class ResultSite:
 <section class="panel"><h2>Scores</h2>{self.sample_scores_table(dataset, index)}</section>
 <section class="panel"><h2>Views</h2><div class="mode-tabs">
 <button class="mode-tab active" data-mode-target="mode-bttf">BTTF diagnosis</button>{"".join(tabs)}</div>
-<div class="method-views bttf-view"><article class="persistent-source"><h3>Source code</h3>{source_view}</article>
+{import_control}<div class="method-views bttf-view"><article class="persistent-source"><h3>Source code</h3>{source_view}</article>
 <div class="mode-panel active" id="mode-bttf" data-dataset="{dataset}" data-index="{index}">
 <p id="status">Loading feature diagnosis…</p><div class="grid two diagnosis-grid">
 <article><h3>Source regions</h3><div id="code" class="diagnostic-code"></div></article>
 <article><h3>Feature contributions</h3><div class="feature-list-scroll"><div id="features"></div></div><div class="selected-feature-detail" aria-live="polite"><strong id="selected-name"></strong><p id="description"></p><p id="equation"></p></div></article></div>
 </div>{"".join(panels)}</div></section>"""
-        return page(item.task_id, body, '<script src="/assets/diagnosis.js" defer></script>', parent=(f'/datasets/{dataset}.html', LABELS[dataset]))
+        return page(item.task_id, body, (IMPORT_ASSETS if import_control else '') + '<script src="/assets/diagnosis.js" defer></script>', parent=(f'/datasets/{dataset}.html', LABELS[dataset]))

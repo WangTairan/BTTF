@@ -115,6 +115,9 @@ main.wide-comparison { width: min(1680px, calc(100vw - 32px)); }
 .feature-list-scroll { max-height: 430px; overflow-y: auto; }
 .explanation-comparison .feature-list-scroll { max-height: calc(72vh - 170px); }
 .help-marker { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid var(--muted); border-radius: 50%; background: transparent; color: var(--muted); font: 11px/1 system-ui; padding: 0; cursor: help; vertical-align: middle; }
+.help-marker:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.help-tooltip { position: fixed; z-index: 10000; box-sizing: border-box; width: max-content; max-width: min(360px, calc(100vw - 24px)); padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 5px 20px rgba(0,0,0,.16); font: 13px/1.55 system-ui; text-align: left; white-space: normal; pointer-events: none; }
+.help-tooltip[hidden] { display: none; }
 @media (max-width: 1000px) { .explanation-comparison { grid-template-columns: 1fr; } .comparison-scroll { max-height: none; } }
 @media (max-width: 900px) { .explanation-runs { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .example-grid, .example-triggers { grid-template-columns: 1fr; } }

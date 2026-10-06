@@ -18,6 +18,32 @@ line counts, and numeric contributions remain available in a public checkout.
 After confirming permission, add the dataset key to `FULL_SOURCE_DATASETS`
 to restore its source views and downloads. Local evaluation data are unchanged.
 
+## Load complete sources in your browser
+
+On a Buse, Dorn, or Scalabrino dataset page, select **Download official ZIP**,
+then **Load ZIP** and choose the downloaded archive.
+If the browser automatically extracts downloads, select **Load folder** and
+choose the resulting folder instead. No download directory is assumed or
+preselected; both paths use the same source-hash verification.
+No manual extraction, installation, or directory configuration is needed.
+The browser matches the
+entire dataset against the published source hashes and restores source views,
+feature highlighting, and code copying on its sample pages. Nonmatching
+archives are rejected without changing the recorded scores.
+
+Imported code stays in the browser's local IndexedDB storage; it is not sent
+to the viewer server or included in the repository or static export. It is
+restored on subsequent visits to the same browser and site. **Clear local
+data** removes it. Private browsing, site-data clearing, or storage restrictions
+can remove or prevent persistence. Fixed 30-case examples remain directly
+viewable without an import.
+
+The importer uses the pinned, locally bundled fflate 0.8.3 ZIP reader, not a
+runtime CDN. Its source-free manifests contain hashes and numeric feature
+offsets only. Original dataset terms continue to apply to imported materials.
+
+## Recorded results
+
 The result matrix and controlled-response overview use the current local
 result summaries and the archived three-run DeepSeek V4 Pro/GPT-6.1 Sol
 scores. Sample pages retain baseline measurement tables and recorded cloud
@@ -36,10 +62,9 @@ Direct-LLM replies are read from `results/direct_llm/`.
 
 ## Online publication
 
-The separate public `BTTF` repository publishes the viewer through GitHub
-Actions and GitHub Pages. This local research repository does not publish it.
-The public workflow exports and checks recorded diagnoses without inference
-or API calls.
+In GitHub Settings → Pages, select **GitHub Actions** as the source.
+The `pages.yml` workflow exports and checks the complete viewer on each push
+to `main`. It publishes recorded diagnoses, without inference or API calls.
 The existing source-display restrictions also apply to the online version.
 
 To preview the static version locally, choose a new output directory:

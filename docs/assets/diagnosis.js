@@ -1,6 +1,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 let result = null, selected = null;
+let originalDiagnosis = null;
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number = value => value === null ? 'Unavailable' : String(Number(Number(value).toFixed(3)));
 const signed = value => (value >= 0 ? '+' : '−') + number(Math.abs(value));
@@ -31,6 +32,9 @@ function renderCode(target='code', highlight=true) {
     return;
   }
   const source=result.source, positions=[0];
+  delete $(target).dataset.noCodeCopy;
+  $(target).classList.add('diagnostic-code');
+  $(target).classList.remove('source-reference');
   $(target).dataset.copySource = source;
   for(const character of source)positions.push(positions[positions.length-1]+character.length);
   const regions=(highlight?selected?.regions||[]:[]).map(region=>({...region,start:positions[region.start],end:positions[region.end]})), tokens=syntaxTokens(source);
@@ -76,7 +80,12 @@ async function initializeDiagnosis(){
  try{
   const response=await fetch(panel.dataset.diagnosisUrl || ('/api/diagnosis?dataset='+encodeURIComponent(panel.dataset.dataset)+'&index='+panel.dataset.index));
   const data=await response.json();if(!response.ok)throw Error(data.error);
-  render(data);status('');
+  originalDiagnosis = data;
+  render(window.BTTFSourceImport ? await window.BTTFSourceImport.hydrate(data) : data);status('');
  }catch(error){status(error.message,true);}
 }
 initializeDiagnosis();
+document.addEventListener('bttf-source-change', async event => {
+  if (!originalDiagnosis || event.detail.dataset !== originalDiagnosis.dataset) return;
+  render(await window.BTTFSourceImport.hydrate(originalDiagnosis));
+});

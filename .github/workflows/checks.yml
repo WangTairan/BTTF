@@ -35,4 +35,4 @@ jobs:
         env:
           MPLBACKEND: Agg
           MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
-        run: bash scripts/check_release.sh
+        run: bash scripts/check_public_release.sh
