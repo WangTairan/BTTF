@@ -6,11 +6,12 @@ The viewer follows the public BTTF source-access policy: complete Buse, Dorn,
 and Scalabrino sources are loaded by users from official downloads, while
 sample results and the fixed 30-case analysis remain directly available.
 
-**Publication status:** this checkout retains its original Git history and
-tracked third-party reproduction inputs. The viewer is publication-filtered;
-the repository itself has not yet been cleared for public release. Ignore
-rules do not remove previously tracked files or historical copies. See
-`RELEASING.md` and `THIRD_PARTY.md` before changing repository visibility.
+The publication history excludes complete source collections with unconfirmed
+redistribution permission, the Scalabrino binaries, third-party paper PDFs,
+old generated viewer pages, and unused upstream project files. Research
+commit authors, dates, messages, and contribution records are retained.
+Complete reproduction inputs may remain locally as ignored files; they are
+not part of the published Git tree. See `THIRD_PARTY.md` for source links.
 
 Code and reproduction materials for BTTF, an interpretable code-readability model built from
 traditional code measurements, embedding-space organization, and causal-LM

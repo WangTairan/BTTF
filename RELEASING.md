@@ -3,17 +3,25 @@
 ## Research-to-public integration status
 
 The public BTTF viewer, browser-local source import, Apache-2.0 license for
-original code, and Pages workflow are integrated here. Original research
-history and reproduction inputs remain intact. No repository rename,
-visibility change, history rewrite, or remote replacement has been performed.
+original code, and Pages workflow are integrated here. Publication history has
+been filtered without squashing commits or dropping empty contribution
+records. Authors, committers, dates, and messages are preserved; affected
+commit and tag hashes change. No remote rename, visibility change, remote
+deletion, or force-push has been performed.
 
-Do not make this research repository public yet: complete Buse, Dorn, and
-Scalabrino collections and the Scalabrino binaries remain tracked, including
-historical copies. `.gitignore` only prevents new untracked additions.
-Passing viewer/public-package tests verifies functionality, not clearance of
-the repository history. Before publication, review those redistribution
-permissions, historical personal paths and survey data, and third-party
-notices. Preserve contributor attribution when choosing a publication route.
+Complete Buse, Dorn, and Scalabrino source collections, Scalabrino binaries,
+third-party paper PDFs, old generated viewer pages, and unused upstream
+Schnappinger project files are removed from reachable publication history.
+Existing local reproduction files are retained and ignored. Current evaluated
+Schnappinger sources and notices, labels, results, and the fixed 30 cases are
+unchanged. Case presentation does not extend upstream reuse permissions.
+
+The remote still contains its old private history until the filtered branch
+and tags replace it. Keep it private during that transition. Do not merge or
+pull the old remote history into this filtered checkout. GitHub collaborator
+permissions belong to the remote repository and are not changed by this local
+operation. Rename the original remote rather than replacing it with a newly
+created repository if those memberships must be retained.
 
 This repository is a paper-reproduction package rather than an archive of all
 development experiments.

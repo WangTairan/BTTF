@@ -28,10 +28,10 @@ Public availability of a download is not, by itself, a redistribution license.
 
 This category is separate from generated caches, private credentials, and
 obsolete experiments. Complete Buse, Dorn, and Scalabrino source collections
-and their source archives are retained as research inputs. They are excluded
-from the exported viewer, but remain tracked in this research checkout and
-its history. They must not be treated as excluded from the repository merely
-because ignore rules have been added. Repository publication remains pending.
+and their source archives may remain locally as ignored reproduction inputs.
+Their complete collections are excluded from the exported viewer, current
+publication tree, and filtered reachable history. They are not discarded from
+the existing local reproduction workspace.
 
 | Excluded source material | Official source |
 | --- | --- |
@@ -51,8 +51,9 @@ user's official ZIP after browser-local import and
 source-hash verification, without hosting or uploading those source files.
 The import manifests contain only identities, hashes, and numeric region
 offsets. This facility does not change the upstream distribution terms.
-The public viewer implementation has been merged into this research repository
-without deleting research inputs or rewriting its original history.
+The public viewer implementation is integrated into the research repository.
+Historical distribution copies are filtered while retaining research commit
+attribution; local reproduction files are kept outside the tracked tree.
 
 ## Compiled baseline tool
 
@@ -61,8 +62,9 @@ authors' tool and classifier in its supplied README. Its JAR includes licenses
 for dependencies, which do not establish a license for the authors' own assets.
 Confirm the authors' terms before redistributing those assets. The retrieval script is
 [`scripts/fetch_scalabrino_tool.sh`](scripts/fetch_scalabrino_tool.sh).
-The JAR and classifier remain tracked research inputs; they are not copied
-into the exported viewer. Retrieve them from the official download to run the
+The JAR and classifier are excluded from the publication tree and its filtered
+history, and are not copied into the exported viewer. Existing local copies
+remain ignored reproduction inputs. Retrieve them from the official download to run the
 Scalabrino baseline or the Dorn feature extractor. Stored viewer results do
 not require these binaries.
 
